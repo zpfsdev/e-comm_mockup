@@ -1,0 +1,13 @@
+.footer {
+  margin-top: auto;
+  padding-block: var(--space-xl);
+  background-color: #7b715a;
+}
+
+.footerText {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-background);
+  text-align: center;
+}

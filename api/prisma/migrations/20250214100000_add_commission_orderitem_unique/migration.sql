@@ -1,0 +1,2 @@
+-- CreateIndex
+CREATE UNIQUE INDEX `COMMISSION_OrderItemID_key` ON `COMMISSION`(`OrderItemID`);

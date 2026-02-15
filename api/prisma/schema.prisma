@@ -1,0 +1,347 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId            Int       @id @default(autoincrement()) @map("UserID")
+  firstName         String    @map("FirstName") @db.VarChar(100)
+  middleName        String?   @map("MiddleName") @db.VarChar(100)
+  lastName          String    @map("LastName") @db.VarChar(100)
+  username          String    @unique @map("Username") @db.VarChar(50)
+  email             String    @unique @map("Email") @db.VarChar(100)
+  userPassword      String    @map("UserPassword") @db.VarChar(255)
+  dob               DateTime  @db.Date @map("DOB")
+  contactNo         String    @map("ContactNo") @db.VarChar(13)
+  dateTimeRegistered DateTime @default(now()) @map("DateTimeRegistered")
+  lastLogin         DateTime? @map("LastLogin")
+  status           UserStatus @default(Active) @map("STATUS")
+  profilePictureUrl String?   @map("ProfilePictureURL") @db.VarChar(255)
+  userRoles         UserRole[]
+  sellers           Seller?
+  userAddresses     UserAddress[]
+  orders            Order[]
+  cart              Cart?
+  reviews           Review[]
+
+  @@map("USERS")
+}
+
+enum UserStatus {
+  Active
+  Inactive
+}
+
+model Role {
+  roleId    Int        @id @default(autoincrement()) @map("RoleID")
+  roleName  String     @unique @map("RoleName") @db.VarChar(50)
+  userRoles UserRole[]
+
+  @@map("ROLES")
+}
+
+model UserRole {
+  userRoleId Int  @id @default(autoincrement()) @map("UserRoleID")
+  userId     Int  @map("UserID")
+  roleId     Int  @map("RoleID")
+  user       User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  role       Role @relation(fields: [roleId], references: [roleId], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("USER_ROLES")
+}
+
+model Seller {
+  sellerId        Int           @id @default(autoincrement()) @map("SellerID")
+  userId         Int           @unique @map("UserID")
+  shopName       String        @unique @map("ShopName") @db.VarChar(255)
+  shopDescription String?      @map("ShopDescription") @db.Text
+  shopLogoUrl    String?       @map("ShopLogoURL") @db.VarChar(255)
+  shopStatus     ShopStatus   @default(Active) @map("ShopStatus")
+  registeredAt   DateTime     @default(now()) @map("RegisteredAt")
+  user           User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  products       Product[]
+  commissions    Commission[]
+
+  @@map("SELLERS")
+}
+
+enum ShopStatus {
+  Active
+  Inactive
+  Banned
+
+  @@map("ShopStatus")
+}
+
+model Province {
+  provinceId Int   @id @default(autoincrement()) @map("ProvinceID")
+  province   String @unique @map("Province") @db.VarChar(100)
+  cities     City[]
+
+  @@map("PROVINCE")
+}
+
+model City {
+  cityId     Int        @id @default(autoincrement()) @map("CityID")
+  city       String     @map("City") @db.VarChar(100)
+  postalCode String     @map("PostalCode") @db.VarChar(10)
+  provinceId Int        @map("ProvinceID")
+  province   Province   @relation(fields: [provinceId], references: [provinceId], onDelete: Cascade)
+  barangays  Barangay[]
+
+  @@unique([city, provinceId])
+  @@map("CITY")
+}
+
+model Barangay {
+  barangayId Int     @id @default(autoincrement()) @map("BarangayID")
+  barangay   String @map("Barangay") @db.VarChar(100)
+  cityId     Int     @map("CityID")
+  city       City    @relation(fields: [cityId], references: [cityId], onDelete: Cascade)
+  addresses  Address[]
+
+  @@unique([barangay, cityId])
+  @@map("BARANGAY")
+}
+
+model Address {
+  addressId     Int           @id @default(autoincrement()) @map("AddressID")
+  street        String        @map("Street") @db.VarChar(255)
+  barangayId    Int           @map("BarangayID")
+  barangay      Barangay      @relation(fields: [barangayId], references: [barangayId], onDelete: Cascade)
+  userAddresses UserAddress[]
+
+  @@unique([street, barangayId])
+  @@map("ADDRESS")
+}
+
+model UserAddress {
+  userAddressId Int          @id @default(autoincrement()) @map("UserAddressID")
+  userId        Int          @map("UserID")
+  addressId     Int          @map("AddressID")
+  addressType   AddressType? @map("AddressType")
+  isDefault     Boolean      @default(false) @map("isDefault")
+  user          User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  address       Address      @relation(fields: [addressId], references: [addressId], onDelete: Cascade)
+  orders        Order[]
+
+  @@unique([userId, addressId])
+  @@map("USER_ADDRESSES")
+}
+
+enum AddressType {
+  Home
+  Work
+
+  @@map("AddressType")
+}
+
+model AgeRange {
+  ageRangeId Int     @id @default(autoincrement()) @map("AgeRangeID")
+  minAge     Int     @map("MinAge")
+  maxAge     Int?    @map("MaxAge")
+  label      String? @map("Label") @db.VarChar(255)
+  products   Product[]
+
+  @@map("AGE_RANGE")
+}
+
+model Category {
+  categoryId   Int       @id @default(autoincrement()) @map("CategoryID")
+  categoryName String   @unique @map("CategoryName") @db.VarChar(255)
+  description  String?  @map("DESCRIPTION") @db.Text
+  products     Product[]
+
+  @@map("CATEGORIES")
+}
+
+model Product {
+  productId      Int            @id @default(autoincrement()) @map("ProductID")
+  sellerId       Int            @map("SellerID")
+  name           String         @map("Name") @db.VarChar(100)
+  description    String         @map("Description") @db.Text
+  imageUrl       String         @map("ImageURL") @db.VarChar(255)
+  price          Decimal       @map("Price") @db.Decimal(10, 2)
+  categoryId     Int            @map("CategoryID")
+  stockQuantity  Int            @default(1) @map("StockQuantity")
+  status         ProductStatus  @default(Available) @map("Status")
+  dateAdded      DateTime       @default(now()) @map("DateAdded")
+  lastUpdated    DateTime       @updatedAt @map("LastUpdated")
+  ageRangeId     Int            @map("AgeRangeID")
+  seller         Seller         @relation(fields: [sellerId], references: [sellerId], onDelete: Cascade)
+  category       Category       @relation(fields: [categoryId], references: [categoryId], onDelete: Cascade)
+  ageRange       AgeRange       @relation(fields: [ageRangeId], references: [ageRangeId], onDelete: Cascade)
+  productDetails ProductDetail?
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+
+  @@unique([sellerId, name])
+  @@map("PRODUCT")
+}
+
+enum ProductStatus {
+  Available
+  Unavailable
+
+  @@map("ProductStatus")
+}
+
+model ProductDetail {
+  detailId  Int     @id @default(autoincrement()) @map("DetailID")
+  productId Int     @unique @map("ProductID")
+  height    Decimal? @map("Height") @db.Decimal(10, 2)
+  weight    Decimal? @map("Weight") @db.Decimal(10, 2)
+  width     Decimal? @map("Width") @db.Decimal(10, 2)
+  length    Decimal? @map("Length") @db.Decimal(10, 2)
+  material  String? @map("Material") @db.VarChar(255)
+  product   Product @relation(fields: [productId], references: [productId], onDelete: Cascade)
+
+  @@map("PRODUCT_DETAILS")
+}
+
+model Order {
+  orderId        Int           @id @default(autoincrement()) @map("OrderID")
+  userId         Int           @map("UserID")
+  orderDate      DateTime      @default(now()) @map("OrderDate")
+  orderStatus    OrderStatus   @default(Pending) @map("OrderStatus")
+  totalAmount    Decimal       @map("TotalAmount") @db.Decimal(10, 2)
+  shippingFee    Decimal       @default(58) @map("ShippingFee") @db.Decimal(10, 2)
+  userAddressId  Int           @map("UserAddressID")
+  notes          String?       @map("Notes") @db.Text
+  user           User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userAddress    UserAddress   @relation(fields: [userAddressId], references: [userAddressId])
+  orderItems     OrderItem[]
+  payment        Payment?
+
+  @@map("ORDERS")
+}
+
+enum OrderStatus {
+  Pending
+  InTransit
+  Completed
+
+  @@map("OrderStatus")
+}
+
+model OrderItem {
+  orderItemId      Int            @id @default(autoincrement()) @map("OrderItemID")
+  orderId          Int            @map("OrderID")
+  productId        Int            @map("ProductID")
+  quantity         Int            @default(1)
+  price            Decimal        @map("Price") @db.Decimal(10, 2)
+  orderItemStatus  OrderItemStatus @default(Pending) @map("OrderItemStatus")
+  dateDelivered    DateTime?      @map("DateDelivered")
+  order            Order          @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  product          Product        @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  reviews          Review[]
+  commissions      Commission[]
+
+  @@unique([orderId, productId])
+  @@map("ORDER_ITEMS")
+}
+
+enum OrderItemStatus {
+  Pending
+  InTransit
+  Completed
+
+  @@map("OrderItemStatus")
+}
+
+model Payment {
+  paymentId     Int            @id @default(autoincrement()) @map("PaymentID")
+  orderId       Int            @unique @map("OrderID")
+  paymentMethod PaymentMethod? @map("PaymentMethod")
+  paymentStatus PaymentStatus  @default(Unpaid) @map("PaymentStatus")
+  paymentAmount Decimal        @map("PaymentAmount") @db.Decimal(10, 2)
+  paymentDate   DateTime?      @map("PaymentDate")
+  order         Order          @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+
+  @@map("PAYMENT")
+}
+
+enum PaymentMethod {
+  COD
+  GCash
+
+  @@map("PaymentMethod")
+}
+
+enum PaymentStatus {
+  Paid
+  Unpaid
+
+  @@map("PaymentStatus")
+}
+
+model Cart {
+  cartId     Int        @id @default(autoincrement()) @map("CartID")
+  userId     Int        @unique @map("UserID")
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  cartItems  CartItem[]
+
+  @@map("CART")
+}
+
+model CartItem {
+  cartItemId Int      @id @default(autoincrement()) @map("CartItemID")
+  cartId     Int      @map("CartID")
+  productId  Int      @map("ProductID")
+  quantity   Int      @default(1)
+  dateAdded  DateTime @default(now()) @map("DateAdded")
+  cart       Cart     @relation(fields: [cartId], references: [cartId], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@map("CART_ITEMS")
+}
+
+model Review {
+  reviewId   Int       @id @default(autoincrement()) @map("ReviewID")
+  userId     Int       @map("UserID")
+  orderItemId Int      @map("OrderItemID")
+  rating     ReviewRating @default(five) @map("Rating")
+  comment    String?   @map("Comment") @db.Text
+  datePosted DateTime @default(now()) @map("DatePosted")
+  user       User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  orderItem  OrderItem @relation(fields: [orderItemId], references: [orderItemId], onDelete: Cascade)
+
+  @@unique([userId, orderItemId])
+  @@map("REVIEWS")
+}
+
+enum ReviewRating {
+  one
+  two
+  three
+  four
+  five
+
+  @@map("ReviewRating")
+}
+
+model Commission {
+  commissionId     Int            @id @default(autoincrement()) @map("CommissionID")
+  sellerId          Int            @map("SellerID")
+  orderItemId       Int            @unique @map("OrderItemID")
+  commissionAmount  Decimal        @map("CommissionAmount") @db.Decimal(10, 2)
+  status            CommissionStatus @default(Unpaid) @map("Status")
+  datePaid          DateTime?      @map("DatePaid")
+  seller            Seller         @relation(fields: [sellerId], references: [sellerId], onDelete: Cascade)
+  orderItem         OrderItem      @relation(fields: [orderItemId], references: [orderItemId], onDelete: Cascade)
+
+  @@map("COMMISSION")
+}
+
+enum CommissionStatus {
+  Paid
+  Unpaid
+
+  @@map("CommissionStatus")
+}

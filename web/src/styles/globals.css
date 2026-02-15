@@ -1,0 +1,50 @@
+/**
+ * Global styles – base layout and shared utilities.
+ * Import variables and reset first.
+ */
+
+@import "./variables.css";
+@import "./reset.css";
+
+html {
+  overflow-x: hidden;
+  min-width: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  font-family: var(--font-outfit, var(--font-sans));
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body a:hover {
+  text-decoration: none;
+}
+
+/* Layout utilities */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--space-md);
+}
+
+/* Responsive padding */
+@media (min-width: 640px) {
+  .container {
+    padding-inline: var(--space-lg);
+  }
+}

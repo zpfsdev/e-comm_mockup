@@ -1,0 +1,13 @@
+/* Root layout: full-height column so footer stays at bottom */
+.appWrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.mainWrap {
+  flex: 1;
+}

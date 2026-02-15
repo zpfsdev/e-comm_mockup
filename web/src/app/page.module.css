@@ -1,0 +1,544 @@
+/**
+ * Home page section styles.
+ * Header and footer are in components (site-header, site-footer).
+ *
+ * Section order: Hero | Shop by Category (+ strip) | Shop by Age | Top Picks |
+ * What's New | Shop by Store | Nurture CTA
+ */
+
+/* Hero: full-width banner with image slot and left-aligned text overlay */
+.hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 748;
+  min-height: 20rem;
+  overflow: hidden;
+}
+
+.heroImageSlot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.heroImageSlot .heroImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding-inline: var(--space-md);
+}
+
+.heroOverlay .container {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .heroOverlay {
+    padding-inline: var(--space-lg);
+  }
+}
+
+.heroContentBox {
+  padding: 0;
+  max-width: 38rem;
+}
+
+.heroTitle {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: var(--line-height-tight);
+  color: var(--color-accent);
+  margin: 0 0 var(--space-md);
+  letter-spacing: -0.05em;
+}
+
+.heroSubtitle {
+  font-size: var(--text-lg);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text);
+  max-width: 36rem;
+  margin: 0 0 var(--space-xl);
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-2xl);
+  min-height: 4rem;
+  font-family: var(--font-display), var(--font-sans);
+  font-size: clamp(1.25rem, 2.5vw, 2.25rem);
+  font-weight: 400;
+  color: var(--color-background);
+  background-color: #7b715a;
+  border: none;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.ctaPrimary:hover {
+  background-color: #6b6350;
+}
+
+/* Brown band: Shop by Category and the strip image below it */
+.sectionRect103 {
+  padding-block: var(--space-3xl);
+  padding-bottom: 0;
+  background-color: #7b715a;
+}
+
+.sectionRect103 .stripSection {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 517;
+  min-height: 12rem;
+  overflow: hidden;
+  margin-top: var(--space-3xl);
+}
+
+.sectionRect103 .sectionTitle {
+  color: var(--color-background);
+}
+
+.sectionRect103 .categoryLabel {
+  color: var(--color-background);
+}
+
+.sectionRect103 .categoryPill {
+  color: var(--color-background);
+}
+
+.sectionRect103 .categoryPill:hover {
+  color: var(--color-accent-muted);
+}
+
+.sectionRect103 .categoryCircle {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sectionRect103 .categoryPill:hover .categoryCircle {
+  border-color: var(--color-background);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Orange band: Shop by Age */
+.sectionRect104 {
+  padding-block: var(--space-3xl);
+  background-color: #dc8242;
+}
+
+.sectionRect104 .sectionTitleLight {
+  color: var(--color-background);
+}
+
+.stripImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Shared section spacing and headings (Top Picks, What's New, Shop by Store) */
+.section {
+  padding-block: var(--space-3xl);
+}
+
+.sectionTitle,
+.sectionTitleLight,
+.sectionTitleAccent,
+.sectionTitleDark {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 0 0 var(--space-xl);
+}
+
+.sectionTitle {
+  color: var(--color-text);
+}
+
+.sectionTitleLight {
+  color: var(--color-text);
+}
+
+.sectionTitleAccent {
+  color: var(--color-accent);
+}
+
+.sectionTitleDark {
+  color: var(--color-text);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: #b35a1a;
+  background-color: #fbd1a2;
+  border: 2px solid #ff751f;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.viewAll:hover {
+  filter: brightness(1.08);
+  transform: scale(1.02);
+}
+
+/* Shop by Category: pill list and circular image slots */
+.categoryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+  justify-content: center;
+}
+
+.categoryPill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: var(--text-xl);
+}
+
+.categoryPill:hover {
+  color: var(--color-primary);
+}
+
+.categoryCircle {
+  width: 11.375rem;
+  height: 11.375rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-background-muted);
+  background-size: cover;
+  background-position: center;
+  border: 2px solid var(--color-border);
+}
+
+.categoryPill:hover .categoryCircle {
+  border-color: var(--color-primary);
+}
+
+.categoryPill:hover .categoryCircle:not([style*="background-image"]) {
+  background-color: var(--color-primary-muted);
+}
+
+.categoryLabel {
+  text-align: center;
+}
+
+/* Shop by Age: three cards (3+, 5+, 8+) with distinct backgrounds */
+.ageList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-lg);
+}
+
+.age3 {
+  background-color: #ece4b7;
+}
+
+.age5 {
+  background: linear-gradient(180deg, #fbd1a2 0%, #fbd1a2 100%);
+}
+
+.age8 {
+  background-color: #5ae79a;
+}
+
+.ageCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  padding: var(--space-lg);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.ageCard:hover {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6), 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: scale(1.03);
+}
+
+.ageLabel {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: 6rem;
+  font-weight: 400;
+  line-height: 1;
+  color: inherit;
+}
+
+.age3 .ageLabel {
+  color: #b3a869;
+}
+
+.age5 .ageLabel {
+  color: #a33e00;
+}
+
+.age8 .ageLabel {
+  color: #247348;
+}
+
+/* Product cards: image slot, age badge, name, price, add-to-cart button */
+.productGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-xl);
+}
+
+.productCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: var(--space-md);
+}
+
+.productImageWrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: var(--space-sm);
+}
+
+.productImage {
+  width: 100%;
+  aspect-ratio: 265 / 371;
+  background-color: var(--color-background-muted);
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.productImageWrap img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 265 / 371;
+  object-fit: cover;
+  object-position: center;
+  border-radius: var(--radius-md);
+  display: block;
+  vertical-align: top;
+}
+
+.ageBadge {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+  z-index: 1;
+}
+
+.productInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.productName {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.productPrice {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.addToCart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  margin-top: auto;
+}
+
+.addToCart:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Shop by Store: store logo circles and names */
+.storeList {
+  list-style: none;
+  margin: 0 0 var(--space-2xl);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+  justify-content: center;
+}
+
+.storeCircle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: var(--text-xl);
+}
+
+.storeCircle:hover {
+  color: var(--color-primary);
+}
+
+.storePlaceholder {
+  width: 11.375rem;
+  height: 11.375rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-background-muted);
+  background-size: cover;
+  background-position: center;
+  border: 2px solid var(--color-border);
+}
+
+.storePlaceholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: var(--radius-full);
+}
+
+.storeCircle:hover .storePlaceholder {
+  border-color: var(--color-primary);
+}
+
+.storeName {
+  text-align: center;
+}
+
+/* Nurture CTA: rounded container with tagline and arrow button */
+.group35 {
+  border-radius: 50px;
+  border: 2px solid #7b715a;
+  overflow: hidden;
+}
+
+.ctaStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2xl);
+  padding: var(--space-2xl) var(--space-3xl);
+}
+
+.ctaStripText {
+  font-family: var(--font-nurture), var(--font-sans);
+  font-size: clamp(1.25rem, 3vw, 2.5rem);
+  font-weight: 400;
+  line-height: 2;
+  letter-spacing: -0.05em;
+  color: #dc8242;
+  margin: 0;
+  text-align: center;
+}
+
+.ctaArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ctaArrow:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Breakpoints: product grid columns and category/age layout */
+@media (min-width: 640px) {
+  .productGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .categoryList {
+    justify-content: flex-start;
+  }
+
+  .ageList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .productGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .productGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .storeList {
+    justify-content: space-between;
+  }
+
+  .ctaStripText {
+    text-align: left;
+    font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+  }
+}

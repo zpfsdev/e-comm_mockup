@@ -1,6 +1,6 @@
 /**
- * Static data for the home page – categories, age cards, stores, placeholder products.
- * Replace with API data when backend is wired.
+ * Home page data: categories, age cards, stores, placeholder products.
+ * Replace with API when backend is wired.
  */
 
 export const CATEGORIES = [
@@ -18,6 +18,15 @@ export const AGE_CARDS = [
 ] as const;
 
 export const STORES = ["KIDOS", "PLAYBOOK", "LARANA", "WONDERS", "GIGGLING"] as const;
+
+/** Store name -> public image filename (for Shop by Store circles). */
+export const STORE_IMAGES: Record<(typeof STORES)[number], string> = {
+  KIDOS: "/kidos.png",
+  PLAYBOOK: "/playbook.png",
+  LARANA: "/larama.png",
+  WONDERS: "/wonders.png",
+  GIGGLING: "/giggling.png",
+};
 
 export const PLACEHOLDER_PRODUCTS = [
   { name: "Stacking Ring", price: "Php 349.00", age: "3+" },

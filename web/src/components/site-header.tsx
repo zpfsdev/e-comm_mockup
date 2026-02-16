@@ -3,8 +3,8 @@ import Link from "next/link";
 import { CartIcon, SearchIcon, UserIcon } from "./icons";
 import styles from "./site-header.module.css";
 
-/** Logo asset path (upscaled brand logo). */
-const LOGO_SRC = "/logow 1_upscayl_5x_digital-art-4x.png";
+/** Brand logo path. */
+const LOGO_SRC = "/logo.png";
 
 export function SiteHeader() {
   return (

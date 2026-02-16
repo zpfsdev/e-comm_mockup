@@ -1,0 +1,193 @@
+/**
+ * Sign up: layout and form.
+ * Background #fafbf7; title CREATE AN ACCOUNT; placeholder-only fields.
+ * Right: hero image, overlay "Start Your Shopping Journey!", then "Go back to Home".
+ */
+
+.wrapper {
+  min-height: 100%;
+  padding-block: var(--space-3xl);
+  background-color: #fafbf7;
+}
+
+.layout {
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+  padding-inline: var(--space-md);
+  display: grid;
+  gap: var(--space-2xl);
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    padding-inline: var(--space-lg);
+  }
+
+  .layout .title {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
+
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #474133;
+  margin: var(--space-2xl) 0 var(--space-lg);
+  text-align: center;
+}
+
+.form {
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-md);
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border: 2px solid rgba(255, 117, 31, 0.25);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-2xl);
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submitBtn:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.links {
+  margin-top: var(--space-md);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.links a {
+  color: var(--color-accent-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.links a:hover {
+  text-decoration: underline;
+}
+
+.decorColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.decor {
+  display: none;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 587 / 728;
+  min-height: 20rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.decorImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.decorTitle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0;
+  padding-bottom: 7rem;
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 2rem;
+  font-weight: 700;
+  color: #474133;
+  text-align: center;
+  line-height: 1.26;
+}
+
+.goBack {
+  font-size: 1.25rem;
+  font-weight: 200;
+  color: var(--color-text);
+  margin: 0;
+  text-align: center;
+  line-height: 1.26;
+}
+
+.goBack a {
+  color: var(--color-accent-dark);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.goBack a:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 1024px) {
+  .decor {
+    display: block;
+  }
+
+  .decorColumn {
+    align-self: stretch;
+    justify-content: center;
+  }
+}

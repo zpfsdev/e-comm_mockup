@@ -1,0 +1,215 @@
+/**
+ * Shop listing: filters sidebar and product grid.
+ */
+
+.shopPage {
+  background-color: var(--color-background);
+  min-height: 100%;
+}
+
+.shopLayout {
+  display: grid;
+  gap: var(--space-xl);
+  padding-block: var(--space-2xl);
+}
+
+@media (min-width: 1024px) {
+  .shopLayout {
+    grid-template-columns: 280px 1fr;
+    align-items: start;
+  }
+}
+
+.sidebar {
+  background-color: var(--color-accent-bg-peach);
+  border: 1px solid rgba(255, 117, 31, 0.2);
+  border-radius: 15px;
+  padding: var(--space-xl);
+}
+
+.sidebarTitle {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 var(--space-md);
+}
+
+.sidebarList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebarList li {
+  margin-bottom: var(--space-xs);
+}
+
+.sidebarLink {
+  display: block;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-text);
+  text-decoration: none;
+  padding: var(--space-xs) 0;
+}
+
+.sidebarLink:hover {
+  color: var(--color-accent-soft);
+}
+
+.sidebarLinkActive {
+  font-weight: 700;
+  color: var(--color-accent-dark);
+}
+
+.sidebarSection {
+  margin-top: var(--space-xl);
+}
+
+.storeCircles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.storeCircleLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.storeCircleLink:hover {
+  color: var(--color-accent-soft);
+}
+
+.storeCircle {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background-color: var(--color-accent-bg-peach);
+  border: 2px solid rgba(255, 117, 31, 0.35);
+}
+
+.storeCircleLink:hover .storeCircle {
+  background-color: var(--color-accent-bg-peach);
+  filter: brightness(0.96);
+  border-color: var(--color-accent);
+}
+
+.mainTitle {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+  margin: 0 0 var(--space-2xl);
+}
+
+.productGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .productGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.productCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  border: 2px solid rgba(255, 117, 31, 0.2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.productCard:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 16px rgba(255, 117, 31, 0.15);
+}
+
+.productImageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 265 / 371;
+  background-color: var(--color-accent-bg-peach);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.productImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.productBody {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.productName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.productPrice {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.addToCartBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.addToCartBtn:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-3xl);
+  color: var(--color-text-muted);
+}
+
+.emptyState a {
+  color: var(--color-accent-dark);
+  font-weight: 600;
+}

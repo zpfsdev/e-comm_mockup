@@ -1,6 +1,5 @@
 /**
- * Design tokens – single source of truth for spacing, colors, typography.
- * Use these variables across the app for consistency.
+ * Design tokens: spacing, colors, typography.
  */
 
 :root {
@@ -16,9 +15,16 @@
   --color-success: #16a34a;
   --color-error: #dc2626;
   --color-warning: #ca8a04;
+  /* Accent (orange) */
   --color-accent: #ff751f;
   --color-accent-hover: #e56a1a;
+  --color-accent-soft: #dc8242;
+  --color-accent-peach: #fbd1a2;
+  --color-accent-dark: #b35a1a;
   --color-accent-muted: #fef3c7;
+  /* Softer orange for large backgrounds only (categories, products, age band) */
+  --color-accent-bg: #e8a366;
+  --color-accent-bg-peach: #fce4c7;
 
   /* Spacing (4px base) */
   --space-xs: 0.25rem;  /* 4px */

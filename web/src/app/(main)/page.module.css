@@ -1,12 +1,11 @@
 /**
- * Home page section styles.
- * Header and footer are in components (site-header, site-footer).
- *
- * Section order: Hero | Shop by Category (+ strip) | Shop by Age | Top Picks |
- * What's New | Shop by Store | Nurture CTA
+ * Home page sections.
+ * Header and footer live in site-header and site-footer.
+ * Order: Hero → Shop by Category (with strip) → Shop by Age → Top Picks →
+ * What's New → Shop by Store → Nurture CTA.
  */
 
-/* Hero: full-width banner with image slot and left-aligned text overlay */
+/* Hero: full-width banner, image slot, left-aligned text and CTA */
 .hero {
   position: relative;
   width: 100%;
@@ -89,14 +88,14 @@
   background-color: #6b6350;
 }
 
-/* Brown band: Shop by Category and the strip image below it */
-.sectionRect103 {
+/* Shop by Category: brown band, category pills, strip image below */
+.categoryStripSection {
   padding-block: var(--space-3xl);
   padding-bottom: 0;
   background-color: #7b715a;
 }
 
-.sectionRect103 .stripSection {
+.categoryStripSection .stripSection {
   position: relative;
   width: 100%;
   aspect-ratio: 1440 / 517;
@@ -105,39 +104,39 @@
   margin-top: var(--space-3xl);
 }
 
-.sectionRect103 .sectionTitle {
+.categoryStripSection .sectionTitle {
   color: var(--color-background);
 }
 
-.sectionRect103 .categoryLabel {
+.categoryStripSection .categoryLabel {
   color: var(--color-background);
 }
 
-.sectionRect103 .categoryPill {
+.categoryStripSection .categoryPill {
   color: var(--color-background);
 }
 
-.sectionRect103 .categoryPill:hover {
+.categoryStripSection .categoryPill:hover {
   color: var(--color-accent-muted);
 }
 
-.sectionRect103 .categoryCircle {
+.categoryStripSection .categoryCircle {
   border-color: rgba(255, 255, 255, 0.4);
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.sectionRect103 .categoryPill:hover .categoryCircle {
+.categoryStripSection .categoryPill:hover .categoryCircle {
   border-color: var(--color-background);
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Orange band: Shop by Age */
-.sectionRect104 {
+/* Shop by Age: orange band, age cards */
+.ageBandSection {
   padding-block: var(--space-3xl);
-  background-color: #dc8242;
+  background-color: var(--color-accent-bg);
 }
 
-.sectionRect104 .sectionTitleLight {
+.ageBandSection .sectionTitleLight {
   color: var(--color-background);
 }
 
@@ -146,7 +145,7 @@
   object-position: center;
 }
 
-/* Shared section spacing and headings (Top Picks, What's New, Shop by Store) */
+/* Standard section: Top Picks, What's New, Shop by Store */
 .section {
   padding-block: var(--space-3xl);
 }
@@ -207,7 +206,7 @@
   transform: scale(1.02);
 }
 
-/* Shop by Category: pill list and circular image slots */
+/* Category pills and circular image slots */
 .categoryList {
   list-style: none;
   margin: 0;
@@ -255,7 +254,7 @@
   text-align: center;
 }
 
-/* Shop by Age: three cards (3+, 5+, 8+) with distinct backgrounds */
+/* Age cards (3+, 5+, 8+) with distinct backgrounds */
 .ageList {
   list-style: none;
   margin: 0;
@@ -270,7 +269,7 @@
 }
 
 .age5 {
-  background: linear-gradient(180deg, #fbd1a2 0%, #fbd1a2 100%);
+  background: linear-gradient(180deg, var(--color-accent-bg-peach) 0%, var(--color-accent-bg-peach) 100%);
 }
 
 .age8 {
@@ -313,7 +312,7 @@
   color: #247348;
 }
 
-/* Product cards: image slot, age badge, name, price, add-to-cart button */
+/* Product cards: image, age badge, name, price, add-to-cart */
 .productGrid {
   list-style: none;
   margin: 0;
@@ -410,7 +409,7 @@
   background-color: var(--color-accent-hover);
 }
 
-/* Shop by Store: store logo circles and names */
+/* Store circles and names */
 .storeList {
   list-style: none;
   margin: 0 0 var(--space-2xl);
@@ -437,16 +436,17 @@
 }
 
 .storePlaceholder {
+  position: relative;
+  display: block;
   width: 11.375rem;
   height: 11.375rem;
   border-radius: var(--radius-full);
   background-color: var(--color-background-muted);
-  background-size: cover;
-  background-position: center;
   border: 2px solid var(--color-border);
+  overflow: hidden;
 }
 
-.storePlaceholder img {
+.storeImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -462,8 +462,8 @@
   text-align: center;
 }
 
-/* Nurture CTA: rounded container with tagline and arrow button */
-.group35 {
+/* Nurture CTA: rounded band, tagline only */
+.nurtureCtaWrap {
   border-radius: 50px;
   border: 2px solid #7b715a;
   overflow: hidden;
@@ -472,9 +472,7 @@
 .ctaStrip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2xl);
+  justify-content: center;
   padding: var(--space-2xl) var(--space-3xl);
 }
 
@@ -489,25 +487,7 @@
   text-align: center;
 }
 
-.ctaArrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 4rem;
-  height: 4rem;
-  color: var(--color-background);
-  background-color: var(--color-accent);
-  border: none;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.ctaArrow:hover {
-  background-color: var(--color-accent-hover);
-}
-
-/* Breakpoints: product grid columns and category/age layout */
+/* Responsive: grid columns and category/age layout */
 @media (min-width: 640px) {
   .productGrid {
     grid-template-columns: repeat(2, 1fr);

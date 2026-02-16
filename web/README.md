@@ -1,6 +1,6 @@
 # Artistryx Web (Next.js)
 
-Next.js frontend for Artistryx. Vanilla CSS (no Tailwind), design tokens, CSS Modules. Figma-derived home mockup and placeholder routes.
+Next.js frontend for Artistryx. Vanilla CSS (no Tailwind), design tokens, CSS Modules. Home, auth (sign-in/sign-up), shop, product detail, cart, profile, address, seller routes.
 
 ## Getting started
 
@@ -45,13 +45,13 @@ src/
 ## Routes
 
 - `/` – Home (hero, categories, age, top picks, what’s new, stores, nurture CTA)
-- `/cart` – Cart (placeholder)
-- `/profile` – Profile (placeholder)
-- `/sign-in`, `/sign-up` – Auth (placeholder)
-- `/shop` – Shop listing (placeholder; query params: category, age, store)
-- `/product/[id]` – Product detail (placeholder)
-- `/address` – My addresses (placeholder)
-- `/seller/start-selling` – Seller onboarding (placeholder)
+- `/cart` – Cart (empty state)
+- `/profile` – Profile
+- `/sign-in`, `/sign-up` – Auth (no header)
+- `/shop` – Shop listing (query params: category, age, store)
+- `/product/[id]` – Product detail
+- `/address` – My addresses
+- `/seller/start-selling` – Seller onboarding
 
 ## Styling
 

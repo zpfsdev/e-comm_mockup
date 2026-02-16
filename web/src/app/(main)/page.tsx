@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon } from "@/components/icons";
+import { BackToTop } from "@/components/back-to-top";
 import {
   AGE_CARDS,
   CATEGORIES,
   PLACEHOLDER_PRODUCTS,
+  STORE_IMAGES,
   STORES,
 } from "@/lib/home-data";
 import styles from "./page.module.css";
@@ -15,7 +16,7 @@ export default function Home() {
       <section className={styles.hero}>
         <div className={styles.heroImageSlot} aria-hidden>
           <Image
-            src="/final 2.png"
+            src="/homepage 1.png"
             alt=""
             fill
             priority
@@ -39,7 +40,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.sectionRect103}>
+      <section className={styles.categoryStripSection}>
         <div className="container">
           <h2 className={styles.sectionTitle}>Shop by Category</h2>
           <ul className={styles.categoryList}>
@@ -55,7 +56,7 @@ export default function Home() {
         </div>
         <div className={styles.stripSection} aria-hidden>
           <Image
-            src="/niuy 1.png"
+            src="/homepage 2.png"
             alt=""
             fill
             sizes="100vw"
@@ -64,7 +65,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.sectionRect104}>
+      <section className={styles.ageBandSection}>
         <div className="container">
           <h2 className={styles.sectionTitleLight}>Shop by Age</h2>
           <ul className={styles.ageList}>
@@ -142,13 +143,21 @@ export default function Home() {
             {STORES.map((name) => (
               <li key={name}>
                 <Link href={`/shop?store=${encodeURIComponent(name)}`} className={styles.storeCircle}>
-                  <span className={styles.storePlaceholder} />
+                  <span className={styles.storePlaceholder}>
+                    <Image
+                      src={STORE_IMAGES[name]}
+                      alt=""
+                      width={182}
+                      height={182}
+                      className={styles.storeImage}
+                    />
+                  </span>
                   <span className={styles.storeName}>{name}</span>
                 </Link>
               </li>
             ))}
           </ul>
-          <div className={styles.group35}>
+          <div className={styles.nurtureCtaWrap}>
             <div className={styles.ctaStrip}>
               <p className={styles.ctaStripText}>
                 Nurture Curiosity, One Playful Moment at a Time.
@@ -157,13 +166,11 @@ export default function Home() {
                 <br />
                 Designed to Inspire Creativity & Independence
               </p>
-              <button type="button" className={styles.ctaArrow} aria-label="Explore">
-                <ArrowRightIcon />
-              </button>
             </div>
           </div>
         </div>
       </section>
+      <BackToTop />
     </>
   );
 }

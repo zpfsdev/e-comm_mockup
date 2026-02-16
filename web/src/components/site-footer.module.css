@@ -1,7 +1,7 @@
 .footer {
   margin-top: auto;
   padding-block: var(--space-xl);
-  background-color: #7b715a;
+  background-color: var(--color-accent-soft);
 }
 
 .footerText {

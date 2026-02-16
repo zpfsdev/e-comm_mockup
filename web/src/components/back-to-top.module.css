@@ -1,0 +1,27 @@
+/**
+ * Back-to-top FAB: appears on scroll, scrolls to top on click.
+ */
+
+.backToTop {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.backToTop:hover {
+  background-color: var(--color-accent-hover);
+  transform: scale(1.05);
+}

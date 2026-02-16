@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Outfit, Paytone_One, Nunito } from "next/font/google";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 import layoutStyles from "./layout.module.css";
 
@@ -37,11 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} ${paytoneOne.variable} ${nunito.variable}`}>
       <body className={outfit.className}>
-        <div className={layoutStyles.appWrapper}>
-          <SiteHeader />
-          <main className={layoutStyles.mainWrap}>{children}</main>
-          <SiteFooter />
-        </div>
+        <div className={layoutStyles.appWrapper}>{children}</div>
       </body>
     </html>
   );

@@ -18,6 +18,18 @@ function ensureString(value: unknown): string {
   throw new BadRequestException('Expected a string value.');
 }
 
+/** Ensures a request-derived value is a number to prevent type-confusion (e.g. array from repeated query params). */
+function ensureNumber(value: unknown): number {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  if (Array.isArray(value) && value.length > 0) {
+    const first: unknown = value[0];
+    if (typeof first === 'number' && !Number.isNaN(first)) return first;
+    const n = Number(first);
+    if (!Number.isNaN(n)) return n;
+  }
+  throw new BadRequestException('Expected a number.');
+}
+
 const PRODUCT_SELECT = {
   id: true,
   name: true,
@@ -125,14 +137,17 @@ export class ProductsService {
       name: ensureString(dto.name),
       description: ensureString(dto.description),
       imageUrl: ensureString(dto.imageUrl),
-      price: dto.price,
-      categoryId: dto.categoryId,
-      ageRangeId: dto.ageRangeId,
-      stockQuantity: dto.stockQuantity,
-      height: dto.height,
-      weight: dto.weight,
-      width: dto.width,
-      length: dto.length,
+      price: ensureNumber(dto.price),
+      categoryId: ensureNumber(dto.categoryId),
+      ageRangeId: ensureNumber(dto.ageRangeId),
+      stockQuantity:
+        dto.stockQuantity !== undefined
+          ? ensureNumber(dto.stockQuantity)
+          : undefined,
+      height: dto.height !== undefined ? ensureNumber(dto.height) : undefined,
+      weight: dto.weight !== undefined ? ensureNumber(dto.weight) : undefined,
+      width: dto.width !== undefined ? ensureNumber(dto.width) : undefined,
+      length: dto.length !== undefined ? ensureNumber(dto.length) : undefined,
       material: dto.material != null ? ensureString(dto.material) : undefined,
     };
     return this.create(seller.id, normalized);
@@ -184,7 +199,34 @@ export class ProductsService {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    return this.update(id, seller.id, dto);
+    const normalized: UpdateProductDto = {
+      ...(dto.name !== undefined && { name: ensureString(dto.name) }),
+      ...(dto.description !== undefined && {
+        description: ensureString(dto.description),
+      }),
+      ...(dto.imageUrl !== undefined && {
+        imageUrl: ensureString(dto.imageUrl),
+      }),
+      ...(dto.price !== undefined && { price: ensureNumber(dto.price) }),
+      ...(dto.categoryId !== undefined && {
+        categoryId: ensureNumber(dto.categoryId),
+      }),
+      ...(dto.ageRangeId !== undefined && {
+        ageRangeId: ensureNumber(dto.ageRangeId),
+      }),
+      ...(dto.stockQuantity !== undefined && {
+        stockQuantity: ensureNumber(dto.stockQuantity),
+      }),
+      ...(dto.height !== undefined && { height: ensureNumber(dto.height) }),
+      ...(dto.weight !== undefined && { weight: ensureNumber(dto.weight) }),
+      ...(dto.width !== undefined && { width: ensureNumber(dto.width) }),
+      ...(dto.length !== undefined && { length: ensureNumber(dto.length) }),
+      ...(dto.material !== undefined &&
+        dto.material !== null && {
+          material: ensureString(dto.material),
+        }),
+    };
+    return this.update(id, seller.id, normalized);
   }
 
   /**

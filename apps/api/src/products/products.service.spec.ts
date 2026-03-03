@@ -114,7 +114,10 @@ describe('ProductsService', () => {
   describe('remove', () => {
     it('soft-deletes product by setting status to Unavailable', async () => {
       mockPrisma.product.findUnique.mockResolvedValue({ sellerId: 10 });
-      mockPrisma.product.update.mockResolvedValue({ ...mockProduct, status: 'Unavailable' });
+      mockPrisma.product.update.mockResolvedValue({
+        ...mockProduct,
+        status: 'Unavailable',
+      });
 
       await service.remove(1, 10);
 

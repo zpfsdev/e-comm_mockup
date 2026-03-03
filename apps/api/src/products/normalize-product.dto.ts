@@ -2,23 +2,15 @@ import { BadRequestException } from '@nestjs/common';
 import type { CreateProductDto } from './dto/create-product.dto';
 import type { UpdateProductDto } from './dto/update-product.dto';
 
-/** Ensures a request-derived value is a string (prevents type-confusion e.g. array from repeated query params). */
+/** Ensures a request-derived value is a string. */
 export function ensureString(value: unknown): string {
   if (typeof value === 'string') return value;
-  if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string')
-    return value[0];
   throw new BadRequestException('Expected a string value.');
 }
 
-/** Ensures a request-derived value is a number (prevents type-confusion). */
+/** Ensures a request-derived value is a number. */
 export function ensureNumber(value: unknown): number {
   if (typeof value === 'number' && !Number.isNaN(value)) return value;
-  if (Array.isArray(value) && value.length > 0) {
-    const first: unknown = value[0];
-    if (typeof first === 'number' && !Number.isNaN(first)) return first;
-    const n = Number(first);
-    if (!Number.isNaN(n)) return n;
-  }
   throw new BadRequestException('Expected a number.');
 }
 

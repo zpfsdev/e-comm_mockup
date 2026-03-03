@@ -133,6 +133,12 @@ export class ProductsService {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
+    const stockQ = dto.stockQuantity;
+    const heightVal = dto.height;
+    const weightVal = dto.weight;
+    const widthVal = dto.width;
+    const lengthVal = dto.length;
+    const materialVal = dto.material;
     const normalized: CreateProductDto = {
       name: ensureString(dto.name),
       description: ensureString(dto.description),
@@ -140,15 +146,12 @@ export class ProductsService {
       price: ensureNumber(dto.price),
       categoryId: ensureNumber(dto.categoryId),
       ageRangeId: ensureNumber(dto.ageRangeId),
-      stockQuantity:
-        dto.stockQuantity !== undefined
-          ? ensureNumber(dto.stockQuantity)
-          : undefined,
-      height: dto.height !== undefined ? ensureNumber(dto.height) : undefined,
-      weight: dto.weight !== undefined ? ensureNumber(dto.weight) : undefined,
-      width: dto.width !== undefined ? ensureNumber(dto.width) : undefined,
-      length: dto.length !== undefined ? ensureNumber(dto.length) : undefined,
-      material: dto.material != null ? ensureString(dto.material) : undefined,
+      stockQuantity: stockQ !== undefined ? ensureNumber(stockQ) : undefined,
+      height: heightVal !== undefined ? ensureNumber(heightVal) : undefined,
+      weight: weightVal !== undefined ? ensureNumber(weightVal) : undefined,
+      width: widthVal !== undefined ? ensureNumber(widthVal) : undefined,
+      length: lengthVal !== undefined ? ensureNumber(lengthVal) : undefined,
+      material: materialVal != null ? ensureString(materialVal) : undefined,
     };
     return this.create(seller.id, normalized);
   }
@@ -199,6 +202,11 @@ export class ProductsService {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
+    const heightVal = dto.height;
+    const weightVal = dto.weight;
+    const widthVal = dto.width;
+    const lengthVal = dto.length;
+    const materialVal = dto.material;
     const normalized: UpdateProductDto = {
       ...(dto.name !== undefined && { name: ensureString(dto.name) }),
       ...(dto.description !== undefined && {
@@ -217,13 +225,13 @@ export class ProductsService {
       ...(dto.stockQuantity !== undefined && {
         stockQuantity: ensureNumber(dto.stockQuantity),
       }),
-      ...(dto.height !== undefined && { height: ensureNumber(dto.height) }),
-      ...(dto.weight !== undefined && { weight: ensureNumber(dto.weight) }),
-      ...(dto.width !== undefined && { width: ensureNumber(dto.width) }),
-      ...(dto.length !== undefined && { length: ensureNumber(dto.length) }),
-      ...(dto.material !== undefined &&
-        dto.material !== null && {
-          material: ensureString(dto.material),
+      ...(heightVal !== undefined && { height: ensureNumber(heightVal) }),
+      ...(weightVal !== undefined && { weight: ensureNumber(weightVal) }),
+      ...(widthVal !== undefined && { width: ensureNumber(widthVal) }),
+      ...(lengthVal !== undefined && { length: ensureNumber(lengthVal) }),
+      ...(materialVal !== undefined &&
+        materialVal !== null && {
+          material: ensureString(materialVal),
         }),
     };
     return this.update(id, seller.id, normalized);

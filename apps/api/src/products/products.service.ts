@@ -100,16 +100,22 @@ export class ProductsService {
   /**
    * Creates a new product for the given seller.
    * Accepts optional physical dimensions via `productDetail`.
+   * Uses explicit field assignment to prevent parameter tampering.
    */
   async create(sellerId: number, dto: CreateProductDto) {
-    const { height, weight, width, length, material, ...productData } = dto;
+    const { height, weight, width, length, material } = dto;
 
     return this.prisma.product.create({
       data: {
-        ...productData,
+        name: dto.name,
+        description: dto.description,
+        imageUrl: dto.imageUrl,
+        categoryId: dto.categoryId,
+        ageRangeId: dto.ageRangeId,
+        stockQuantity: dto.stockQuantity ?? 1,
         sellerId,
         price: new Prisma.Decimal(dto.price),
-        ...(height || weight || width || length || material
+        ...(height != null || weight != null || width != null || length != null || material != null
           ? { productDetail: { create: { height, weight, width, length, material } } }
           : {}),
       },
@@ -127,27 +133,35 @@ export class ProductsService {
    * Updates a product's fields.
    * Upserts `productDetail` when any dimension value is provided.
    * Throws `ForbiddenException` if the caller does not own the product.
+   * Uses explicit field assignment to prevent parameter tampering.
    */
   async update(id: number, sellerId: number, dto: UpdateProductDto) {
     await this.assertOwnership(id, sellerId);
-    const { height, weight, width, length, material, price, ...rest } = dto;
+    const { height, weight, width, length, material, price } = dto;
+
+    const data: Prisma.ProductUpdateInput = {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.description !== undefined && { description: dto.description }),
+      ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+      ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
+      ...(dto.ageRangeId !== undefined && { ageRangeId: dto.ageRangeId }),
+      ...(dto.stockQuantity !== undefined && { stockQuantity: dto.stockQuantity }),
+      ...(price !== undefined && { price: new Prisma.Decimal(price) }),
+      ...(height != null || weight != null || width != null || length != null || material != null
+        ? {
+            productDetail: {
+              upsert: {
+                create: { height, weight, width, length, material },
+                update: { height, weight, width, length, material },
+              },
+            },
+          }
+        : {}),
+    };
 
     return this.prisma.product.update({
       where: { id },
-      data: {
-        ...rest,
-        ...(price !== undefined && { price: new Prisma.Decimal(price) }),
-        ...(height || weight || width || length || material
-          ? {
-              productDetail: {
-                upsert: {
-                  create: { height, weight, width, length, material },
-                  update: { height, weight, width, length, material },
-                },
-              },
-            }
-          : {}),
-      },
+      data,
       select: PRODUCT_SELECT,
     });
   }

@@ -1,9 +1,22 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+
+/** Ensures a request-derived value is a string to prevent type-confusion (e.g. array from repeated query params). */
+function ensureString(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string')
+    return value[0];
+  throw new BadRequestException('Expected a string value.');
+}
 
 const PRODUCT_SELECT = {
   id: true,
@@ -38,13 +51,14 @@ export class ProductsService {
     const { search, categoryId, ageRangeId, page = 1, limit = 20 } = query;
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
+    const searchStr = search != null ? ensureString(search) : undefined;
 
     const where: Prisma.ProductWhereInput = {
       status: 'Available',
-      ...(search && {
+      ...(searchStr && {
         OR: [
-          { name: { contains: search } },
-          { description: { contains: search } },
+          { name: { contains: searchStr } },
+          { description: { contains: searchStr } },
         ],
       }),
       ...(categoryId && { categoryId }),
@@ -62,7 +76,13 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
-    return { products, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+    return {
+      products,
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   /**
@@ -70,7 +90,10 @@ export class ProductsService {
    * Throws `NotFoundException` when the product does not exist.
    */
   async findById(id: number) {
-    const product = await this.prisma.product.findUnique({ where: { id }, select: PRODUCT_SELECT });
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      select: PRODUCT_SELECT,
+    });
     if (!product) throw new NotFoundException('Product not found.');
     return product;
   }
@@ -87,14 +110,32 @@ export class ProductsService {
 
   /** Returns all products for the authenticated seller (resolves userId → sellerId). */
   async findByUserId(userId: number) {
-    const seller = await this.prisma.seller.findUniqueOrThrow({ where: { userId } });
+    const seller = await this.prisma.seller.findUniqueOrThrow({
+      where: { userId },
+    });
     return this.findBySeller(seller.id);
   }
 
   /** Creates a new product — resolves userId → sellerId internally. */
   async createForUser(userId: number, dto: CreateProductDto) {
-    const seller = await this.prisma.seller.findUniqueOrThrow({ where: { userId } });
-    return this.create(seller.id, dto);
+    const seller = await this.prisma.seller.findUniqueOrThrow({
+      where: { userId },
+    });
+    const normalized: CreateProductDto = {
+      name: ensureString(dto.name),
+      description: ensureString(dto.description),
+      imageUrl: ensureString(dto.imageUrl),
+      price: dto.price,
+      categoryId: dto.categoryId,
+      ageRangeId: dto.ageRangeId,
+      stockQuantity: dto.stockQuantity,
+      height: dto.height,
+      weight: dto.weight,
+      width: dto.width,
+      length: dto.length,
+      material: dto.material != null ? ensureString(dto.material) : undefined,
+    };
+    return this.create(seller.id, normalized);
   }
 
   /**
@@ -107,16 +148,31 @@ export class ProductsService {
 
     return this.prisma.product.create({
       data: {
-        name: dto.name,
-        description: dto.description,
-        imageUrl: dto.imageUrl,
+        name: ensureString(dto.name),
+        description: ensureString(dto.description),
+        imageUrl: ensureString(dto.imageUrl),
         categoryId: dto.categoryId,
         ageRangeId: dto.ageRangeId,
         stockQuantity: dto.stockQuantity ?? 1,
         sellerId,
         price: new Prisma.Decimal(dto.price),
-        ...(height != null || weight != null || width != null || length != null || material != null
-          ? { productDetail: { create: { height, weight, width, length, material } } }
+        ...(height != null ||
+        weight != null ||
+        width != null ||
+        length != null ||
+        material != null
+          ? {
+              productDetail: {
+                create: {
+                  height,
+                  weight,
+                  width,
+                  length,
+                  material:
+                    material != null ? ensureString(material) : undefined,
+                },
+              },
+            }
           : {}),
       },
       select: PRODUCT_SELECT,
@@ -125,7 +181,9 @@ export class ProductsService {
 
   /** Updates a product — resolves userId → sellerId internally. */
   async updateForUser(id: number, userId: number, dto: UpdateProductDto) {
-    const seller = await this.prisma.seller.findUniqueOrThrow({ where: { userId } });
+    const seller = await this.prisma.seller.findUniqueOrThrow({
+      where: { userId },
+    });
     return this.update(id, seller.id, dto);
   }
 
@@ -140,19 +198,43 @@ export class ProductsService {
     const { height, weight, width, length, material, price } = dto;
 
     const data: Prisma.ProductUpdateInput = {
-      ...(dto.name !== undefined && { name: dto.name }),
-      ...(dto.description !== undefined && { description: dto.description }),
-      ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+      ...(dto.name !== undefined && { name: ensureString(dto.name) }),
+      ...(dto.description !== undefined && {
+        description: ensureString(dto.description),
+      }),
+      ...(dto.imageUrl !== undefined && {
+        imageUrl: ensureString(dto.imageUrl),
+      }),
       ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
       ...(dto.ageRangeId !== undefined && { ageRangeId: dto.ageRangeId }),
-      ...(dto.stockQuantity !== undefined && { stockQuantity: dto.stockQuantity }),
+      ...(dto.stockQuantity !== undefined && {
+        stockQuantity: dto.stockQuantity,
+      }),
       ...(price !== undefined && { price: new Prisma.Decimal(price) }),
-      ...(height != null || weight != null || width != null || length != null || material != null
+      ...(height != null ||
+      weight != null ||
+      width != null ||
+      length != null ||
+      material != null
         ? {
             productDetail: {
               upsert: {
-                create: { height, weight, width, length, material },
-                update: { height, weight, width, length, material },
+                create: {
+                  height,
+                  weight,
+                  width,
+                  length,
+                  material:
+                    material != null ? ensureString(material) : undefined,
+                },
+                update: {
+                  height,
+                  weight,
+                  width,
+                  length,
+                  material:
+                    material != null ? ensureString(material) : undefined,
+                },
               },
             },
           }
@@ -168,7 +250,9 @@ export class ProductsService {
 
   /** Soft-deletes a product — resolves userId → sellerId internally. */
   async removeForUser(id: number, userId: number): Promise<void> {
-    const seller = await this.prisma.seller.findUniqueOrThrow({ where: { userId } });
+    const seller = await this.prisma.seller.findUniqueOrThrow({
+      where: { userId },
+    });
     return this.remove(id, seller.id);
   }
 
@@ -186,12 +270,16 @@ export class ProductsService {
   }
 
   /** Guards mutation endpoints — ensures the product belongs to the seller. */
-  private async assertOwnership(productId: number, sellerId: number): Promise<void> {
+  private async assertOwnership(
+    productId: number,
+    sellerId: number,
+  ): Promise<void> {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
       select: { sellerId: true },
     });
     if (!product) throw new NotFoundException('Product not found.');
-    if (product.sellerId !== sellerId) throw new ForbiddenException('You do not own this product.');
+    if (product.sellerId !== sellerId)
+      throw new ForbiddenException('You do not own this product.');
   }
 }

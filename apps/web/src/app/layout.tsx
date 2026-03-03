@@ -1,0 +1,40 @@
+import type { Metadata } from 'next';
+import { Outfit, Paytone_One } from 'next/font/google';
+import './globals.css';
+import { QueryProvider } from '@/providers/query-provider';
+import { AuthProvider } from '@/providers/auth-provider';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+
+const paytoneOne = Paytone_One({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-paytone-one',
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  title: 'Artistryx — Early Childhood Learning Products',
+  description:
+    'Premium early childhood learning treasures designed to inspire creativity and independence.',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={`${outfit.variable} ${paytoneOne.variable}`}>
+      <body>
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
+      </body>
+    </html>
+  );
+}

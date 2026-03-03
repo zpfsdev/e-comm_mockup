@@ -1,0 +1,501 @@
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 748;
+  min-height: 20rem;
+  overflow: hidden;
+}
+
+.heroImageSlot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.heroImageSlot .heroImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding-inline: var(--container-pad);
+}
+
+.heroContentBox {
+  max-width: 44rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  color: var(--color-accent);
+  margin: 0 0 var(--space-4);
+  white-space: nowrap;
+}
+
+.heroSubtitle {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.9375rem;
+  color: var(--color-text);
+  max-width: 34rem;
+  margin: 0 0 var(--space-8);
+  text-align: left;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-12);
+  min-height: 4rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.5vw, 2.25rem);
+  font-weight: 400;
+  color: var(--color-bg);
+  background-color: #7b715a;
+  border: none;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.ctaPrimary:hover {
+  background-color: #6b6350;
+  text-decoration: none;
+}
+
+/* ─── Shop by Category ────────────────────────────────────────────────────── */
+.categoryStripSection {
+  padding-block: var(--space-16);
+  padding-bottom: 0;
+  background-color: #7b715a;
+}
+
+.stripSection {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 517;
+  min-height: 12rem;
+  overflow: hidden;
+  margin-top: var(--space-16);
+}
+
+.stripImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ─── Section titles ──────────────────────────────────────────────────────── */
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-8);
+  color: var(--color-bg);
+  text-align: center;
+}
+
+.sectionTitleAccent {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  margin: 0;
+  color: var(--color-primary);
+  text-align: left;
+}
+
+.sectionTitleDark {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-8);
+  color: var(--color-text);
+  text-align: center;
+}
+
+/* ─── Category pills ──────────────────────────────────────────────────────── */
+.categoryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  justify-content: center;
+}
+
+.categoryPill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--color-bg);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  transition: color 0.15s ease;
+}
+
+.categoryPill:hover {
+  color: var(--color-cream);
+  text-decoration: none;
+}
+
+.categoryCircle {
+  width: 10.625rem;
+  height: 10.625rem;
+  border-radius: var(--radius-full);
+  border: none;
+  display: block;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.categoryPill:hover .categoryCircle {
+  opacity: 0.85;
+}
+
+.categoryLabel {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-bg);
+}
+
+/* ─── Shop by Age ─────────────────────────────────────────────────────────── */
+.ageBandSection {
+  padding-block: var(--space-16);
+  background-color: #dc8242;
+}
+
+.ageBandTitle {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-8);
+  color: var(--color-bg);
+  text-align: center;
+}
+
+.ageList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-6);
+}
+
+.age3 { background-color: #ece4b7; }
+.age5 { background-color: #fce4c7; }
+.age8 { background-color: #5ae79a; }
+
+.ageCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  padding: var(--space-6);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.ageCard:hover {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6), 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: scale(1.03);
+  text-decoration: none;
+}
+
+.ageLabel {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 12vw, 9rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.age3 .ageLabel { color: #b3a869; }
+.age5 .ageLabel { color: #a33e00; }
+.age8 .ageLabel { color: #247348; }
+
+/* ─── Product sections ────────────────────────────────────────────────────── */
+.section {
+  padding-block: var(--space-16);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: #b35a1a;
+  background-color: #fbd1a2;
+  border: 2px solid #ff751f;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.viewAll:hover {
+  filter: brightness(1.08);
+  transform: scale(1.02);
+  text-decoration: none;
+}
+
+.productGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+.productCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: var(--space-4);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.productCard:hover {
+  box-shadow: 0 4px 16px rgba(255, 117, 31, 0.15);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.productImageWrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+.productImage {
+  width: 100%;
+  aspect-ratio: 265 / 371;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+  background-color: var(--color-card-border);
+}
+
+.ageBadge {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  z-index: 1;
+}
+
+.productInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.productName {
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.productPrice {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.addToCart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff4e8;
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+  margin-top: auto;
+}
+
+.addToCart:hover {
+  background-color: var(--color-accent-hover);
+  text-decoration: none;
+}
+
+/* ─── Shop by Store ───────────────────────────────────────────────────────── */
+.storeList {
+  list-style: none;
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  justify-content: center;
+}
+
+.storeLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  transition: color 0.15s ease;
+}
+
+.storeLink:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.storeImageWrap {
+  position: relative;
+  width: 11.375rem;
+  height: 11.375rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-card-border);
+  border: 2px solid var(--color-card-border);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.storeLink:hover .storeImageWrap {
+  border-color: var(--color-primary);
+}
+
+.storeImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.storeName {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ─── Nurture CTA ─────────────────────────────────────────────────────────── */
+.nurtureCtaWrap {
+  border-radius: 50px;
+  border: 2px solid #7b715a;
+  overflow: hidden;
+}
+
+.ctaStrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-16);
+}
+
+.ctaStripText {
+  font-family: var(--font-brand), var(--font-body);
+  font-size: clamp(1.25rem, 3vw, 2.5rem);
+  font-weight: 400;
+  line-height: 2;
+  letter-spacing: -0.02em;
+  color: var(--color-secondary);
+  margin: 0;
+  text-align: center;
+  max-width: none;
+}
+
+/* ─── Skeleton ────────────────────────────────────────────────────────────── */
+.skeletonGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  .productGrid,
+  .skeletonGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ageList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .productGrid,
+  .skeletonGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .productGrid,
+  .skeletonGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .storeList {
+    justify-content: space-between;
+  }
+
+  .ctaStripText {
+    text-align: left;
+  }
+}

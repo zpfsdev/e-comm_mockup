@@ -1,0 +1,97 @@
+/**
+ * Cart: empty state and future list.
+ */
+
+.page {
+  min-height: 100%;
+  padding-block: var(--space-3xl);
+  background-color: var(--color-background);
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--space-md);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-inline: var(--space-lg);
+  }
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  margin-inline: auto;
+  margin-bottom: var(--space-lg);
+  color: var(--color-accent-soft);
+}
+
+.emptyIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.emptyTitle {
+  font-family: var(--font-display), var(--font-sans);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-md);
+}
+
+.emptyText {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  margin: 0 auto var(--space-2xl);
+  max-width: 28rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+  align-items: center;
+}
+
+.linkPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-2xl);
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.linkPrimary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.linkSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--color-accent-dark);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.linkSecondary:hover {
+  color: var(--color-accent-hover);
+}

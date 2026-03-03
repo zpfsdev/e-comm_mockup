@@ -1,0 +1,319 @@
+.page {
+  background-color: var(--color-background);
+  min-height: 100%;
+  padding-block: var(--space-2xl);
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+
+.headingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent-soft);
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+  text-decoration: none;
+}
+
+.backBtn:hover {
+  opacity: 0.7;
+  text-decoration: none;
+}
+
+.backBtn svg {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.heading {
+  font-family: var(--font-body);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-accent-soft);
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 28rem;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Item list ───────────────────────────────────────────────────────────── */
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.selectAllBar {
+  background-color: var(--color-background);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.cartItem {
+  background-color: var(--color-background);
+  border-radius: 15px;
+  padding: var(--space-4);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.storeMeta {
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.storeIndicator {
+  width: 0.5rem;
+  height: 1.25rem;
+  background-color: var(--color-accent-soft);
+  border-radius: 1px;
+}
+
+.itemImage {
+  width: 6.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background-color: var(--color-card-border);
+  flex-shrink: 0;
+}
+
+.itemDetails {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.itemName {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.itemStock {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #ff0000;
+}
+
+.itemRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.itemPrice {
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+/* ─── Quantity controls ───────────────────────────────────────────────────── */
+.qtyRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.qtyControls {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #744929;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #fbd1a2;
+  height: 1.5rem;
+}
+
+.qtyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 100%;
+  background-color: #fbd1a2;
+  border: none;
+  color: #744929;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  min-height: unset;
+  min-width: unset;
+  padding: 0;
+}
+
+.qtyBtn:hover:not(:disabled) {
+  background-color: #f0c08a;
+}
+
+.qtyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qtyValue {
+  min-width: 1.5rem;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: #744929;
+}
+
+.removeBtn {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  min-height: unset;
+  min-width: unset;
+}
+
+.removeBtn:hover {
+  opacity: 0.75;
+}
+
+/* ─── Order summary ───────────────────────────────────────────────────────── */
+.summary {
+  background-color: var(--color-background);
+  border-radius: 10px;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.summaryTitle {
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-accent-soft);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.summaryTotalAmount {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.summaryDivider {
+  height: 1px;
+  background-color: var(--color-card-border);
+}
+
+.checkoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-background);
+  background-color: var(--color-accent-soft);
+  border: none;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-height: 2.2rem;
+}
+
+.checkoutBtn:hover {
+  background-color: var(--color-accent);
+  text-decoration: none;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  padding-block: var(--space-16);
+}
+
+.emptyText {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: var(--color-text);
+  text-align: center;
+  margin: 0;
+  max-width: none;
+}
+
+.goShoppingBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem var(--space-8);
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: #ffffff;
+  background-color: #dc8242;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+  min-width: 12rem;
+}
+
+.goShoppingBtn:hover {
+  background-color: var(--color-accent);
+  text-decoration: none;
+}

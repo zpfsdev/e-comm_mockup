@@ -1,0 +1,245 @@
+.nav {
+  background-color: #ffffff;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: 0.375rem var(--container-pad);
+  gap: var(--space-6);
+}
+
+/* ─── Logo ───────────────────────────────────────────────────────────────── */
+.logo {
+  display: block;
+  line-height: 0;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoImage {
+  display: block;
+  height: auto;
+  width: auto;
+  max-height: 4.75rem;
+  object-fit: contain;
+}
+
+.logo:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+/* ─── Right actions: sell btn + icon group ────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+/* ─── Uniformly-spaced icon trio: search · profile · cart ────────────────── */
+.iconGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ─── All icon buttons share exact same box ──────────────────────────────── */
+.iconBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  min-height: unset;
+  min-width: unset;
+  padding: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--color-primary);
+}
+
+.initials {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-body);
+}
+
+/* ─── SVG icons ──────────────────────────────────────────────────────────── */
+.icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ─── Search: button + dropdown ──────────────────────────────────────────── */
+.searchWrapper {
+  position: relative;
+}
+
+.searchDropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: var(--space-3);
+  z-index: 201;
+  min-width: 16rem;
+}
+
+.searchInput {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-4);
+  width: 100%;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+}
+
+/* ─── Profile dropdown — JS-controlled hover ─────────────────────────────── */
+.dropdownWrapper {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 200;
+}
+
+.dropdownOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.dropdownArrow {
+  width: 0;
+  height: 0;
+  margin-inline: auto;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #7b715a;
+}
+
+.dropdownPanel {
+  background-color: #7b715a;
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  min-width: 9.5rem;
+  padding: var(--space-2) 0;
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  padding: 0.4rem var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: #ffffff;
+  background: none;
+  border: none;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: unset;
+  transition: opacity 0.12s ease;
+}
+
+.dropdownItem:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: var(--space-1) var(--space-4);
+}
+
+/* ─── Cart badge ─────────────────────────────────────────────────────────── */
+.cartBadge {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.1rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  background-color: var(--color-accent-soft);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+/* ─── START SELLING / MY STORE button ────────────────────────────────────── */
+.sellBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 var(--space-5);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #7b715a;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  min-width: unset;
+  min-height: unset;
+  transition: background-color var(--transition-fast);
+}
+
+.sellBtn:hover {
+  background-color: #6b6350;
+  text-decoration: none;
+}

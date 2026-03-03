@@ -1,0 +1,75 @@
+.page {
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: var(--space-12) var(--container-pad);
+}
+
+.pageHeader { margin-bottom: var(--space-10); }
+
+.heading {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  color: var(--color-primary);
+}
+
+.subheading { font-size: var(--text-base); color: var(--color-text-muted); margin-top: var(--space-2); }
+
+/* ─── Stats row ───────────────────────────────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+}
+@media (max-width: 900px)  { .statsGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px)  { .statsGrid { grid-template-columns: 1fr; } }
+
+.statCard {
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+.statLabel { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-2); }
+.statValue { font-family: var(--font-display); font-size: var(--text-3xl); color: var(--color-primary); }
+
+/* ─── Section ─────────────────────────────────────────────────────────────── */
+.sectionTitle { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-tertiary); margin-bottom: var(--space-6); }
+
+/* ─── Products table ──────────────────────────────────────────────────────── */
+.tableWrap { overflow-x: auto; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.table th {
+  background-color: var(--color-card-border);
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-card-border);
+  vertical-align: middle;
+}
+.table tr:hover td { background-color: var(--color-card-border); }
+
+.actionBtn {
+  font-size: var(--text-xs); font-weight: var(--weight-bold);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none; cursor: pointer;
+  min-height: unset; min-width: unset;
+  transition: opacity var(--transition-fast);
+}
+.actionBtn:hover { opacity: 0.8; }
+.editBtn   { background-color: var(--color-lemon); color: var(--color-lemon-text); }
+.deleteBtn { background-color: #ffe0e0; color: var(--color-error); }
+
+.addBtn { margin-bottom: var(--space-6); }
+
+.empty { text-align: center; padding: var(--space-8); color: var(--color-text-muted); }

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -9,26 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-
-/** Ensures a request-derived value is a string to prevent type-confusion (e.g. array from repeated query params). */
-function ensureString(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string')
-    return value[0];
-  throw new BadRequestException('Expected a string value.');
-}
-
-/** Ensures a request-derived value is a number to prevent type-confusion (e.g. array from repeated query params). */
-function ensureNumber(value: unknown): number {
-  if (typeof value === 'number' && !Number.isNaN(value)) return value;
-  if (Array.isArray(value) && value.length > 0) {
-    const first: unknown = value[0];
-    if (typeof first === 'number' && !Number.isNaN(first)) return first;
-    const n = Number(first);
-    if (!Number.isNaN(n)) return n;
-  }
-  throw new BadRequestException('Expected a number.');
-}
+import { ensureString } from './normalize-product.dto';
 
 const PRODUCT_SELECT = {
   id: true,
@@ -128,55 +108,25 @@ export class ProductsService {
     return this.findBySeller(seller.id);
   }
 
-  /** Creates a new product — resolves userId → sellerId internally. */
+  /** Creates a new product — resolves userId → sellerId. Caller must pass controller-normalized DTO. */
   async createForUser(userId: number, dto: CreateProductDto) {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    const {
-      name,
-      description,
-      imageUrl,
-      price,
-      categoryId,
-      ageRangeId,
-      stockQuantity: stockQ,
-      height: heightVal,
-      weight: weightVal,
-      width: widthVal,
-      length: lengthVal,
-      material: materialVal,
-    } = dto;
-    const normalized: CreateProductDto = {
-      name: ensureString(name),
-      description: ensureString(description),
-      imageUrl: ensureString(imageUrl),
-      price: ensureNumber(price),
-      categoryId: ensureNumber(categoryId),
-      ageRangeId: ensureNumber(ageRangeId),
-      stockQuantity: stockQ !== undefined ? ensureNumber(stockQ) : undefined,
-      height: heightVal !== undefined ? ensureNumber(heightVal) : undefined,
-      weight: weightVal !== undefined ? ensureNumber(weightVal) : undefined,
-      width: widthVal !== undefined ? ensureNumber(widthVal) : undefined,
-      length: lengthVal !== undefined ? ensureNumber(lengthVal) : undefined,
-      material: materialVal != null ? ensureString(materialVal) : undefined,
-    };
-    return this.create(seller.id, normalized);
+    return this.create(seller.id, dto);
   }
 
   /**
    * Creates a new product for the given seller.
-   * Accepts optional physical dimensions via `productDetail`.
-   * Uses explicit field assignment to prevent parameter tampering.
+   * Expects controller-normalized DTO (string/number only).
    */
   async create(sellerId: number, dto: CreateProductDto) {
     const { height, weight, width, length, material } = dto;
-
     return this.prisma.product.create({
       data: {
-        name: ensureString(dto.name),
-        description: ensureString(dto.description),
-        imageUrl: ensureString(dto.imageUrl),
+        name: dto.name,
+        description: dto.description,
+        imageUrl: dto.imageUrl,
         categoryId: dto.categoryId,
         ageRangeId: dto.ageRangeId,
         stockQuantity: dto.stockQuantity ?? 1,
@@ -194,8 +144,7 @@ export class ProductsService {
                   weight,
                   width,
                   length,
-                  material:
-                    material != null ? ensureString(material) : undefined,
+                  material: material ?? undefined,
                 },
               },
             }
@@ -205,71 +154,25 @@ export class ProductsService {
     });
   }
 
-  /** Updates a product — resolves userId → sellerId internally. */
+  /** Updates a product — resolves userId → sellerId. Caller must pass controller-normalized DTO. */
   async updateForUser(id: number, userId: number, dto: UpdateProductDto) {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    const {
-      name: nameVal,
-      description: descVal,
-      imageUrl: imageUrlVal,
-      price: priceVal,
-      categoryId: categoryIdVal,
-      ageRangeId: ageRangeIdVal,
-      stockQuantity: stockQVal,
-      height: heightVal,
-      weight: weightVal,
-      width: widthVal,
-      length: lengthVal,
-      material: materialVal,
-    } = dto;
-    const normalized: UpdateProductDto = {
-      ...(nameVal !== undefined && { name: ensureString(nameVal) }),
-      ...(descVal !== undefined && { description: ensureString(descVal) }),
-      ...(imageUrlVal !== undefined && {
-        imageUrl: ensureString(imageUrlVal),
-      }),
-      ...(priceVal !== undefined && { price: ensureNumber(priceVal) }),
-      ...(categoryIdVal !== undefined && {
-        categoryId: ensureNumber(categoryIdVal),
-      }),
-      ...(ageRangeIdVal !== undefined && {
-        ageRangeId: ensureNumber(ageRangeIdVal),
-      }),
-      ...(stockQVal !== undefined && {
-        stockQuantity: ensureNumber(stockQVal),
-      }),
-      ...(heightVal !== undefined && { height: ensureNumber(heightVal) }),
-      ...(weightVal !== undefined && { weight: ensureNumber(weightVal) }),
-      ...(widthVal !== undefined && { width: ensureNumber(widthVal) }),
-      ...(lengthVal !== undefined && { length: ensureNumber(lengthVal) }),
-      ...(materialVal !== undefined &&
-        materialVal !== null && {
-          material: ensureString(materialVal),
-        }),
-    };
-    return this.update(id, seller.id, normalized);
+    return this.update(id, seller.id, dto);
   }
 
   /**
-   * Updates a product's fields.
-   * Upserts `productDetail` when any dimension value is provided.
-   * Throws `ForbiddenException` if the caller does not own the product.
-   * Uses explicit field assignment to prevent parameter tampering.
+   * Updates a product's fields. Expects controller-normalized DTO.
+   * Upserts productDetail when any dimension is provided.
    */
   async update(id: number, sellerId: number, dto: UpdateProductDto) {
     await this.assertOwnership(id, sellerId);
     const { height, weight, width, length, material, price } = dto;
-
     const data: Prisma.ProductUpdateInput = {
-      ...(dto.name !== undefined && { name: ensureString(dto.name) }),
-      ...(dto.description !== undefined && {
-        description: ensureString(dto.description),
-      }),
-      ...(dto.imageUrl !== undefined && {
-        imageUrl: ensureString(dto.imageUrl),
-      }),
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.description !== undefined && { description: dto.description }),
+      ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
       ...(dto.ageRangeId !== undefined && { ageRangeId: dto.ageRangeId }),
       ...(dto.stockQuantity !== undefined && {
@@ -289,23 +192,20 @@ export class ProductsService {
                   weight,
                   width,
                   length,
-                  material:
-                    material != null ? ensureString(material) : undefined,
+                  material: material ?? undefined,
                 },
                 update: {
                   height,
                   weight,
                   width,
                   length,
-                  material:
-                    material != null ? ensureString(material) : undefined,
+                  material: material ?? undefined,
                 },
               },
             },
           }
         : {}),
     };
-
     return this.prisma.product.update({
       where: { id },
       data,

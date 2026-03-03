@@ -1,11 +1,15 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
 const mockProducts = [
   { id: 1, price: '199.00', stockQuantity: 10, sellerId: 5 },
-  { id: 2, price: '299.00', stockQuantity: 5,  sellerId: 6 },
+  { id: 2, price: '299.00', stockQuantity: 5, sellerId: 6 },
 ];
 
 const mockCreatedOrder = {
@@ -42,7 +46,9 @@ const mockPrisma = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
-  $transaction: jest.fn((callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)),
+  $transaction: jest.fn((callback: (tx: typeof mockTx) => Promise<unknown>) =>
+    callback(mockTx),
+  ),
 };
 
 describe('OrdersService', () => {
@@ -86,7 +92,9 @@ describe('OrdersService', () => {
       mockPrisma.userAddress.findFirst.mockResolvedValue({ id: 7 });
       mockTx.product.findMany.mockResolvedValue([mockProducts[0]]);
 
-      await expect(service.createOrder(42, inputCreateOrderDto)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.createOrder(42, inputCreateOrderDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when stock is insufficient', async () => {
@@ -98,7 +106,13 @@ describe('OrdersService', () => {
       mockTx.product.findMany.mockResolvedValue(lowStockProducts);
 
       await expect(
-        service.createOrder(42, { items: [{ productId: 1, quantity: 1 }, { productId: 2, quantity: 1 }], userAddressId: 7 }),
+        service.createOrder(42, {
+          items: [
+            { productId: 1, quantity: 1 },
+            { productId: 2, quantity: 1 },
+          ],
+          userAddressId: 7,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -110,10 +124,16 @@ describe('OrdersService', () => {
         orderItems: [{ id: 201, productId: 1, quantity: 2, price: '199.00' }],
       });
 
-      await service.createOrder(42, { items: [{ productId: 1, quantity: 2 }], userAddressId: 7 });
+      await service.createOrder(42, {
+        items: [{ productId: 1, quantity: 2 }],
+        userAddressId: 7,
+      });
 
       const commissionCall = mockTx.commission.create.mock.calls[0][0];
-      expect(Number(commissionCall.data.commissionAmount)).toBeCloseTo(199 * 2 * 0.05, 2);
+      expect(Number(commissionCall.data.commissionAmount)).toBeCloseTo(
+        199 * 2 * 0.05,
+        2,
+      );
     });
   });
 
@@ -149,7 +169,9 @@ describe('OrdersService', () => {
     it('throws NotFoundException when order is not found or belongs to another user', async () => {
       mockPrisma.order.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOrderById(100, 99)).rejects.toThrow(NotFoundException);
+      await expect(service.findOrderById(100, 99)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -162,12 +184,19 @@ describe('OrdersService', () => {
         product: { sellerId: 5 },
         order: { id: 100 },
       });
-      mockPrisma.orderItem.update.mockResolvedValue({ id: 201, orderItemStatus: 'Shipped' });
+      mockPrisma.orderItem.update.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'InTransit',
+      });
 
-      const actualResult = await service.updateOrderItemStatus(201, 5, 'Shipped');
+      const actualResult = await service.updateOrderItemStatus(
+        201,
+        5,
+        'InTransit',
+      );
 
       expect(mockPrisma.orderItem.update).toHaveBeenCalledTimes(1);
-      expect(actualResult.orderItemStatus).toBe('Shipped');
+      expect(actualResult.orderItemStatus).toBe('InTransit');
     });
 
     it('sets dateDelivered when status becomes Completed', async () => {
@@ -176,7 +205,10 @@ describe('OrdersService', () => {
         product: { sellerId: 5 },
         order: { id: 100 },
       });
-      mockPrisma.orderItem.update.mockResolvedValue({ id: 201, orderItemStatus: 'Completed' });
+      mockPrisma.orderItem.update.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Completed',
+      });
 
       await service.updateOrderItemStatus(201, 5, 'Completed');
 
@@ -191,13 +223,17 @@ describe('OrdersService', () => {
         order: { id: 100 },
       });
 
-      await expect(service.updateOrderItemStatus(201, 5, 'Shipped')).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.updateOrderItemStatus(201, 5, 'InTransit'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws NotFoundException when order item does not exist', async () => {
       mockPrisma.orderItem.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateOrderItemStatus(999, 5, 'Shipped')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.updateOrderItemStatus(999, 5, 'InTransit'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

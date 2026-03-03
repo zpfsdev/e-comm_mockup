@@ -15,17 +15,19 @@ interface OrderItem {
 
 interface Order {
   id: number;
-  orderStatus: string;
+  orderStatus: OrderStatusKey;
   totalAmount: number;
   orderDate: string;
   orderItems: OrderItem[];
 }
 
 const STATUS_CLASS = {
-  Pending:   styles.statusPending,
+  Pending: styles.statusPending,
   Completed: styles.statusCompleted,
   InTransit: styles.statusShipped,
 } as const;
+
+type OrderStatusKey = keyof typeof STATUS_CLASS;
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-PH', {

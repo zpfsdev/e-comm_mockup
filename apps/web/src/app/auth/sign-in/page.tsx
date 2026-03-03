@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
 import styles from '../auth.module.css';
 
 interface SignInPayload {
@@ -16,7 +16,7 @@ interface SignInPayload {
 
 interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
+  csrfToken?: string;
 }
 
 function EyeIcon() {
@@ -52,7 +52,9 @@ export default function SignInPage() {
     },
     onSuccess: (data) => {
       localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.csrfToken) {
+        sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
+      }
       document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
       const from = searchParams.get('from') ?? '/';
       router.push(from);

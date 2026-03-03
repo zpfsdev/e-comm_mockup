@@ -17,6 +17,8 @@ const SALT_ROUNDS = 12;
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  /** CSRF token for /auth/refresh; client sends it in X-CSRF-Token header. */
+  csrfToken: string;
   user: {
     id: number;
     email: string;
@@ -26,6 +28,9 @@ export interface AuthTokens {
     roles: string[];
   };
 }
+
+const CSRF_TOKEN_PURPOSE = 'csrf';
+const CSRF_TOKEN_EXPIRY = '7d';
 
 /** Handles account creation, credential validation, and JWT issuance. */
 @Injectable()
@@ -142,7 +147,7 @@ export class AuthService {
     });
   }
 
-  /** Constructs access & refresh tokens and shapes the user summary returned to the client. */
+  /** Constructs access, refresh, and CSRF tokens and shapes the user summary. */
   private buildTokenResponse(user: {
     id: number;
     email: string;
@@ -159,10 +164,15 @@ export class AuthService {
       { ...payload, ver: user.refreshTokenVersion },
       { expiresIn: '7d' },
     );
+    const csrfToken = this.jwtService.sign(
+      { sub: user.id, purpose: CSRF_TOKEN_PURPOSE },
+      { expiresIn: CSRF_TOKEN_EXPIRY },
+    );
 
     return {
       accessToken,
       refreshToken,
+      csrfToken,
       user: {
         id: user.id,
         email: user.email,
@@ -174,12 +184,30 @@ export class AuthService {
     };
   }
 
-  /** Issues a new access token from a valid refresh token. */
-  async refresh(refreshToken: string): Promise<{ accessToken: string }> {
+  /**
+   * Issues a new access token from a valid refresh token.
+   * Requires csrfToken to match the user from the refresh token (CSRF protection).
+   */
+  async refresh(
+    refreshToken: string,
+    csrfToken: string | undefined,
+  ): Promise<{ accessToken: string }> {
     try {
+      if (!csrfToken) {
+        throw new UnauthorizedException('CSRF token required.');
+      }
+      const csrfPayload = this.jwtService.verify<{ sub: number; purpose?: string }>(
+        csrfToken,
+      );
+      if (csrfPayload.purpose !== CSRF_TOKEN_PURPOSE) {
+        throw new UnauthorizedException('Invalid CSRF token.');
+      }
       const payload = this.jwtService.verify<JwtPayload & { ver?: number }>(
         refreshToken,
       );
+      if (payload.sub !== csrfPayload.sub) {
+        throw new UnauthorizedException('Invalid refresh token.');
+      }
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         include: { userRoles: { include: { role: true } } },

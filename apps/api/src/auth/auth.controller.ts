@@ -32,7 +32,6 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
-    // Do not expose refreshToken in the response body.
     const { refreshToken, ...safeTokens } = tokens;
     return safeTokens;
   }
@@ -63,7 +62,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token using a refresh token' })
   refresh(@Req() req: Request): Promise<{ accessToken: string }> {
     const token = req.cookies?.refreshToken;
-    return this.authService.refresh(token ?? '');
+    const csrfToken = req.headers['x-csrf-token'] as string | undefined;
+    return this.authService.refresh(token ?? '', csrfToken);
   }
 
   @Get('me')

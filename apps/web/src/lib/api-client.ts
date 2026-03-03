@@ -2,6 +2,9 @@ import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from './constants';
 
+/** SessionStorage key for CSRF token (sent in X-CSRF-Token on /auth/refresh). */
+export const CSRF_TOKEN_KEY = 'csrfToken';
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -55,6 +58,7 @@ apiClient.interceptors.response.use(
 
     if (!localStorage.getItem('accessToken')) {
       localStorage.removeItem('accessToken');
+      sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
       window.location.href = '/auth/sign-in';
       return Promise.reject(error);
@@ -74,10 +78,16 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
+      const csrfToken =
+        typeof window !== 'undefined' ? sessionStorage.getItem(CSRF_TOKEN_KEY) : null;
       const { data } = await axios.post<{ accessToken: string }>(
         `${API_BASE_URL}/auth/refresh`,
         {},
-        { withCredentials: true },
+        {
+          withCredentials: true,
+          headers:
+            csrfToken != null ? { 'X-CSRF-Token': csrfToken } : undefined,
+        },
       );
       const { accessToken } = data;
       localStorage.setItem('accessToken', accessToken);
@@ -89,6 +99,7 @@ apiClient.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       localStorage.removeItem('accessToken');
+      sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
       window.location.href = '/auth/sign-in';
       return Promise.reject(refreshError);

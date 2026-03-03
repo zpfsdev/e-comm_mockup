@@ -133,19 +133,27 @@ export class ProductsService {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    const stockQ = dto.stockQuantity;
-    const heightVal = dto.height;
-    const weightVal = dto.weight;
-    const widthVal = dto.width;
-    const lengthVal = dto.length;
-    const materialVal = dto.material;
+    const {
+      name,
+      description,
+      imageUrl,
+      price,
+      categoryId,
+      ageRangeId,
+      stockQuantity: stockQ,
+      height: heightVal,
+      weight: weightVal,
+      width: widthVal,
+      length: lengthVal,
+      material: materialVal,
+    } = dto;
     const normalized: CreateProductDto = {
-      name: ensureString(dto.name),
-      description: ensureString(dto.description),
-      imageUrl: ensureString(dto.imageUrl),
-      price: ensureNumber(dto.price),
-      categoryId: ensureNumber(dto.categoryId),
-      ageRangeId: ensureNumber(dto.ageRangeId),
+      name: ensureString(name),
+      description: ensureString(description),
+      imageUrl: ensureString(imageUrl),
+      price: ensureNumber(price),
+      categoryId: ensureNumber(categoryId),
+      ageRangeId: ensureNumber(ageRangeId),
       stockQuantity: stockQ !== undefined ? ensureNumber(stockQ) : undefined,
       height: heightVal !== undefined ? ensureNumber(heightVal) : undefined,
       weight: weightVal !== undefined ? ensureNumber(weightVal) : undefined,
@@ -202,28 +210,35 @@ export class ProductsService {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    const heightVal = dto.height;
-    const weightVal = dto.weight;
-    const widthVal = dto.width;
-    const lengthVal = dto.length;
-    const materialVal = dto.material;
+    const {
+      name: nameVal,
+      description: descVal,
+      imageUrl: imageUrlVal,
+      price: priceVal,
+      categoryId: categoryIdVal,
+      ageRangeId: ageRangeIdVal,
+      stockQuantity: stockQVal,
+      height: heightVal,
+      weight: weightVal,
+      width: widthVal,
+      length: lengthVal,
+      material: materialVal,
+    } = dto;
     const normalized: UpdateProductDto = {
-      ...(dto.name !== undefined && { name: ensureString(dto.name) }),
-      ...(dto.description !== undefined && {
-        description: ensureString(dto.description),
+      ...(nameVal !== undefined && { name: ensureString(nameVal) }),
+      ...(descVal !== undefined && { description: ensureString(descVal) }),
+      ...(imageUrlVal !== undefined && {
+        imageUrl: ensureString(imageUrlVal),
       }),
-      ...(dto.imageUrl !== undefined && {
-        imageUrl: ensureString(dto.imageUrl),
+      ...(priceVal !== undefined && { price: ensureNumber(priceVal) }),
+      ...(categoryIdVal !== undefined && {
+        categoryId: ensureNumber(categoryIdVal),
       }),
-      ...(dto.price !== undefined && { price: ensureNumber(dto.price) }),
-      ...(dto.categoryId !== undefined && {
-        categoryId: ensureNumber(dto.categoryId),
+      ...(ageRangeIdVal !== undefined && {
+        ageRangeId: ensureNumber(ageRangeIdVal),
       }),
-      ...(dto.ageRangeId !== undefined && {
-        ageRangeId: ensureNumber(dto.ageRangeId),
-      }),
-      ...(dto.stockQuantity !== undefined && {
-        stockQuantity: ensureNumber(dto.stockQuantity),
+      ...(stockQVal !== undefined && {
+        stockQuantity: ensureNumber(stockQVal),
       }),
       ...(heightVal !== undefined && { height: ensureNumber(heightVal) }),
       ...(weightVal !== undefined && { weight: ensureNumber(weightVal) }),

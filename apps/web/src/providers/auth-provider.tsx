@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
 
 interface User {
   id: number;
@@ -48,12 +48,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(res.data);
         document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
       })
-      .catch(() => localStorage.removeItem('accessToken'))
+      .catch(() => {
+        localStorage.removeItem('accessToken');
+        sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
   const logout = useCallback((): void => {
     localStorage.removeItem('accessToken');
+    sessionStorage.removeItem(CSRF_TOKEN_KEY);
     document.cookie = 'session=; path=/; max-age=0';
     setUser(null);
     window.location.href = '/';

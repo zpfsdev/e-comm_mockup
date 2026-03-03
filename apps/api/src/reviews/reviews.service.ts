@@ -27,7 +27,12 @@ export class ReviewsService {
     }
 
     return this.prisma.review.create({
-      data: { userId, orderItemId, ...dto },
+      data: {
+        userId,
+        orderItemId,
+        rating: dto.rating,
+        comment: dto.comment,
+      },
     });
   }
 

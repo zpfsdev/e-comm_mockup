@@ -44,7 +44,12 @@ export class SellersService {
 
     return this.prisma.$transaction(async (tx) => {
       const seller = await tx.seller.create({
-        data: { userId, ...dto },
+        data: {
+          userId,
+          shopName: dto.shopName,
+          shopDescription: dto.shopDescription,
+          shopLogoUrl: dto.shopLogoUrl,
+        },
       });
       await tx.userRole.upsert({
         where: { userId_roleId: { userId, roleId: sellerRole.id } },

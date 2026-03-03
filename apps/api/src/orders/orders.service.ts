@@ -27,21 +27,31 @@ export class OrdersService {
    * 4. Decrements stock for each product.
    * 5. Creates `Commission` records (5%) for the seller of each item.
    * 6. Clears the user's cart.
+   *
+   * Rollback: If any step throws (e.g. BadRequestException, DB error), Prisma aborts the
+   * transaction and rolls back all writes. No partial orders or stock updates are committed.
    */
   async createOrder(userId: number, dto: CreateOrderDto) {
     if (!dto.items.length) {
       throw new BadRequestException('Order must contain at least one item.');
     }
 
-    if ((dto.userAddressId && dto.deliveryAddress) || (!dto.userAddressId && !dto.deliveryAddress)) {
-      throw new BadRequestException('Provide either userAddressId or deliveryAddress, but not both.');
+    if (
+      (dto.userAddressId && dto.deliveryAddress) ||
+      (!dto.userAddressId && !dto.deliveryAddress)
+    ) {
+      throw new BadRequestException(
+        'Provide either userAddressId or deliveryAddress, but not both.',
+      );
     }
 
     const productIds = dto.items.map((i) => i.productId);
 
     const uniqueProductIds = new Set(productIds);
     if (uniqueProductIds.size !== productIds.length) {
-      throw new BadRequestException('Duplicate product entries in order items are not allowed.');
+      throw new BadRequestException(
+        'Duplicate product entries in order items are not allowed.',
+      );
     }
 
     if (dto.userAddressId) {
@@ -49,7 +59,9 @@ export class OrdersService {
         where: { id: dto.userAddressId, userId },
       });
       if (!userAddress) {
-        throw new ForbiddenException('The specified address does not belong to your account.');
+        throw new ForbiddenException(
+          'The specified address does not belong to your account.',
+        );
       }
     }
 
@@ -63,12 +75,16 @@ export class OrdersService {
         throw new BadRequestException('One or more products are unavailable.');
       }
 
-      const quantityMap = new Map(dto.items.map((i) => [i.productId, i.quantity]));
+      const quantityMap = new Map(
+        dto.items.map((i) => [i.productId, i.quantity]),
+      );
 
       for (const product of products) {
         const qty = quantityMap.get(product.id) ?? 0;
         if (product.stockQuantity < qty) {
-          throw new BadRequestException(`Insufficient stock for product ${product.id}.`);
+          throw new BadRequestException(
+            `Insufficient stock for product ${product.id}.`,
+          );
         }
       }
 
@@ -117,7 +133,9 @@ export class OrdersService {
         products.map((product) =>
           tx.product.update({
             where: { id: product.id },
-            data: { stockQuantity: { decrement: quantityMap.get(product.id) ?? 0 } },
+            data: {
+              stockQuantity: { decrement: quantityMap.get(product.id) ?? 0 },
+            },
           }),
         ),
       );
@@ -143,30 +161,41 @@ export class OrdersService {
     });
   }
 
-  /** Returns a paginated list of orders for a user, newest first. */
+  /** Returns a paginated list of orders for a user, newest first, with total/page metadata. */
   async findUserOrders(userId: number, page = 1, limit = 20) {
     const MAX_ORDER_PAGE_SIZE = 50;
     const safeLimit = Math.min(limit, MAX_ORDER_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
-    return this.prisma.order.findMany({
-      where: { userId },
-      include: {
-        orderItems: {
-          include: {
-            product: { select: { id: true, name: true, imageUrl: true } },
+    const where = { userId };
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          orderItems: {
+            include: {
+              product: { select: { id: true, name: true, imageUrl: true } },
+            },
+          },
+          payment: true,
+          userAddress: {
+            include: {
+              address: { include: { barangay: { include: { city: true } } } },
+            },
           },
         },
-        payment: true,
-        userAddress: {
-          include: {
-            address: { include: { barangay: { include: { city: true } } } },
-          },
-        },
-      },
-      orderBy: { orderDate: 'desc' },
-      take: safeLimit,
-      skip,
-    });
+        orderBy: { orderDate: 'desc' },
+        take: safeLimit,
+        skip,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return {
+      orders,
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   /**
@@ -209,7 +238,9 @@ export class OrdersService {
     userId: number,
     status: OrderItemStatus,
   ) {
-    const seller = await this.prisma.seller.findUniqueOrThrow({ where: { userId } });
+    const seller = await this.prisma.seller.findUniqueOrThrow({
+      where: { userId },
+    });
     return this.updateOrderItemStatus(orderItemId, seller.id, status);
   }
 

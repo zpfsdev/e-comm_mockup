@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -35,6 +36,8 @@ const CSRF_TOKEN_EXPIRY = '7d';
 /** Handles account creation, credential validation, and JWT issuance. */
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -196,9 +199,10 @@ export class AuthService {
       if (!csrfToken) {
         throw new UnauthorizedException('CSRF token required.');
       }
-      const csrfPayload = this.jwtService.verify<{ sub: number; purpose?: string }>(
-        csrfToken,
-      );
+      const csrfPayload = this.jwtService.verify<{
+        sub: number;
+        purpose?: string;
+      }>(csrfToken);
       if (csrfPayload.purpose !== CSRF_TOKEN_PURPOSE) {
         throw new UnauthorizedException('Invalid CSRF token.');
       }
@@ -225,8 +229,11 @@ export class AuthService {
         expiresIn: '15m',
       });
       return { accessToken };
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token.');
+    } catch (err) {
+      this.logger.debug(err);
+      const ex = new UnauthorizedException('Invalid refresh token.');
+      if (err instanceof Error) (ex as Error & { cause?: unknown }).cause = err;
+      throw ex;
     }
   }
 }

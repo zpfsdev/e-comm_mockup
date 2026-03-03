@@ -38,13 +38,14 @@ function formatDate(dateStr: string): string {
 }
 
 export default function OrdersPage() {
-  const { data: orders = [], isLoading, isError } = useQuery<Order[]>({
+  const { data: ordersResponse, isLoading, isError } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const { data } = await apiClient.get<Order[]>('/orders');
+      const { data } = await apiClient.get<{ orders: Order[]; total: number; page: number; limit: number; totalPages: number }>('/orders');
       return data;
     },
   });
+  const orders = ordersResponse?.orders ?? [];
 
   if (isError) {
     return (

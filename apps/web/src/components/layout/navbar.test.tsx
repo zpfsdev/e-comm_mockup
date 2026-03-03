@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { Navbar } from './navbar';
 
 jest.mock('next/image', () => {
-  return (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} />;
+  return ({ priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => (
+    <img {...props} alt={props.alt ?? ''} />
+  );
 });
 
 jest.mock('next/link', () => {

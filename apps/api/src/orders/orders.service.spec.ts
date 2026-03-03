@@ -41,6 +41,7 @@ const mockPrisma = {
   order: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
+    count: jest.fn(),
   },
   orderItem: {
     findUnique: jest.fn(),
@@ -140,18 +141,28 @@ describe('OrdersService', () => {
   // ─── findUserOrders ──────────────────────────────────────────────────────────
 
   describe('findUserOrders', () => {
-    it('returns all orders for a user, newest first', async () => {
+    it('returns paginated orders with total and page metadata', async () => {
       mockPrisma.order.findMany.mockResolvedValue([mockCreatedOrder]);
+      mockPrisma.order.count.mockResolvedValue(1);
 
-      const actualResult = await service.findUserOrders(42);
+      const actualResult = await service.findUserOrders(42, 1, 20);
 
-      expect(actualResult).toHaveLength(1);
+      expect(actualResult).toEqual(
+        expect.objectContaining({
+          orders: [mockCreatedOrder],
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        }),
+      );
       expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { userId: 42 },
           orderBy: { orderDate: 'desc' },
         }),
       );
+      expect(mockPrisma.order.count).toHaveBeenCalledWith({ where: { userId: 42 } });
     });
   });
 

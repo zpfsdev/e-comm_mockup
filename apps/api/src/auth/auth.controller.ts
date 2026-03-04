@@ -69,10 +69,27 @@ export class AuthController {
     return safeTokens;
   }
 
+  /**
+   * Issues a new access token using the HTTP-only `refreshToken` cookie.
+   *
+   * **Cookie-only mechanism** — there is no body payload for this endpoint.
+   * The browser automatically sends the `refreshToken` cookie (set on login/register)
+   * because `withCredentials: true` is used on the client.
+   *
+   * **CSRF protection** — the caller must include the CSRF token received at login
+   * in the `X-CSRF-Token` request header.  Without it the request is rejected with 401.
+   *
+   * @returns `{ accessToken }` — a fresh 15-minute JWT access token.
+   */
   @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token using a refresh token' })
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description:
+      'Cookie-only flow: reads `refreshToken` from HttpOnly cookie. ' +
+      'Requires the CSRF token (received at login) in the `X-CSRF-Token` header.',
+  })
   refresh(
     @Req()
     req: Request & {

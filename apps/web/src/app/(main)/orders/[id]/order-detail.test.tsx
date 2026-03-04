@@ -1,0 +1,96 @@
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/react';
+import OrderDetailPage from './page';
+
+jest.mock('next/image', () => {
+  const MockImage = ({
+    priority: _priority,
+    fill: _fill,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & {
+    priority?: boolean;
+    fill?: boolean;
+  }) => <img {...props} alt={props.alt ?? ''} />;
+  MockImage.displayName = 'MockNextImage';
+  return MockImage;
+});
+
+jest.mock('next/link', () => {
+  const MockLink = ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  );
+  MockLink.displayName = 'MockNextLink';
+  return MockLink;
+});
+
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: jest.fn(),
+}));
+
+jest.mock('@/lib/api-client', () => ({
+  apiClient: { get: jest.fn() },
+}));
+
+const mockOrder = {
+  id: 101,
+  orderStatus: 'Pending' as const,
+  totalAmount: '498.00',
+  shippingFee: '58.00',
+  orderDate: '2026-01-15T10:00:00Z',
+  notes: 'Leave at door',
+  orderItems: [
+    {
+      id: 1,
+      quantity: 2,
+      price: '199.00',
+      orderItemStatus: 'Pending',
+      product: { id: 5, name: 'Story Book', imageUrl: undefined },
+    },
+  ],
+  payment: { paymentStatus: 'Unpaid', paymentAmount: '498.00' },
+  userAddress: undefined,
+};
+
+describe('OrderDetailPage', () => {
+  const useQueryMock = () =>
+    (jest.requireMock('@tanstack/react-query') as { useQuery: jest.Mock }).useQuery;
+
+  const inputParams = { id: '101' };
+
+  it('shows loading skeleton while fetching', () => {
+    useQueryMock().mockReturnValue({ data: undefined, isLoading: true, error: null });
+
+    render(<OrderDetailPage params={inputParams} />);
+
+    expect(screen.queryByText(/order #101/i)).not.toBeInTheDocument();
+  });
+
+  it('renders order details when data is available', () => {
+    useQueryMock().mockReturnValue({ data: mockOrder, isLoading: false, error: null });
+
+    render(<OrderDetailPage params={inputParams} />);
+
+    expect(screen.getByText(/order #101/i)).toBeInTheDocument();
+    expect(screen.getByText(/story book/i)).toBeInTheDocument();
+    expect(screen.getByText(/unpaid/i)).toBeInTheDocument();
+    expect(screen.getByText(/leave at door/i)).toBeInTheDocument();
+  });
+
+  it('shows not found message when order is null', () => {
+    useQueryMock().mockReturnValue({ data: null, isLoading: false, error: new Error('Not found') });
+
+    render(<OrderDetailPage params={inputParams} />);
+
+    expect(screen.getByText(/order not found/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to orders/i })).toBeInTheDocument();
+  });
+});

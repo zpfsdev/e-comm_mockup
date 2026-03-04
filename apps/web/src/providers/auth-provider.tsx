@@ -47,6 +47,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .then((res) => {
         setUser(res.data);
         document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
+        const at = localStorage.getItem('accessToken');
+        if (at) {
+          document.cookie = `at=${at}; path=/; SameSite=Strict; max-age=900`;
+        }
       })
       .catch(() => {
         localStorage.removeItem('accessToken');
@@ -59,6 +63,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('accessToken');
     sessionStorage.removeItem(CSRF_TOKEN_KEY);
     document.cookie = 'session=; path=/; max-age=0';
+    document.cookie = 'at=; path=/; max-age=0';
     setUser(null);
     window.location.href = '/';
   }, []);

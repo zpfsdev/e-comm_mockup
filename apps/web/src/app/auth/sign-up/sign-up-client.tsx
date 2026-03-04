@@ -70,6 +70,7 @@ export default function SignUpClientPage() {
         sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
       }
       document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
+      document.cookie = `at=${data.accessToken}; path=/; SameSite=Strict; max-age=900`;
       const from = searchParams.get('from') ?? '/';
       router.push(from);
     },

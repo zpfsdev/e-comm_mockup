@@ -3,9 +3,14 @@ import { render, screen } from '@testing-library/react';
 import CartPage from './page';
 
 jest.mock('next/image', () => {
-  const MockImage = (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img {...props} alt={props.alt ?? ''} />
-  );
+  const MockImage = ({
+    priority: _priority,
+    fill: _fill,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & {
+    priority?: boolean;
+    fill?: boolean;
+  }) => <img {...props} alt={props.alt ?? ''} />;
   MockImage.displayName = 'MockNextImage';
   return MockImage;
 });

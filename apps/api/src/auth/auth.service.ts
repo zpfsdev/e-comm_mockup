@@ -92,17 +92,13 @@ export class AuthService {
       include: { userRoles: { include: { role: true } } },
     });
 
-    if (!user) {
+    if (!user || user.status === 'Inactive') {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
-    }
-
-    if (user.status === 'Inactive') {
-      throw new UnauthorizedException('Account is inactive.');
     }
 
     await this.prisma.user.update({

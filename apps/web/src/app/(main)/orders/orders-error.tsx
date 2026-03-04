@@ -10,6 +10,7 @@ export function OrdersError() {
     <div className={styles.page}>
       <div style={{ padding: 'var(--space-8)' }}>
         <p
+          role="alert"
           style={{
             color: 'var(--color-error, #ef4444)',
             marginBottom: 'var(--space-3)',

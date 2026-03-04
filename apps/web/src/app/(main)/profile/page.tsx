@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -42,6 +42,13 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<EditForm>({ firstName: '', middleName: '', lastName: '', contactNumber: '', profilePictureUrl: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, []);
 
   const { data: profile, isLoading, isError } = useQuery<UserProfile>({
     queryKey: ['profile'],
@@ -70,7 +77,8 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       setFeedback({ type: 'success', message: 'Profile updated successfully.' });
-      setTimeout(() => setFeedback(null), 4000);
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = setTimeout(() => setFeedback(null), 4000);
     },
     onError: () => {
       setFeedback({ type: 'error', message: 'Failed to update profile. Please try again.' });
@@ -79,13 +87,13 @@ export default function ProfilePage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const payload: Partial<EditForm> = {};
-    if (form.firstName)        payload.firstName        = form.firstName;
-    if (form.middleName)       payload.middleName       = form.middleName;
-    if (form.lastName)         payload.lastName         = form.lastName;
-    if (form.contactNumber)    payload.contactNumber    = form.contactNumber;
-    if (form.profilePictureUrl) payload.profilePictureUrl = form.profilePictureUrl;
-    mutation.mutate(payload);
+    mutation.mutate({
+      ...(form.firstName && { firstName: form.firstName }),
+      ...(form.lastName && { lastName: form.lastName }),
+      middleName: form.middleName,
+      contactNumber: form.contactNumber,
+      profilePictureUrl: form.profilePictureUrl,
+    });
   }
 
   const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : '';

@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProductDetail } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -177,6 +173,7 @@ export class ProductsService {
 
   /**
    * Updates a product's fields. Expects controller-normalized DTO.
+   * Ownership check is folded into the WHERE clause so the read and write are atomic.
    * Upserts productDetail when any dimension is provided.
    */
   async update(
@@ -184,7 +181,6 @@ export class ProductsService {
     sellerId: number,
     dto: UpdateProductDto,
   ): Promise<ProductDto> {
-    await this.assertOwnership(id, sellerId);
     const { height, weight, width, length, material, price } = dto;
     const data: Prisma.ProductUpdateInput = {
       ...(dto.name !== undefined && { name: dto.name }),
@@ -223,12 +219,22 @@ export class ProductsService {
           }
         : {}),
     };
-    const product = await this.prisma.product.update({
-      where: { id },
-      data,
-      select: PRODUCT_SELECT,
-    });
-    return this.mapToProductDto(product);
+    try {
+      const product = await this.prisma.product.update({
+        where: { id, sellerId },
+        data,
+        select: PRODUCT_SELECT,
+      });
+      return this.mapToProductDto(product);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException('Product not found.');
+      }
+      throw err;
+    }
   }
 
   /** Soft-deletes a product — resolves userId → sellerId internally. */
@@ -242,14 +248,23 @@ export class ProductsService {
   /**
    * Soft-deletes a product by setting its status to `Unavailable`.
    * Physical record is retained for order history integrity.
-   * Throws `ForbiddenException` if the caller does not own the product.
+   * Ownership check is atomic with the write — sellerId is in the WHERE clause.
    */
   async remove(id: number, sellerId: number): Promise<void> {
-    await this.assertOwnership(id, sellerId);
-    await this.prisma.product.update({
-      where: { id },
-      data: { status: 'Unavailable' },
-    });
+    try {
+      await this.prisma.product.update({
+        where: { id, sellerId },
+        data: { status: 'Unavailable' },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException('Product not found.');
+      }
+      throw err;
+    }
   }
 
   private mapToProductDto(product: {
@@ -319,18 +334,5 @@ export class ProductsService {
           }
         : null,
     };
-  }
-  /** Guards mutation endpoints — ensures the product belongs to the seller. */
-  private async assertOwnership(
-    productId: number,
-    sellerId: number,
-  ): Promise<void> {
-    const product = await this.prisma.product.findUnique({
-      where: { id: productId },
-      select: { sellerId: true },
-    });
-    if (!product) throw new NotFoundException('Product not found.');
-    if (product.sellerId !== sellerId)
-      throw new ForbiddenException('You do not own this product.');
   }
 }

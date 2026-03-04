@@ -160,21 +160,16 @@ export class CartService {
     );
   }
 
-  /** Deletes a single item from the cart. */
+  /** Deletes a single item from the cart. Uses a transaction so findUniqueOrThrow and delete are atomic. */
   async removeItem(userId: number, productId: number): Promise<void> {
-    const cart = await this.prisma.cart.findUniqueOrThrow({
-      where: { userId },
-    });
-    const existingItem = await this.prisma.cartItem.findUnique({
-      where: { cartId_productId: { cartId: cart.id, productId } },
-      select: { id: true },
-    });
-    if (!existingItem) {
-      throw new NotFoundException('Cart item not found.');
-    }
-
-    await this.prisma.cartItem.delete({
-      where: { cartId_productId: { cartId: cart.id, productId } },
+    await this.prisma.$transaction(async (tx) => {
+      const cart = await tx.cart.findUniqueOrThrow({ where: { userId } });
+      const deleted = await tx.cartItem.deleteMany({
+        where: { cartId: cart.id, productId },
+      });
+      if (deleted.count === 0) {
+        throw new NotFoundException('Cart item not found.');
+      }
     });
   }
 

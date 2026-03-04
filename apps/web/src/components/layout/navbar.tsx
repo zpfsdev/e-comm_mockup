@@ -33,6 +33,12 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    };
+  }, []);
+
   function handleSearchSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (searchQuery.trim()) {

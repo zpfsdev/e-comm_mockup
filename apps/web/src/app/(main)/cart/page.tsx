@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +22,19 @@ interface Cart {
 
 export default function CartPage() {
   const queryClient = useQueryClient();
+  const [mutatingIds, setMutatingIds] = useState<Set<number>>(new Set());
+
+  function startMutating(productId: number): void {
+    setMutatingIds((prev) => new Set(prev).add(productId));
+  }
+
+  function stopMutating(productId: number): void {
+    setMutatingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
+  }
 
   const {
     data: cart,
@@ -39,12 +53,20 @@ export default function CartPage() {
   const updateMutation = useMutation({
     mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) =>
       apiClient.patch(`/cart/items/${productId}`, { quantity }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+    onMutate: ({ productId }) => startMutating(productId),
+    onSettled: (_data, _error, variables) => {
+      stopMutating(variables.productId);
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
   });
 
   const removeMutation = useMutation({
     mutationFn: (productId: number) => apiClient.delete(`/cart/items/${productId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+    onMutate: (productId) => startMutating(productId),
+    onSettled: (_data, _error, productId) => {
+      stopMutating(productId);
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
   });
 
   const subtotal =
@@ -141,72 +163,77 @@ export default function CartPage() {
 
         <div className={styles.layout}>
           <div className={styles.itemList}>
-            {cart.items.map((item) => (
-              <div key={item.id} className={styles.cartItem}>
-                <div
-                  className={styles.itemImage}
-                  style={!item.product.imageUrl ? { background: 'var(--color-card-border)' } : undefined}
-                >
-                  {item.product.imageUrl && (
-                    <Image
-                      src={item.product.imageUrl}
-                      alt={item.product.name}
-                      width={104}
-                      height={88}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
-                    />
-                  )}
-                </div>
+            {cart.items.map((item) => {
+              const isMutating = mutatingIds.has(item.product.id);
+              return (
+                <div key={item.id} className={styles.cartItem}>
+                  <div
+                    className={styles.itemImage}
+                    style={!item.product.imageUrl ? { background: 'var(--color-card-border)' } : undefined}
+                  >
+                    {item.product.imageUrl && (
+                      <Image
+                        src={item.product.imageUrl}
+                        alt={item.product.name}
+                        width={104}
+                        height={88}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
+                      />
+                    )}
+                  </div>
 
-                <div className={styles.itemDetails}>
-                  <span className={styles.itemName}>{item.product.name}</span>
-                  {item.product.stock !== undefined && item.product.stock <= 5 && (
-                    <span className={styles.itemStock}>{item.product.stock} items left</span>
-                  )}
-                </div>
+                  <div className={styles.itemDetails}>
+                    <span className={styles.itemName}>{item.product.name}</span>
+                    {item.product.stock !== undefined && item.product.stock <= 5 && (
+                      <span className={styles.itemStock}>{item.product.stock} items left</span>
+                    )}
+                  </div>
 
-                <div className={styles.itemRight}>
-                  <span className={styles.itemPrice}>₱{Number(item.product.price).toFixed(2)}</span>
-                  <div className={styles.qtyControls}>
+                  <div className={styles.itemRight}>
+                    <span className={styles.itemPrice}>₱{Number(item.product.price).toFixed(2)}</span>
+                    <div className={styles.qtyControls}>
+                      <button
+                        type="button"
+                        className={styles.qtyBtn}
+                        onClick={() =>
+                          updateMutation.mutate({
+                            productId: item.product.id,
+                            quantity: item.quantity - 1,
+                          })
+                        }
+                        disabled={item.quantity <= 1 || isMutating}
+                        aria-label="Decrease quantity"
+                      >
+                        −
+                      </button>
+                      <span className={styles.qtyValue}>{item.quantity}</span>
+                      <button
+                        type="button"
+                        className={styles.qtyBtn}
+                        onClick={() =>
+                          updateMutation.mutate({
+                            productId: item.product.id,
+                            quantity: item.quantity + 1,
+                          })
+                        }
+                        disabled={isMutating}
+                        aria-label="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      className={styles.qtyBtn}
-                      onClick={() =>
-                        updateMutation.mutate({
-                          productId: item.product.id,
-                          quantity: item.quantity - 1,
-                        })
-                      }
-                      disabled={item.quantity <= 1}
-                      aria-label="Decrease quantity"
+                      className={styles.removeBtn}
+                      onClick={() => removeMutation.mutate(item.product.id)}
+                      disabled={isMutating}
                     >
-                      −
-                    </button>
-                    <span className={styles.qtyValue}>{item.quantity}</span>
-                    <button
-                      type="button"
-                      className={styles.qtyBtn}
-                      onClick={() =>
-                        updateMutation.mutate({
-                          productId: item.product.id,
-                          quantity: item.quantity + 1,
-                        })
-                      }
-                      aria-label="Increase quantity"
-                    >
-                      +
+                      Remove
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    className={styles.removeBtn}
-                    onClick={() => removeMutation.mutate(item.product.id)}
-                  >
-                    Remove
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <aside className={styles.summary}>
@@ -225,7 +252,7 @@ export default function CartPage() {
             <div className={styles.summaryDivider} />
 
             <div className={styles.summaryTotal}>
-              <span>Subtotal</span>
+              <span>Total</span>
               <span className={styles.summaryTotalAmount}>₱{total.toFixed(2)}</span>
             </div>
 

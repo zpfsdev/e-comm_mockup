@@ -111,15 +111,15 @@ export class OrdersService {
   }
 
   private resolveOrderNotes(dto: CreateOrderDto): string | undefined {
-    if (dto.notes) return dto.notes;
-    if (!dto.deliveryAddress) return undefined;
-    return [
+    if (!dto.deliveryAddress) return dto.notes;
+    const addressLine = [
       dto.deliveryAddress.streetLine,
       dto.deliveryAddress.barangay,
       dto.deliveryAddress.city,
     ]
       .filter(Boolean)
       .join(', ');
+    return dto.notes ? `${addressLine} — ${dto.notes}` : addressLine;
   }
 
   private async fetchAndValidateProducts(

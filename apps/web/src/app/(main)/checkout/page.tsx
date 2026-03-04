@@ -239,7 +239,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {error && <p className={styles.errorBanner}>{error}</p>}
+          {error && <p role="alert" className={styles.errorBanner}>{error}</p>}
         </form>
 
         {/* Summary sidebar — button uses form="order-form" to submit the form above */}

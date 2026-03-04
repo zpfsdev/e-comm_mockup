@@ -1,4 +1,5 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductsService } from './products.service';
@@ -113,7 +114,6 @@ describe('ProductsService', () => {
 
   describe('remove', () => {
     it('soft-deletes product by setting status to Unavailable', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue({ sellerId: 10 });
       mockPrisma.product.update.mockResolvedValue({
         ...mockProduct,
         status: 'Unavailable',
@@ -122,21 +122,21 @@ describe('ProductsService', () => {
       await service.remove(1, 10);
 
       expect(mockPrisma.product.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: 'Unavailable' } }),
+        expect.objectContaining({
+          where: { id: 1, sellerId: 10 },
+          data: { status: 'Unavailable' },
+        }),
       );
     });
 
-    it('throws ForbiddenException when seller does not own the product', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue({ sellerId: 99 });
+    it('throws NotFoundException when product not found or not owned by seller', async () => {
+      const p2025 = new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '',
+      });
+      mockPrisma.product.update.mockRejectedValue(p2025);
 
-      await expect(service.remove(1, 10)).rejects.toThrow(ForbiddenException);
-      expect(mockPrisma.product.update).not.toHaveBeenCalled();
-    });
-
-    it('throws NotFoundException when product does not exist', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue(null);
-
-      await expect(service.remove(999, 10)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(1, 99)).rejects.toThrow(NotFoundException);
     });
   });
 });

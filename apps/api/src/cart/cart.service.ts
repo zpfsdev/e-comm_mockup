@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { CartItem } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
+import type { CartDto, CartItemDto } from './models/cart.dto';
 
 /** Manages a user's shopping cart — add, update, remove, and clear operations. */
 @Injectable()
@@ -12,10 +14,10 @@ export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Returns the full cart for a user, including product details and seller info.
+   * Returns the full cart for a user, mapped to a simple DTO shape.
    * Throws `NotFoundException` if no cart exists (carts are created on registration).
    */
-  async getCart(userId: number) {
+  async getCart(userId: number): Promise<CartDto> {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: {
@@ -39,15 +41,28 @@ export class CartService {
     });
 
     if (!cart) throw new NotFoundException('Cart not found.');
-    return cart;
+
+    const items: CartItemDto[] = cart.cartItems.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price.toString(),
+        imageUrl: item.product.imageUrl,
+        stock: item.product.stockQuantity,
+      },
+    }));
+
+    return { items };
   }
 
   /**
    * Adds a product to the cart or increments its quantity if already present.
    * Validates that the product is available and stock is sufficient.
    */
-  async addItem(userId: number, dto: AddToCartDto) {
-    return this.prisma.$transaction(async (tx) => {
+  async addItem(userId: number, dto: AddToCartDto): Promise<CartItem> {
+    return this.prisma.$transaction(async (tx): Promise<CartItem> => {
       const cart = await tx.cart.findUniqueOrThrow({
         where: { userId },
       });
@@ -89,8 +104,12 @@ export class CartService {
    * Sets an item's quantity directly.
    * Passing `quantity: 0` removes the item entirely.
    */
-  async updateItem(userId: number, productId: number, dto: UpdateCartItemDto) {
-    return this.prisma.$transaction(async (tx) => {
+  async updateItem(
+    userId: number,
+    productId: number,
+    dto: UpdateCartItemDto,
+  ): Promise<CartItem | void> {
+    return this.prisma.$transaction(async (tx): Promise<CartItem | void> => {
       const cart = await tx.cart.findUniqueOrThrow({
         where: { userId },
       });

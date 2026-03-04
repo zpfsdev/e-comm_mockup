@@ -68,7 +68,7 @@ async function bootstrap(): Promise<void> {
     origin: configService.get<string>('FRONTEND_URL', 'http://localhost:3000'),
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Accept'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'X-CSRF-Token'],
   });
 
   // ── Swagger (development only) ───────────────────────────────────────────────

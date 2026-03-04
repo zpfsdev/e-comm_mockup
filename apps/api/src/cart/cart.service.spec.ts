@@ -76,8 +76,8 @@ describe('CartService', () => {
 
       const actualResult = await service.getCart(42);
 
-      expect(actualResult.cartItems).toHaveLength(1);
-      expect(actualResult.cartItems[0].product.name).toBe('Story Book');
+      expect(actualResult.items).toHaveLength(1);
+      expect(actualResult.items[0].product.name).toBe('Story Book');
     });
 
     it('throws NotFoundException when no cart is found', async () => {

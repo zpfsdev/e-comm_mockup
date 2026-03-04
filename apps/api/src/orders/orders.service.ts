@@ -4,20 +4,33 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { OrderItemStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-
-/** Flat ₱58 shipping fee applied to every order. */
-const SHIPPING_FEE = 58;
-
-/** Platform commission rate — 5% of each completed order item's value. */
-const COMMISSION_RATE = 0.05;
+import type {
+  OrderSummaryDto,
+  PaginatedOrdersResponseDto,
+} from './models/order.dto';
 
 /** Handles order placement, retrieval, and per-item status updates for sellers. */
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly shippingFee: Prisma.Decimal;
+  private readonly commissionRate: Prisma.Decimal;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    const shippingFeeNumber =
+      this.configService.get<number>('ORDERS_SHIPPING_FEE') ?? 58;
+    const commissionRateNumber =
+      this.configService.get<number>('ORDERS_COMMISSION_RATE') ?? 0.05;
+
+    this.shippingFee = new Prisma.Decimal(shippingFeeNumber);
+    this.commissionRate = new Prisma.Decimal(commissionRateNumber);
+  }
 
   /**
    * Places a new order in a single transaction:
@@ -31,7 +44,10 @@ export class OrdersService {
    * Rollback: If any step throws (e.g. BadRequestException, DB error), Prisma aborts the
    * transaction and rolls back all writes. No partial orders or stock updates are committed.
    */
-  async createOrder(userId: number, dto: CreateOrderDto) {
+  async createOrder(
+    userId: number,
+    dto: CreateOrderDto,
+  ): Promise<OrderSummaryDto> {
     if (!dto.items.length) {
       throw new BadRequestException('Order must contain at least one item.');
     }
@@ -90,10 +106,11 @@ export class OrdersService {
 
       const itemTotal = products.reduce((sum, product) => {
         const qty = quantityMap.get(product.id) ?? 0;
-        return sum + Number(product.price) * qty;
-      }, 0);
+        const priceDecimal = new Prisma.Decimal(product.price);
+        return sum.plus(priceDecimal.mul(qty));
+      }, new Prisma.Decimal(0));
 
-      const totalAmount = itemTotal + SHIPPING_FEE;
+      const totalAmountDecimal = itemTotal.plus(this.shippingFee);
 
       const deliveryNotes = dto.deliveryAddress
         ? [
@@ -108,8 +125,8 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           userId,
-          totalAmount: new Prisma.Decimal(totalAmount),
-          shippingFee: new Prisma.Decimal(SHIPPING_FEE),
+          totalAmount: totalAmountDecimal,
+          shippingFee: this.shippingFee,
           userAddressId: dto.userAddressId,
           notes: dto.notes ?? deliveryNotes,
           orderItems: {
@@ -121,12 +138,24 @@ export class OrdersService {
           },
           payment: {
             create: {
-              paymentAmount: new Prisma.Decimal(totalAmount),
+              paymentAmount: totalAmountDecimal,
               paymentStatus: 'Unpaid',
             },
           },
         },
-        include: { orderItems: true, payment: true },
+        include: {
+          orderItems: {
+            include: {
+              product: { select: { id: true, name: true, imageUrl: true } },
+            },
+          },
+          payment: true,
+          userAddress: {
+            include: {
+              address: { include: { barangay: { include: { city: true } } } },
+            },
+          },
+        },
       });
 
       await Promise.all(
@@ -147,9 +176,9 @@ export class OrdersService {
             data: {
               sellerId: product.sellerId,
               orderItemId: orderItem.id,
-              commissionAmount: new Prisma.Decimal(
-                Number(orderItem.price) * orderItem.quantity * COMMISSION_RATE,
-              ),
+              commissionAmount: new Prisma.Decimal(orderItem.price)
+                .mul(orderItem.quantity)
+                .mul(this.commissionRate),
             },
           });
         }),
@@ -157,12 +186,16 @@ export class OrdersService {
 
       await tx.cartItem.deleteMany({ where: { cart: { userId } } });
 
-      return order;
+      return this.mapToOrderSummaryDto(order);
     });
   }
 
   /** Returns a paginated list of orders for a user, newest first, with total/page metadata. */
-  async findUserOrders(userId: number, page = 1, limit = 20) {
+  async findUserOrders(
+    userId: number,
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedOrdersResponseDto> {
     const MAX_ORDER_PAGE_SIZE = 50;
     const safeLimit = Math.min(limit, MAX_ORDER_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
@@ -190,7 +223,7 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
     return {
-      orders,
+      orders: orders.map((order) => this.mapToOrderSummaryDto(order)),
       total,
       page,
       limit: safeLimit,
@@ -202,7 +235,7 @@ export class OrdersService {
    * Returns a single order with full detail.
    * Scoped to the requesting user — throws `NotFoundException` for unknown or other users' orders.
    */
-  async findOrderById(id: number, userId: number) {
+  async findOrderById(id: number, userId: number): Promise<OrderSummaryDto> {
     const order = await this.prisma.order.findFirst({
       where: { id, userId },
       include: {
@@ -229,7 +262,7 @@ export class OrdersService {
     });
 
     if (!order) throw new NotFoundException('Order not found.');
-    return order;
+    return this.mapToOrderSummaryDto(order);
   }
 
   /** Resolves userId → sellerId then delegates to `updateOrderItemStatus`. */
@@ -268,5 +301,70 @@ export class OrdersService {
     if (status === 'Completed') data.dateDelivered = new Date();
 
     return this.prisma.orderItem.update({ where: { id: orderItemId }, data });
+  }
+
+  private mapToOrderSummaryDto(
+    order: Prisma.OrderGetPayload<{
+      include: {
+        orderItems: {
+          include: {
+            product: { select: { id: true; name: true; imageUrl: true } };
+          };
+        };
+        payment: true;
+        userAddress: {
+          include: {
+            address: {
+              include: {
+                barangay: {
+                  include: {
+                    city: true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    }>,
+  ): OrderSummaryDto {
+    return {
+      id: order.id,
+      orderDate: order.orderDate,
+      totalAmount: order.totalAmount.toString(),
+      shippingFee: order.shippingFee.toString(),
+      notes: order.notes,
+      orderItems: order.orderItems.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price.toString(),
+        orderItemStatus: item.orderItemStatus,
+        dateDelivered: item.dateDelivered,
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          imageUrl: item.product.imageUrl,
+        },
+      })),
+      payment: order.payment
+        ? {
+            id: order.payment.id,
+            paymentAmount: order.payment.paymentAmount.toString(),
+            paymentStatus: order.payment.paymentStatus,
+            paymentDate: order.payment.paymentDate,
+          }
+        : null,
+      userAddress: order.userAddress
+        ? {
+            id: order.userAddress.id,
+            streetLine: order.userAddress.address.street,
+            postalCode: order.userAddress.address.barangay.city.postalCode,
+            location: {
+              cityName: order.userAddress.address.barangay.city.city,
+              barangayName: order.userAddress.address.barangay.barangay,
+            },
+          }
+        : null,
+    };
   }
 }

@@ -25,19 +25,7 @@ export class CartController {
   @Get()
   @ApiOperation({ summary: 'Get current user cart' })
   getCart(@CurrentUser() user: JwtPayload) {
-    return this.cartService.getCart(user.sub).then((cart) => ({
-      items: cart.cartItems.map((item) => ({
-        id: item.id,
-        quantity: item.quantity,
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          imageUrl: item.product.imageUrl,
-          stock: item.product.stockQuantity,
-        },
-      })),
-    }));
+    return this.cartService.getCart(user.sub);
   }
 
   @Post('items')

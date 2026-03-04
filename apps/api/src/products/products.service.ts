@@ -3,12 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProductDetail } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ensureString } from './normalize-product.dto';
+import type { ProductDto, ProductListResponseDto } from './models/product.dto';
 
 const PRODUCT_SELECT = {
   id: true,
@@ -39,7 +40,7 @@ export class ProductsService {
    * Supports free-text search across name and description,
    * plus optional filtering by category and age range.
    */
-  async findAll(query: ProductQueryDto) {
+  async findAll(query: ProductQueryDto): Promise<ProductListResponseDto> {
     const { search, categoryId, ageRangeId, page = 1, limit = 20 } = query;
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
@@ -69,7 +70,7 @@ export class ProductsService {
     ]);
 
     return {
-      products,
+      products: products.map((product) => this.mapToProductDto(product)),
       total,
       page,
       limit: safeLimit,
@@ -81,27 +82,31 @@ export class ProductsService {
    * Returns full details for a single product.
    * Throws `NotFoundException` when the product does not exist.
    */
-  async findById(id: number) {
+  async findById(id: number): Promise<ProductDto> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       select: PRODUCT_SELECT,
     });
     if (!product) throw new NotFoundException('Product not found.');
-    return product;
+    return this.mapToProductDto(product);
   }
 
   /** Returns all products for a given seller ID, newest first. */
-  async findBySeller(sellerId: number, limit = SELLER_PRODUCT_PREVIEW_LIMIT) {
-    return this.prisma.product.findMany({
+  async findBySeller(
+    sellerId: number,
+    limit = SELLER_PRODUCT_PREVIEW_LIMIT,
+  ): Promise<ProductDto[]> {
+    const products = await this.prisma.product.findMany({
       where: { sellerId },
       select: PRODUCT_SELECT,
       orderBy: { dateAdded: 'desc' },
       take: limit,
     });
+    return products.map((product) => this.mapToProductDto(product));
   }
 
   /** Returns all products for the authenticated seller (resolves userId → sellerId). */
-  async findByUserId(userId: number) {
+  async findByUserId(userId: number): Promise<ProductDto[]> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
@@ -109,7 +114,10 @@ export class ProductsService {
   }
 
   /** Creates a new product — resolves userId → sellerId. Caller must pass controller-normalized DTO. */
-  async createForUser(userId: number, dto: CreateProductDto) {
+  async createForUser(
+    userId: number,
+    dto: CreateProductDto,
+  ): Promise<ProductDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
@@ -120,9 +128,9 @@ export class ProductsService {
    * Creates a new product for the given seller.
    * Expects controller-normalized DTO (string/number only).
    */
-  async create(sellerId: number, dto: CreateProductDto) {
+  async create(sellerId: number, dto: CreateProductDto): Promise<ProductDto> {
     const { height, weight, width, length, material } = dto;
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         name: dto.name,
         description: dto.description,
@@ -152,10 +160,15 @@ export class ProductsService {
       },
       select: PRODUCT_SELECT,
     });
+    return this.mapToProductDto(product);
   }
 
   /** Updates a product — resolves userId → sellerId. Caller must pass controller-normalized DTO. */
-  async updateForUser(id: number, userId: number, dto: UpdateProductDto) {
+  async updateForUser(
+    id: number,
+    userId: number,
+    dto: UpdateProductDto,
+  ): Promise<ProductDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
@@ -166,7 +179,11 @@ export class ProductsService {
    * Updates a product's fields. Expects controller-normalized DTO.
    * Upserts productDetail when any dimension is provided.
    */
-  async update(id: number, sellerId: number, dto: UpdateProductDto) {
+  async update(
+    id: number,
+    sellerId: number,
+    dto: UpdateProductDto,
+  ): Promise<ProductDto> {
     await this.assertOwnership(id, sellerId);
     const { height, weight, width, length, material, price } = dto;
     const data: Prisma.ProductUpdateInput = {
@@ -206,11 +223,12 @@ export class ProductsService {
           }
         : {}),
     };
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id },
       data,
       select: PRODUCT_SELECT,
     });
+    return this.mapToProductDto(product);
   }
 
   /** Soft-deletes a product — resolves userId → sellerId internally. */
@@ -234,6 +252,74 @@ export class ProductsService {
     });
   }
 
+  private mapToProductDto(product: {
+    id: number;
+    name: string;
+    description: string;
+    imageUrl: string;
+    price: Prisma.Decimal;
+    stockQuantity: number;
+    status: string;
+    dateAdded: Date;
+    lastUpdated: Date;
+    seller: { id: number; shopName: string; shopLogoUrl: string | null };
+    category: { id: number; categoryName: string };
+    ageRange: {
+      id: number;
+      label: string | null;
+      minAge: number;
+      maxAge: number | null;
+    };
+    productDetail: ProductDetail | null;
+  }): ProductDto {
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      imageUrl: product.imageUrl,
+      price: product.price.toString(),
+      stockQuantity: product.stockQuantity,
+      status: product.status,
+      dateAdded: product.dateAdded,
+      lastUpdated: product.lastUpdated,
+      seller: {
+        id: product.seller.id,
+        shopName: product.seller.shopName,
+        shopLogoUrl: product.seller.shopLogoUrl,
+      },
+      category: {
+        id: product.category.id,
+        categoryName: product.category.categoryName,
+      },
+      ageRange: {
+        id: product.ageRange.id,
+        label: product.ageRange.label,
+        minAge: product.ageRange.minAge,
+        maxAge: product.ageRange.maxAge,
+      },
+      productDetail: product.productDetail
+        ? {
+            height:
+              product.productDetail.height != null
+                ? Number(product.productDetail.height)
+                : null,
+            weight:
+              product.productDetail.weight != null
+                ? Number(product.productDetail.weight)
+                : null,
+            width:
+              product.productDetail.width != null
+                ? Number(product.productDetail.width)
+                : null,
+            length:
+              product.productDetail.length != null
+                ? Number(product.productDetail.length)
+                : null,
+            material: product.productDetail.material,
+          }
+        : null,
+    };
+  }
   /** Guards mutation endpoints — ensures the product belongs to the seller. */
   private async assertOwnership(
     productId: number,

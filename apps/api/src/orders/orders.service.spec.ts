@@ -3,26 +3,59 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
 const mockProducts = [
-  { id: 1, price: '199.00', stockQuantity: 10, sellerId: 5 },
-  { id: 2, price: '299.00', stockQuantity: 5, sellerId: 6 },
+  {
+    id: 1,
+    price: new Prisma.Decimal('199.00'),
+    stockQuantity: 10,
+    sellerId: 5,
+  },
+  {
+    id: 2,
+    price: new Prisma.Decimal('299.00'),
+    stockQuantity: 5,
+    sellerId: 6,
+  },
 ];
 
 const mockCreatedOrder = {
   id: 100,
   userId: 42,
-  totalAmount: '556.00',
-  shippingFee: '58.00',
+  totalAmount: new Prisma.Decimal('556.00'),
+  shippingFee: new Prisma.Decimal('58.00'),
   orderDate: new Date(),
   orderItems: [
-    { id: 201, productId: 1, quantity: 1, price: '199.00' },
-    { id: 202, productId: 2, quantity: 1, price: '299.00' },
+    {
+      id: 201,
+      productId: 1,
+      quantity: 1,
+      price: new Prisma.Decimal('199.00'),
+      product: { id: 1, name: 'Product 1', imageUrl: 'image-1' },
+      orderItemStatus: 'Pending',
+      dateDelivered: null,
+    },
+    {
+      id: 202,
+      productId: 2,
+      quantity: 1,
+      price: new Prisma.Decimal('299.00'),
+      product: { id: 2, name: 'Product 2', imageUrl: 'image-2' },
+      orderItemStatus: 'Pending',
+      dateDelivered: null,
+    },
   ],
-  payment: { id: 301, paymentStatus: 'Unpaid', paymentAmount: '556.00' },
+  payment: {
+    id: 301,
+    paymentStatus: 'Unpaid',
+    paymentAmount: new Prisma.Decimal('556.00'),
+  },
+  userAddress: null,
 };
 
 const mockTx = {
@@ -60,6 +93,16 @@ describe('OrdersService', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'ORDERS_SHIPPING_FEE') return 58;
+              if (key === 'ORDERS_COMMISSION_RATE') return 0.05;
+              return undefined;
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -122,7 +165,17 @@ describe('OrdersService', () => {
       mockTx.product.findMany.mockResolvedValue([mockProducts[0]]);
       mockTx.order.create.mockResolvedValueOnce({
         ...mockCreatedOrder,
-        orderItems: [{ id: 201, productId: 1, quantity: 2, price: '199.00' }],
+        orderItems: [
+          {
+            id: 201,
+            productId: 1,
+            quantity: 2,
+            price: new Prisma.Decimal('199.00'),
+            product: { id: 1, name: 'Product 1', imageUrl: 'image-1' },
+            orderItemStatus: 'Pending',
+            dateDelivered: null,
+          },
+        ],
       });
 
       await service.createOrder(42, {
@@ -149,7 +202,11 @@ describe('OrdersService', () => {
 
       expect(actualResult).toEqual(
         expect.objectContaining({
-          orders: [mockCreatedOrder],
+          orders: [
+            expect.objectContaining({
+              id: mockCreatedOrder.id,
+            }),
+          ],
           total: 1,
           page: 1,
           limit: 20,

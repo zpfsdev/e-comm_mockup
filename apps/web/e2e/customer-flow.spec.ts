@@ -10,7 +10,7 @@ test('customer can browse products and reach checkout redirect', async ({ page }
   const firstAddButton = page
     .getByRole('button', { name: /add .* to cart/i, exact: false })
     .first();
-  await firstAddButton.click({ trial: true });
+  await firstAddButton.click();
 
   await page.goto('/cart');
   await expect(page.getByRole('heading', { name: /my cart/i })).toBeVisible();

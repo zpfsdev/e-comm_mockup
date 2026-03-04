@@ -68,6 +68,7 @@ export default function CheckoutPage() {
       const { data } = await apiClient.get<Cart>('/cart');
       return data;
     },
+    staleTime: 0,
   });
 
   const mutation = useMutation({

@@ -53,10 +53,11 @@ describe('SellersService', () => {
         totalProducts: 3,
         totalOrders: 10,
         pendingOrders: 4,
-        totalRevenue: 250,
+        totalRevenue: '250',
       });
       expect(mockPrisma.seller.findUniqueOrThrow).toHaveBeenCalledWith({
         where: { userId: inputUserId },
+        select: { id: true },
       });
     });
 

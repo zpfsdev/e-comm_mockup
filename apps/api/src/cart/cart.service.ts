@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { CartItem } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
 import type { CartDto, CartItemDto } from './models/cart.dto';
@@ -61,8 +60,8 @@ export class CartService {
    * Adds a product to the cart or increments its quantity if already present.
    * Validates that the product is available and stock is sufficient.
    */
-  async addItem(userId: number, dto: AddToCartDto): Promise<CartItem> {
-    return this.prisma.$transaction(async (tx): Promise<CartItem> => {
+  async addItem(userId: number, dto: AddToCartDto): Promise<CartItemDto> {
+    return this.prisma.$transaction(async (tx): Promise<CartItemDto> => {
       const cart = await tx.cart.findUniqueOrThrow({
         where: { userId },
       });
@@ -86,7 +85,7 @@ export class CartService {
         throw new BadRequestException('Insufficient stock.');
       }
 
-      return tx.cartItem.upsert({
+      const upserted = await tx.cartItem.upsert({
         where: {
           cartId_productId: { cartId: cart.id, productId: dto.productId },
         },
@@ -97,61 +96,68 @@ export class CartService {
           quantity: dto.quantity,
         },
       });
+
+      return this.mapToCartItemDto(upserted.id, upserted.quantity, product);
     });
   }
 
   /**
    * Sets an item's quantity directly.
-   * Passing `quantity: 0` removes the item entirely.
+   * Passing `quantity: 0` removes the item entirely and returns `undefined`
+   * (the controller sends 204 No Content for that path).
    */
   async updateItem(
     userId: number,
     productId: number,
     dto: UpdateCartItemDto,
-  ): Promise<CartItem | void> {
-    return this.prisma.$transaction(async (tx): Promise<CartItem | void> => {
-      const cart = await tx.cart.findUniqueOrThrow({
-        where: { userId },
-      });
+  ): Promise<CartItemDto | undefined> {
+    return this.prisma.$transaction(
+      async (tx): Promise<CartItemDto | undefined> => {
+        const cart = await tx.cart.findUniqueOrThrow({
+          where: { userId },
+        });
 
-      if (dto.quantity === 0) {
-        const existingForDelete = await tx.cartItem.findUnique({
+        if (dto.quantity === 0) {
+          const existingForDelete = await tx.cartItem.findUnique({
+            where: { cartId_productId: { cartId: cart.id, productId } },
+            select: { id: true },
+          });
+          if (!existingForDelete) {
+            throw new NotFoundException('Cart item not found.');
+          }
+          await tx.cartItem.delete({
+            where: { cartId_productId: { cartId: cart.id, productId } },
+          });
+          return undefined;
+        }
+
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+        });
+        if (!product || product.status === 'Unavailable') {
+          throw new BadRequestException('Product is not available.');
+        }
+
+        if (product.stockQuantity < dto.quantity) {
+          throw new BadRequestException('Insufficient stock.');
+        }
+
+        const existingItem = await tx.cartItem.findUnique({
           where: { cartId_productId: { cartId: cart.id, productId } },
           select: { id: true },
         });
-        if (!existingForDelete) {
+        if (!existingItem) {
           throw new NotFoundException('Cart item not found.');
         }
-        await tx.cartItem.delete({
+
+        const updated = await tx.cartItem.update({
           where: { cartId_productId: { cartId: cart.id, productId } },
+          data: { quantity: dto.quantity },
         });
-        return;
-      }
 
-      const product = await tx.product.findUnique({
-        where: { id: productId },
-      });
-      if (!product || product.status === 'Unavailable') {
-        throw new BadRequestException('Product is not available.');
-      }
-
-      if (product.stockQuantity < dto.quantity) {
-        throw new BadRequestException('Insufficient stock.');
-      }
-
-      const existingItem = await tx.cartItem.findUnique({
-        where: { cartId_productId: { cartId: cart.id, productId } },
-        select: { id: true },
-      });
-      if (!existingItem) {
-        throw new NotFoundException('Cart item not found.');
-      }
-
-      return tx.cartItem.update({
-        where: { cartId_productId: { cartId: cart.id, productId } },
-        data: { quantity: dto.quantity },
-      });
-    });
+        return this.mapToCartItemDto(updated.id, updated.quantity, product);
+      },
+    );
   }
 
   /** Deletes a single item from the cart. */
@@ -178,5 +184,29 @@ export class CartService {
       where: { userId },
     });
     await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+  }
+
+  private mapToCartItemDto(
+    id: number,
+    quantity: number,
+    product: {
+      id: number;
+      name: string;
+      imageUrl: string | null;
+      price: { toString(): string };
+      stockQuantity: number;
+    },
+  ): CartItemDto {
+    return {
+      id,
+      quantity,
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.price.toString(),
+        imageUrl: product.imageUrl ?? '',
+        stock: product.stockQuantity,
+      },
+    };
   }
 }

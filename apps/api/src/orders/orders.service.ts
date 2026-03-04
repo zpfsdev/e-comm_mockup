@@ -33,25 +33,52 @@ export class OrdersService {
   }
 
   /**
-   * Places a new order in a single transaction:
-   * 1. Validates product availability and stock — inside the transaction to prevent TOCTOU races.
-   * 2. Optionally validates that userAddressId belongs to the requesting user (IDOR guard).
-   * 3. Creates the `Order`, `OrderItem` rows, and an `Unpaid` payment record.
-   * 4. Decrements stock for each product.
-   * 5. Creates `Commission` records (5%) for the seller of each item.
-   * 6. Clears the user's cart.
-   *
-   * Rollback: If any step throws (e.g. BadRequestException, DB error), Prisma aborts the
-   * transaction and rolls back all writes. No partial orders or stock updates are committed.
+   * Places a new order in a single atomic transaction.
+   * Pre-flight validation runs before the transaction to fail fast on obvious errors.
+   * All stock checks and writes happen inside the transaction to prevent TOCTOU races.
    */
   async createOrder(
     userId: number,
     dto: CreateOrderDto,
   ): Promise<OrderSummaryDto> {
+    this.validateOrderRequest(dto);
+    await this.assertAddressOwnership(userId, dto.userAddressId);
+
+    const productIds = dto.items.map((i) => i.productId);
+    const quantityMap = new Map(
+      dto.items.map((i) => [i.productId, i.quantity]),
+    );
+    const orderNotes = this.resolveOrderNotes(dto);
+
+    return this.prisma.$transaction(async (tx) => {
+      const products = await this.fetchAndValidateProducts(
+        tx,
+        productIds,
+        quantityMap,
+      );
+      const totalAmount = this.calculateOrderTotal(products, quantityMap);
+
+      const order = await this.persistOrder(tx, {
+        userId,
+        products,
+        quantityMap,
+        totalAmount,
+        userAddressId: dto.userAddressId,
+        notes: orderNotes,
+      });
+
+      await this.decrementStock(tx, products, quantityMap);
+      await this.createCommissions(tx, order.orderItems, products);
+      await tx.cartItem.deleteMany({ where: { cart: { userId } } });
+
+      return this.mapToOrderSummaryDto(order);
+    });
+  }
+
+  private validateOrderRequest(dto: CreateOrderDto): void {
     if (!dto.items.length) {
       throw new BadRequestException('Order must contain at least one item.');
     }
-
     if (
       (dto.userAddressId && dto.deliveryAddress) ||
       (!dto.userAddressId && !dto.deliveryAddress)
@@ -60,134 +87,181 @@ export class OrdersService {
         'Provide either userAddressId or deliveryAddress, but not both.',
       );
     }
-
     const productIds = dto.items.map((i) => i.productId);
-
-    const uniqueProductIds = new Set(productIds);
-    if (uniqueProductIds.size !== productIds.length) {
+    if (new Set(productIds).size !== productIds.length) {
       throw new BadRequestException(
         'Duplicate product entries in order items are not allowed.',
       );
     }
+  }
 
-    if (dto.userAddressId) {
-      const userAddress = await this.prisma.userAddress.findFirst({
-        where: { id: dto.userAddressId, userId },
-      });
-      if (!userAddress) {
-        throw new ForbiddenException(
-          'The specified address does not belong to your account.',
+  private async assertAddressOwnership(
+    userId: number,
+    userAddressId?: number,
+  ): Promise<void> {
+    if (!userAddressId) return;
+    const userAddress = await this.prisma.userAddress.findFirst({
+      where: { id: userAddressId, userId },
+    });
+    if (!userAddress) {
+      throw new ForbiddenException(
+        'The specified address does not belong to your account.',
+      );
+    }
+  }
+
+  private resolveOrderNotes(dto: CreateOrderDto): string | undefined {
+    if (dto.notes) return dto.notes;
+    if (!dto.deliveryAddress) return undefined;
+    return [
+      dto.deliveryAddress.streetLine,
+      dto.deliveryAddress.barangay,
+      dto.deliveryAddress.city,
+    ]
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  private async fetchAndValidateProducts(
+    tx: Prisma.TransactionClient,
+    productIds: number[],
+    quantityMap: Map<number, number>,
+  ): Promise<
+    Array<{
+      id: number;
+      price: Prisma.Decimal;
+      stockQuantity: number;
+      sellerId: number;
+    }>
+  > {
+    const products = await tx.product.findMany({
+      where: { id: { in: productIds }, status: 'Available' },
+      select: { id: true, price: true, stockQuantity: true, sellerId: true },
+    });
+
+    if (products.length !== productIds.length) {
+      throw new BadRequestException('One or more products are unavailable.');
+    }
+
+    for (const product of products) {
+      const qty = quantityMap.get(product.id) ?? 0;
+      if (product.stockQuantity < qty) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${product.id}.`,
         );
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const products = await tx.product.findMany({
-        where: { id: { in: productIds }, status: 'Available' },
-        select: { id: true, price: true, stockQuantity: true, sellerId: true },
-      });
+    return products;
+  }
 
-      if (products.length !== productIds.length) {
-        throw new BadRequestException('One or more products are unavailable.');
-      }
+  private calculateOrderTotal(
+    products: Array<{ id: number; price: Prisma.Decimal }>,
+    quantityMap: Map<number, number>,
+  ): Prisma.Decimal {
+    const itemTotal = products.reduce((sum, product) => {
+      const qty = quantityMap.get(product.id) ?? 0;
+      return sum.plus(new Prisma.Decimal(product.price).mul(qty));
+    }, new Prisma.Decimal(0));
+    return itemTotal.plus(this.shippingFee);
+  }
 
-      const quantityMap = new Map(
-        dto.items.map((i) => [i.productId, i.quantity]),
-      );
-
-      for (const product of products) {
-        const qty = quantityMap.get(product.id) ?? 0;
-        if (product.stockQuantity < qty) {
-          throw new BadRequestException(
-            `Insufficient stock for product ${product.id}.`,
-          );
-        }
-      }
-
-      const itemTotal = products.reduce((sum, product) => {
-        const qty = quantityMap.get(product.id) ?? 0;
-        const priceDecimal = new Prisma.Decimal(product.price);
-        return sum.plus(priceDecimal.mul(qty));
-      }, new Prisma.Decimal(0));
-
-      const totalAmountDecimal = itemTotal.plus(this.shippingFee);
-
-      const deliveryNotes = dto.deliveryAddress
-        ? [
-            dto.deliveryAddress.streetLine,
-            dto.deliveryAddress.barangay,
-            dto.deliveryAddress.city,
-          ]
-            .filter(Boolean)
-            .join(', ')
-        : undefined;
-
-      const order = await tx.order.create({
-        data: {
-          userId,
-          totalAmount: totalAmountDecimal,
-          shippingFee: this.shippingFee,
-          userAddressId: dto.userAddressId,
-          notes: dto.notes ?? deliveryNotes,
-          orderItems: {
-            create: products.map((product) => ({
-              productId: product.id,
-              quantity: quantityMap.get(product.id) ?? 1,
-              price: product.price,
-            })),
-          },
-          payment: {
-            create: {
-              paymentAmount: totalAmountDecimal,
-              paymentStatus: 'Unpaid',
-            },
+  private async persistOrder(
+    tx: Prisma.TransactionClient,
+    params: {
+      userId: number;
+      products: Array<{
+        id: number;
+        price: Prisma.Decimal;
+        stockQuantity: number;
+        sellerId: number;
+      }>;
+      quantityMap: Map<number, number>;
+      totalAmount: Prisma.Decimal;
+      userAddressId?: number;
+      notes?: string;
+    },
+  ) {
+    return tx.order.create({
+      data: {
+        userId: params.userId,
+        totalAmount: params.totalAmount,
+        shippingFee: this.shippingFee,
+        userAddressId: params.userAddressId,
+        notes: params.notes,
+        orderItems: {
+          create: params.products.map((product) => ({
+            productId: product.id,
+            quantity: params.quantityMap.get(product.id) ?? 1,
+            price: product.price,
+          })),
+        },
+        payment: {
+          create: {
+            paymentAmount: params.totalAmount,
+            paymentStatus: 'Unpaid',
           },
         },
-        include: {
-          orderItems: {
-            include: {
-              product: { select: { id: true, name: true, imageUrl: true } },
-            },
-          },
-          payment: true,
-          userAddress: {
-            include: {
-              address: { include: { barangay: { include: { city: true } } } },
-            },
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: { select: { id: true, name: true, imageUrl: true } },
           },
         },
-      });
-
-      await Promise.all(
-        products.map((product) =>
-          tx.product.update({
-            where: { id: product.id },
-            data: {
-              stockQuantity: { decrement: quantityMap.get(product.id) ?? 0 },
-            },
-          }),
-        ),
-      );
-
-      await Promise.all(
-        order.orderItems.map((orderItem) => {
-          const product = products.find((p) => p.id === orderItem.productId)!;
-          return tx.commission.create({
-            data: {
-              sellerId: product.sellerId,
-              orderItemId: orderItem.id,
-              commissionAmount: new Prisma.Decimal(orderItem.price)
-                .mul(orderItem.quantity)
-                .mul(this.commissionRate),
-            },
-          });
-        }),
-      );
-
-      await tx.cartItem.deleteMany({ where: { cart: { userId } } });
-
-      return this.mapToOrderSummaryDto(order);
+        payment: true,
+        userAddress: {
+          include: {
+            address: { include: { barangay: { include: { city: true } } } },
+          },
+        },
+      },
     });
+  }
+
+  private async decrementStock(
+    tx: Prisma.TransactionClient,
+    products: Array<{ id: number }>,
+    quantityMap: Map<number, number>,
+  ): Promise<void> {
+    await Promise.all(
+      products.map((product) =>
+        tx.product.update({
+          where: { id: product.id },
+          data: {
+            stockQuantity: { decrement: quantityMap.get(product.id) ?? 0 },
+          },
+        }),
+      ),
+    );
+  }
+
+  private async createCommissions(
+    tx: Prisma.TransactionClient,
+    orderItems: Array<{
+      id: number;
+      productId: number;
+      price: Prisma.Decimal;
+      quantity: number;
+    }>,
+    products: Array<{ id: number; sellerId: number }>,
+  ): Promise<void> {
+    const sellerMap = new Map(products.map((p) => [p.id, p.sellerId]));
+    await Promise.all(
+      orderItems.map((orderItem) => {
+        const sellerId = sellerMap.get(orderItem.productId);
+        if (sellerId === undefined) return Promise.resolve();
+        return tx.commission.create({
+          data: {
+            sellerId,
+            orderItemId: orderItem.id,
+            commissionAmount: new Prisma.Decimal(orderItem.price)
+              .mul(orderItem.quantity)
+              .mul(this.commissionRate),
+          },
+        });
+      }),
+    );
   }
 
   /** Returns a paginated list of orders for a user, newest first, with total/page metadata. */

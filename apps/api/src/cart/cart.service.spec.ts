@@ -28,7 +28,14 @@ const mockCart = {
   ],
 };
 
-const mockAvailableProduct = { id: 5, status: 'Available', stockQuantity: 20 };
+const mockAvailableProduct = {
+  id: 5,
+  name: 'Story Book',
+  imageUrl: null,
+  price: '150.00',
+  status: 'Available',
+  stockQuantity: 20,
+};
 
 const mockPrisma = {
   cart: {

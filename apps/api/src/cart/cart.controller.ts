@@ -3,12 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
   Post,
+  Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import {
   CurrentUser,
   type JwtPayload,
@@ -35,13 +38,21 @@ export class CartController {
   }
 
   @Patch('items/:productId')
-  @ApiOperation({ summary: 'Update cart item quantity' })
-  updateItem(
+  @ApiOperation({
+    summary: 'Update cart item quantity (quantity=0 removes the item)',
+  })
+  async updateItem(
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseIntPipe) productId: number,
     @Body() dto: UpdateCartItemDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.cartService.updateItem(user.sub, productId, dto);
+    const result = await this.cartService.updateItem(user.sub, productId, dto);
+    if (result === undefined) {
+      res.status(HttpStatus.NO_CONTENT);
+      return;
+    }
+    return result;
   }
 
   @Delete('items/:productId')

@@ -1,0 +1,87 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Main navigation" [ref=e3]:
+      - generic [ref=e4]:
+        - link "Artistryx home" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img "Artistryx" [ref=e6]
+        - generic [ref=e7]:
+          - link "START SELLING" [ref=e8] [cursor=pointer]:
+            - /url: /auth/sign-in
+          - generic [ref=e9]:
+            - button "Toggle search" [ref=e11] [cursor=pointer]:
+              - img [ref=e12]
+            - button "Account menu" [ref=e16] [cursor=pointer]:
+              - img [ref=e17]
+            - link "Shopping cart" [ref=e20] [cursor=pointer]:
+              - /url: /cart
+              - img [ref=e21]
+    - main [ref=e24]:
+      - generic [ref=e27]:
+        - complementary [ref=e28]:
+          - heading "All Categories" [level=2] [ref=e29]
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "All Categories" [ref=e32] [cursor=pointer]:
+                - /url: /products
+            - listitem [ref=e33]:
+              - link "Charts" [ref=e34] [cursor=pointer]:
+                - /url: /products?category=Charts
+            - listitem [ref=e35]:
+              - link "Coloring Books" [ref=e36] [cursor=pointer]:
+                - /url: /products?category=Coloring%20Books
+            - listitem [ref=e37]:
+              - link "Board Games" [ref=e38] [cursor=pointer]:
+                - /url: /products?category=Board%20Games
+            - listitem [ref=e39]:
+              - link "Flash Cards" [ref=e40] [cursor=pointer]:
+                - /url: /products?category=Flash%20Cards
+            - listitem [ref=e41]:
+              - link "Story Books" [ref=e42] [cursor=pointer]:
+                - /url: /products?category=Story%20Books
+          - generic [ref=e43]:
+            - heading "Age Range" [level=2] [ref=e44]
+            - list [ref=e45]:
+              - listitem [ref=e46]:
+                - link "3+" [ref=e47] [cursor=pointer]:
+                  - /url: /products?age=3%2B
+              - listitem [ref=e48]:
+                - link "5+" [ref=e49] [cursor=pointer]:
+                  - /url: /products?age=5%2B
+              - listitem [ref=e50]:
+                - link "8+" [ref=e51] [cursor=pointer]:
+                  - /url: /products?age=8%2B
+          - generic [ref=e52]:
+            - heading "All Shops" [level=2] [ref=e53]
+            - generic [ref=e54]:
+              - link "KIDOS" [ref=e55] [cursor=pointer]:
+                - /url: /products?store=KIDOS
+                - generic [ref=e57]: KIDOS
+              - link "PLAYBOOK" [ref=e58] [cursor=pointer]:
+                - /url: /products?store=PLAYBOOK
+                - generic [ref=e60]: PLAYBOOK
+              - link "LARANA" [ref=e61] [cursor=pointer]:
+                - /url: /products?store=LARANA
+                - generic [ref=e63]: LARANA
+              - link "WONDERS" [ref=e64] [cursor=pointer]:
+                - /url: /products?store=WONDERS
+                - generic [ref=e66]: WONDERS
+              - link "GIGGLING" [ref=e67] [cursor=pointer]:
+                - /url: /products?store=GIGGLING
+                - generic [ref=e69]: GIGGLING
+        - generic [ref=e70]:
+          - heading "All Products" [level=1] [ref=e71]
+          - paragraph [ref=e72]: Failed to load products. Please try again.
+    - contentinfo [ref=e73]:
+      - paragraph [ref=e75]: © 2026 Artistryx. All Rights Reserved.
+  - generic [ref=e76]:
+    - img [ref=e78]
+    - button "Open Tanstack query devtools" [ref=e126] [cursor=pointer]:
+      - img [ref=e127]
+  - button "Open Next.js Dev Tools" [ref=e180] [cursor=pointer]:
+    - img [ref=e181]
+  - alert [ref=e184]
+```

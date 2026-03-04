@@ -49,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
         const at = localStorage.getItem('accessToken');
         if (at) {
-          document.cookie = `at=${at}; path=/; SameSite=Strict; max-age=900`;
+          document.cookie = `at=${at}; path=/; SameSite=Strict; max-age=900; Secure`;
         }
       })
       .catch(() => {

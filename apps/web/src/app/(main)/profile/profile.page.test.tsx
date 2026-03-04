@@ -84,6 +84,7 @@ describe('ProfilePage', () => {
     render(<ProfilePage />);
 
     const textBoxes = screen.getAllByRole('textbox');
+    await user.clear(textBoxes[0]);
     await user.type(textBoxes[0], 'Maria');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 

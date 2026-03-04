@@ -60,6 +60,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('accessToken');
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
+      document.cookie = 'at=; path=/; max-age=0; Secure';
       window.location.href = '/auth/sign-in';
       return Promise.reject(error);
     }
@@ -101,6 +102,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('accessToken');
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
+      document.cookie = 'at=; path=/; max-age=0; Secure';
       window.location.href = '/auth/sign-in';
       return Promise.reject(refreshError);
     } finally {

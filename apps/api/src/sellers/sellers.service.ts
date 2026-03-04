@@ -6,6 +6,14 @@ import {
 import { RoleName } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSellerDto } from './dto/create-seller.dto';
+import type {
+  PaginatedSalesReportDto,
+  SellerDashboardDto,
+  SellerPublicDto,
+  SellerSaleItemDto,
+  SellerStatsDto,
+  SellerSummaryDto,
+} from './models/seller.dto';
 
 const MAX_SHOPS_LIST_SIZE = 200;
 const SHOP_PRODUCT_PREVIEW_LIMIT = 24;
@@ -15,7 +23,7 @@ const SALES_REPORT_PAGE_SIZE = 100;
 export class SellersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(limit = MAX_SHOPS_LIST_SIZE) {
+  async findAll(limit = MAX_SHOPS_LIST_SIZE): Promise<SellerSummaryDto[]> {
     return this.prisma.seller.findMany({
       where: { shopStatus: 'Active' },
       select: {
@@ -30,10 +38,18 @@ export class SellersService {
     });
   }
 
-  async findById(id: number, productLimit = SHOP_PRODUCT_PREVIEW_LIMIT) {
+  async findById(
+    id: number,
+    productLimit = SHOP_PRODUCT_PREVIEW_LIMIT,
+  ): Promise<SellerPublicDto> {
     const seller = await this.prisma.seller.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        shopName: true,
+        shopLogoUrl: true,
+        shopDescription: true,
+        registeredAt: true,
         products: {
           where: { status: 'Available' },
           select: {
@@ -48,11 +64,29 @@ export class SellersService {
         },
       },
     });
+
     if (!seller) throw new NotFoundException('Shop not found.');
-    return seller;
+
+    return {
+      id: seller.id,
+      shopName: seller.shopName,
+      shopLogoUrl: seller.shopLogoUrl,
+      shopDescription: seller.shopDescription,
+      registeredAt: seller.registeredAt,
+      products: seller.products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        imageUrl: p.imageUrl,
+        price: p.price.toString(),
+        category: p.category,
+      })),
+    };
   }
 
-  async registerSeller(userId: number, dto: CreateSellerDto) {
+  async registerSeller(
+    userId: number,
+    dto: CreateSellerDto,
+  ): Promise<SellerSummaryDto> {
     const existingSeller = await this.prisma.seller.findUnique({
       where: { userId },
     });
@@ -63,13 +97,20 @@ export class SellersService {
       where: { roleName: RoleName.Seller },
     });
 
-    return this.prisma.$transaction(async (tx) => {
-      const seller = await tx.seller.create({
+    const seller = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.seller.create({
         data: {
           userId,
           shopName: dto.shopName,
           shopDescription: dto.shopDescription,
           shopLogoUrl: dto.shopLogoUrl,
+        },
+        select: {
+          id: true,
+          shopName: true,
+          shopLogoUrl: true,
+          shopDescription: true,
+          registeredAt: true,
         },
       });
       await tx.userRole.upsert({
@@ -77,22 +118,32 @@ export class SellersService {
         update: {},
         create: { userId, roleId: sellerRole.id },
       });
-      return seller;
+      return created;
     });
+
+    return seller;
   }
 
-  async getSellerDashboard(userId: number) {
+  async getSellerDashboard(userId: number): Promise<SellerDashboardDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
+      select: { id: true, shopName: true, shopLogoUrl: true },
     });
 
     const [products, recentOrders, commissions] = await Promise.all([
       this.prisma.product.count({ where: { sellerId: seller.id } }),
       this.prisma.orderItem.findMany({
         where: { product: { sellerId: seller.id } },
-        include: {
+        select: {
+          id: true,
+          orderItemStatus: true,
+          quantity: true,
+          price: true,
           order: {
-            include: { user: { select: { firstName: true, lastName: true } } },
+            select: {
+              orderDate: true,
+              user: { select: { firstName: true, lastName: true } },
+            },
           },
           product: { select: { name: true } },
         },
@@ -106,15 +157,28 @@ export class SellersService {
     ]);
 
     return {
-      seller,
-      stats: { products, totalCommission: commissions._sum.commissionAmount },
-      recentOrders,
+      shopName: seller.shopName,
+      shopLogoUrl: seller.shopLogoUrl,
+      stats: {
+        products,
+        totalCommission: commissions._sum.commissionAmount?.toString() ?? null,
+      },
+      recentOrders: recentOrders.map((item) => ({
+        id: item.id,
+        orderItemStatus: item.orderItemStatus,
+        quantity: item.quantity,
+        price: item.price.toString(),
+        productName: item.product.name,
+        customerName: `${item.order.user.firstName} ${item.order.user.lastName}`,
+        orderDate: item.order.orderDate,
+      })),
     };
   }
 
-  async getSellerStats(userId: number) {
+  async getSellerStats(userId: number): Promise<SellerStatsDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
+      select: { id: true },
     });
 
     const [totalProducts, totalOrders, pendingOrders, revenueAgg] =
@@ -138,30 +202,65 @@ export class SellersService {
         }),
       ]);
 
-    const totalRevenue = Number(revenueAgg._sum.price ?? 0);
-
-    return { totalProducts, totalOrders, pendingOrders, totalRevenue };
+    return {
+      totalProducts,
+      totalOrders,
+      pendingOrders,
+      totalRevenue: (revenueAgg._sum.price ?? 0).toString(),
+    };
   }
 
   async getSalesReport(
     userId: number,
     page = 1,
     limit = SALES_REPORT_PAGE_SIZE,
-  ) {
+  ): Promise<PaginatedSalesReportDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
+      select: { id: true },
     });
+
     const safeLimit = Math.min(limit, SALES_REPORT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
-    return this.prisma.orderItem.findMany({
-      where: { product: { sellerId: seller.id }, orderItemStatus: 'Completed' },
-      include: {
-        product: { select: { name: true, price: true } },
-        order: { select: { orderDate: true } },
-      },
-      orderBy: { order: { orderDate: 'desc' } },
-      take: safeLimit,
-      skip,
-    });
+    const where = {
+      product: { sellerId: seller.id },
+      orderItemStatus: 'Completed' as const,
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.orderItem.findMany({
+        where,
+        select: {
+          id: true,
+          orderItemStatus: true,
+          quantity: true,
+          price: true,
+          product: { select: { name: true, price: true } },
+          order: { select: { orderDate: true } },
+        },
+        orderBy: { order: { orderDate: 'desc' } },
+        take: safeLimit,
+        skip,
+      }),
+      this.prisma.orderItem.count({ where }),
+    ]);
+
+    const items: SellerSaleItemDto[] = rows.map((row) => ({
+      id: row.id,
+      orderItemStatus: row.orderItemStatus,
+      quantity: row.quantity,
+      price: row.price.toString(),
+      productName: row.product.name,
+      productPrice: row.product.price.toString(),
+      orderDate: row.order.orderDate,
+    }));
+
+    return {
+      items,
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 }

@@ -50,4 +50,3 @@ describe('API contracts', () => {
     });
   });
 });
-

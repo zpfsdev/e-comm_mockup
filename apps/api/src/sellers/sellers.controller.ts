@@ -1,7 +1,19 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
-import { CurrentUser, type JwtPayload } from '../core/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
 import { Roles } from '../core/decorators/roles.decorator';
 import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
@@ -58,7 +70,10 @@ export class SellersController {
   @ApiBearerAuth()
   @Roles(RoleName.Customer)
   @ApiOperation({ summary: 'Register current user as a seller' })
-  registerSeller(@CurrentUser() user: JwtPayload, @Body() dto: CreateSellerDto) {
+  registerSeller(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateSellerDto,
+  ) {
     return this.sellersService.registerSeller(user.sub, dto);
   }
 

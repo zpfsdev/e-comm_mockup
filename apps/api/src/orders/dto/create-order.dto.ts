@@ -54,7 +54,9 @@ export class CreateOrderDto {
   items: OrderItemDto[];
 
   /** Saved address ID — mutually exclusive with `deliveryAddress`. */
-  @ApiPropertyOptional({ description: 'UserAddress ID to ship to (for saved addresses)' })
+  @ApiPropertyOptional({
+    description: 'UserAddress ID to ship to (for saved addresses)',
+  })
   @IsOptional()
   @IsInt()
   @IsPositive()

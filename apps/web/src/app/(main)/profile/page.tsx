@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -50,18 +50,6 @@ export default function ProfilePage() {
       return data;
     },
   });
-
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        firstName: profile.firstName,
-        middleName: profile.middleName ?? '',
-        lastName: profile.lastName,
-        contactNumber: profile.contactNumber ?? '',
-        profilePictureUrl: profile.profilePictureUrl ?? '',
-      });
-    }
-  }, [profile]);
 
   const mutation = useMutation({
     mutationFn: (payload: Partial<EditForm>) => apiClient.patch('/users/profile', payload),

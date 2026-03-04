@@ -24,13 +24,13 @@ import { UsersModule } from './users/users.module';
     ThrottlerModule.forRoot([
       {
         name: 'global',
-        ttl: 60_000,   // 1 minute window
-        limit: 120,    // 120 req / minute per IP (covers normal browsing)
+        ttl: 60_000, // 1 minute window
+        limit: 120, // 120 req / minute per IP (covers normal browsing)
       },
       {
         name: 'auth',
         ttl: 60_000,
-        limit: 10,     // 10 req / minute per IP (brute-force protection on login)
+        limit: 10, // 10 req / minute per IP (brute-force protection on login)
       },
     ]),
 

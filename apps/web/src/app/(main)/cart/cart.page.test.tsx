@@ -3,16 +3,21 @@ import { render, screen } from '@testing-library/react';
 import CartPage from './page';
 
 jest.mock('next/image', () => {
-  return (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} />;
+  const MockImage = (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    <img {...props} alt={props.alt ?? ''} />
+  );
+  MockImage.displayName = 'MockNextImage';
+  return MockImage;
 });
 
 jest.mock('next/link', () => {
-  return ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    // eslint-disable-next-line jsx-a11y/anchor-is-valid
+  const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>
       {children}
     </a>
   );
+  MockLink.displayName = 'MockNextLink';
+  return MockLink;
 });
 
 jest.mock('@tanstack/react-query', () => ({
@@ -23,7 +28,7 @@ jest.mock('@tanstack/react-query', () => ({
 
 describe('CartPage', () => {
   it('renders empty cart message when there are no items', () => {
-    const useQueryMock = require('@tanstack/react-query').useQuery as jest.Mock;
+    const useQueryMock = (jest.requireMock('@tanstack/react-query') as { useQuery: jest.Mock }).useQuery;
     useQueryMock.mockReturnValue({
       data: { items: [] },
       isLoading: false,

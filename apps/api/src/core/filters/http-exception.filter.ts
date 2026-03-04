@@ -39,7 +39,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const message =
       resolved instanceof HttpException
-        ? (resolved.getResponse() as Record<string, unknown>)['message'] ?? resolved.message
+        ? ((resolved.getResponse() as Record<string, unknown>)['message'] ??
+          resolved.message)
         : 'Internal server error';
 
     const error =
@@ -67,7 +68,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       switch (exception.code) {
         case 'P2002':
-          return new ConflictException('A record with this value already exists.');
+          return new ConflictException(
+            'A record with this value already exists.',
+          );
         case 'P2025':
           return new NotFoundException('The requested record was not found.');
         default:

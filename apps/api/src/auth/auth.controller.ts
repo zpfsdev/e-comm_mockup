@@ -1,14 +1,25 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { CurrentUser, type JwtPayload } from '../core/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
 import type { AuthTokens } from './auth.service';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('auth')
@@ -32,7 +43,8 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
-    const { refreshToken, ...safeTokens } = tokens;
+    const { refreshToken: _refreshToken, ...safeTokens } = tokens;
+    void _refreshToken;
     return safeTokens;
   }
 
@@ -52,7 +64,8 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
-    const { refreshToken, ...safeTokens } = tokens;
+    const { refreshToken: _refreshToken, ...safeTokens } = tokens;
+    void _refreshToken;
     return safeTokens;
   }
 
@@ -60,10 +73,30 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using a refresh token' })
-  refresh(@Req() req: Request): Promise<{ accessToken: string }> {
-    const token = req.cookies?.refreshToken;
-    const csrfToken = req.headers['x-csrf-token'] as string | undefined;
-    return this.authService.refresh(token ?? '', csrfToken);
+  refresh(
+    @Req()
+    req: Request & {
+      cookies?: Record<string, unknown>;
+    },
+  ): Promise<{ accessToken: string }> {
+    const rawCookies: unknown = req.cookies;
+    const cookies =
+      rawCookies && typeof rawCookies === 'object'
+        ? (rawCookies as { refreshToken?: unknown })
+        : { refreshToken: undefined };
+    const rawRefresh = cookies.refreshToken;
+    const headerValue = req.headers['x-csrf-token'];
+    const csrfToken =
+      typeof headerValue === 'string'
+        ? headerValue
+        : Array.isArray(headerValue)
+          ? headerValue[0]
+          : undefined;
+
+    const refreshToken =
+      typeof rawRefresh === 'string' ? rawRefresh : undefined;
+
+    return this.authService.refresh(refreshToken ?? '', csrfToken);
   }
 
   @Get('me')
@@ -76,15 +109,22 @@ export class AuthController {
   @Post('change-password')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Change own password and revoke all existing refresh tokens' })
-  async changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto): Promise<void> {
+  @ApiOperation({
+    summary: 'Change own password and revoke all existing refresh tokens',
+  })
+  async changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
     await this.authService.changePassword(user.sub, dto);
   }
 
   @Post('logout-all')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Logout from all sessions by revoking all existing refresh tokens' })
+  @ApiOperation({
+    summary: 'Logout from all sessions by revoking all existing refresh tokens',
+  })
   async logoutAll(@CurrentUser() user: JwtPayload): Promise<void> {
     await this.authService.logoutAll(user.sub);
   }

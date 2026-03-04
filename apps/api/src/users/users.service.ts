@@ -24,7 +24,15 @@ export class UsersService {
         status: true,
         userRoles: { include: { role: true } },
         userAddresses: {
-          include: { address: { include: { barangay: { include: { city: { include: { province: true } } } } } } },
+          include: {
+            address: {
+              include: {
+                barangay: {
+                  include: { city: { include: { province: true } } },
+                },
+              },
+            },
+          },
         },
       },
     });

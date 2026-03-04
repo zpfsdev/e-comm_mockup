@@ -4,6 +4,8 @@ import { UserStatus } from '@prisma/client';
 
 export class SetUserStatusDto {
   @ApiProperty({ enum: UserStatus, example: UserStatus.Active })
-  @IsEnum(UserStatus, { message: `status must be one of: ${Object.values(UserStatus).join(', ')}` })
+  @IsEnum(UserStatus, {
+    message: `status must be one of: ${Object.values(UserStatus).join(', ')}`,
+  })
   status: UserStatus;
 }

@@ -22,7 +22,13 @@ interface Cart {
 export default function CartPage() {
   const queryClient = useQueryClient();
 
-  const { data: cart, isLoading, isError } = useQuery<Cart>({
+  const {
+    data: cart,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery<Cart>({
     queryKey: ['cart'],
     queryFn: async () => {
       const { data } = await apiClient.get<Cart>('/cart');
@@ -50,9 +56,19 @@ export default function CartPage() {
     return (
       <div className={styles.page}>
         <div className={styles.inner}>
-          <p style={{ color: 'var(--color-error, #ef4444)', padding: 'var(--space-8)' }}>
-            Failed to load your cart. Please try again.
-          </p>
+          <div style={{ padding: 'var(--space-8)' }}>
+            <p style={{ color: 'var(--color-error, #ef4444)', marginBottom: 'var(--space-3)' }}>
+              Failed to load your cart. Please try again.
+            </p>
+            <button
+              type="button"
+              className={styles.retryBtn}
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              {isFetching ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
         </div>
       </div>
     );

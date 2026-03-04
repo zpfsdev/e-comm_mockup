@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { HTMLAttributes } from 'react';
 import styles from './avatar.module.css';
 
@@ -15,7 +16,7 @@ export function Avatar({ src, alt = '', initials, size = 'md', className = '', .
   return (
     <div className={classes} {...props}>
       {src ? (
-        <img src={src} alt={alt} />
+        <Image src={src} alt={alt} fill sizes="3rem" className={styles.image} />
       ) : (
         <span aria-label={alt}>{initials ?? '?'}</span>
       )}

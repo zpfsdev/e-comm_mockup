@@ -1,2 +1,4 @@
-export default {};
+const styles: Record<string, string> = {};
+
+export default styles;
 

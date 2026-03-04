@@ -36,21 +36,27 @@ export class AdminService {
   }
 
   async setShopStatus(sellerId: number, status: ShopStatus) {
-    const seller = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+    });
     if (!seller) throw new NotFoundException('Shop not found.');
-    return this.prisma.seller.update({ where: { id: sellerId }, data: { shopStatus: status } });
+    return this.prisma.seller.update({
+      where: { id: sellerId },
+      data: { shopStatus: status },
+    });
   }
 
   async getPlatformStats() {
-    const [totalUsers, totalSellers, totalOrders, revenueAgg] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.seller.count(),
-      this.prisma.order.count(),
-      this.prisma.payment.aggregate({
-        where: { paymentStatus: 'Paid' },
-        _sum: { paymentAmount: true },
-      }),
-    ]);
+    const [totalUsers, totalSellers, totalOrders, revenueAgg] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.seller.count(),
+        this.prisma.order.count(),
+        this.prisma.payment.aggregate({
+          where: { paymentStatus: 'Paid' },
+          _sum: { paymentAmount: true },
+        }),
+      ]);
 
     const totalRevenue = Number(revenueAgg._sum.paymentAmount ?? 0);
 

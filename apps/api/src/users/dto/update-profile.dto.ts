@@ -23,7 +23,9 @@ export class UpdateProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Matches(/^(\+63|0)[0-9]{10}$/, { message: 'Invalid Philippine contact number' })
+  @Matches(/^(\+63|0)[0-9]{10}$/, {
+    message: 'Invalid Philippine contact number',
+  })
   contactNumber?: string;
 
   @ApiPropertyOptional()

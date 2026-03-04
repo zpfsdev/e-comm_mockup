@@ -49,6 +49,8 @@ export class RegisterDto {
 
   @ApiProperty({ example: '09171234567' })
   @IsString()
-  @Matches(/^(\+63|0)[0-9]{10}$/, { message: 'Invalid Philippine contact number' })
+  @Matches(/^(\+63|0)[0-9]{10}$/, {
+    message: 'Invalid Philippine contact number',
+  })
   contactNumber: string;
 }

@@ -162,7 +162,9 @@ describe('OrdersService', () => {
           orderBy: { orderDate: 'desc' },
         }),
       );
-      expect(mockPrisma.order.count).toHaveBeenCalledWith({ where: { userId: 42 } });
+      expect(mockPrisma.order.count).toHaveBeenCalledWith({
+        where: { userId: 42 },
+      });
     });
   });
 

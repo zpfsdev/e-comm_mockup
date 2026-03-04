@@ -45,6 +45,12 @@ const mockPrisma = {
   product: {
     findUnique: jest.fn(),
   },
+  $transaction: jest
+    .fn()
+    .mockImplementation(
+      async <T>(callback: (tx: typeof mockPrisma) => Promise<T>): Promise<T> =>
+        callback(mockPrisma),
+    ),
 };
 
 describe('CartService', () => {

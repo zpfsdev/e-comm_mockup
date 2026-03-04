@@ -28,7 +28,9 @@ async function measureLatencies(url: string, count = 10): Promise<number[]> {
 
   for (let i = 0; i < count; i++) {
     const start = performance.now();
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+    });
     const end = performance.now();
     await response.json();
     latencies.push(end - start);
@@ -48,7 +50,10 @@ describe('GET /api/v1/products', () => {
   let sortedLatencies: number[];
 
   beforeAll(async () => {
-    sortedLatencies = await measureLatencies(`${API_BASE}/api/v1/products?limit=20`, 15);
+    sortedLatencies = await measureLatencies(
+      `${API_BASE}/api/v1/products?limit=20`,
+      15,
+    );
   }, 60_000);
 
   it('p50 (median) response time is under 300 ms', () => {
@@ -96,7 +101,10 @@ describe('GET /api/v1/categories', () => {
   let sortedLatencies: number[];
 
   beforeAll(async () => {
-    sortedLatencies = await measureLatencies(`${API_BASE}/api/v1/categories`, 10);
+    sortedLatencies = await measureLatencies(
+      `${API_BASE}/api/v1/categories`,
+      10,
+    );
   }, 30_000);
 
   it('p95 response time is under 200 ms (reference data, expected fast)', () => {

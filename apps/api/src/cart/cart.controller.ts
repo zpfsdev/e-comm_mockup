@@ -1,6 +1,18 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser, type JwtPayload } from '../core/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../core/decorators/current-user.decorator';
 import { CartService } from './cart.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
 
@@ -46,7 +58,10 @@ export class CartController {
 
   @Delete('items/:productId')
   @ApiOperation({ summary: 'Remove item from cart' })
-  removeItem(@CurrentUser() user: JwtPayload, @Param('productId', ParseIntPipe) productId: number) {
+  removeItem(
+    @CurrentUser() user: JwtPayload,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
     return this.cartService.removeItem(user.sub, productId);
   }
 

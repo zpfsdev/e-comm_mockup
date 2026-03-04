@@ -51,7 +51,11 @@ describe('UsersService', () => {
     it('delegates to prisma.update with dto and returns projected user', async () => {
       const inputId = 5;
       const inputDto = { firstName: 'Updated', lastName: 'User' };
-      const expectedUser = { id: inputId, firstName: 'Updated', lastName: 'User' };
+      const expectedUser = {
+        id: inputId,
+        firstName: 'Updated',
+        lastName: 'User',
+      };
 
       (mockPrisma.user.update as jest.Mock).mockResolvedValue(expectedUser);
 
@@ -66,4 +70,3 @@ describe('UsersService', () => {
     });
   });
 });
-

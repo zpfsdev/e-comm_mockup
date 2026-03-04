@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { Roles } from '../core/decorators/roles.decorator';
@@ -30,13 +38,19 @@ export class AdminController {
 
   @Patch('users/:id/status')
   @ApiOperation({ summary: 'Activate or deactivate a user account' })
-  setUserStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetUserStatusDto) {
+  setUserStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetUserStatusDto,
+  ) {
     return this.adminService.setUserStatus(id, dto.status);
   }
 
   @Patch('shops/:id/status')
   @ApiOperation({ summary: 'Set shop status (Active/Inactive/Banned)' })
-  setShopStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: SetShopStatusDto) {
+  setShopStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetShopStatusDto,
+  ) {
     return this.adminService.setShopStatus(id, dto.status);
   }
 

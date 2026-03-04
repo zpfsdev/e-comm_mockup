@@ -30,7 +30,7 @@ export class CreateProductDto {
   @MaxLength(255)
   imageUrl: string;
 
-  @ApiProperty({ example: 150.00 })
+  @ApiProperty({ example: 150.0 })
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   @Type(() => Number)

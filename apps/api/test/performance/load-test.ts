@@ -41,8 +41,8 @@ const SCENARIOS: Array<{
     duration: 30,
     sla: {
       name: 'SRS NFR',
-      p99MaxMs: 3_000,   // SRS requirement
-      p50MaxMs: 800,     // TTFB-equivalent target
+      p99MaxMs: 3_000, // SRS requirement
+      p50MaxMs: 800, // TTFB-equivalent target
       maxErrorRatePercent: 0.5,
       minRps: 50,
     },
@@ -54,8 +54,8 @@ const SCENARIOS: Array<{
     duration: 30,
     sla: {
       name: 'Modern standard',
-      p99MaxMs: 1_500,   // stretch: comfortable margin under 3 s
-      p50MaxMs: 300,     // stretch median
+      p99MaxMs: 1_500, // stretch: comfortable margin under 3 s
+      p50MaxMs: 300, // stretch median
       maxErrorRatePercent: 0.1,
       minRps: 80,
     },
@@ -100,7 +100,9 @@ interface ScenarioResult {
   duration: number;
 }
 
-async function runScenario(scenario: typeof SCENARIOS[number]): Promise<ScenarioResult> {
+async function runScenario(
+  scenario: (typeof SCENARIOS)[number],
+): Promise<ScenarioResult> {
   return new Promise((resolve) => {
     const instance = autocannon({
       url: scenario.url,
@@ -119,18 +121,22 @@ async function runScenario(scenario: typeof SCENARIOS[number]): Promise<Scenario
       const p50 = result.latency.p50;
       const p99 = result.latency.p99;
       const rps = result.requests.average;
-      const errorCount = result.errors + result['2xx' in result ? '0' : 'non2xx' as keyof typeof result];
       const totalRequests = result.requests.total;
-      const errorRate = totalRequests > 0 ? (result.errors / totalRequests) * 100 : 0;
+      const errorRate =
+        totalRequests > 0 ? (result.errors / totalRequests) * 100 : 0;
 
       if (p99 > sla.p99MaxMs)
         violations.push(`p99 latency ${p99}ms exceeds ${sla.p99MaxMs}ms`);
       if (p50 > sla.p50MaxMs)
         violations.push(`p50 latency ${p50}ms exceeds ${sla.p50MaxMs}ms`);
       if (errorRate > sla.maxErrorRatePercent)
-        violations.push(`error rate ${errorRate.toFixed(2)}% exceeds ${sla.maxErrorRatePercent}%`);
+        violations.push(
+          `error rate ${errorRate.toFixed(2)}% exceeds ${sla.maxErrorRatePercent}%`,
+        );
       if (rps < sla.minRps)
-        violations.push(`throughput ${rps.toFixed(1)} req/s below ${sla.minRps} req/s`);
+        violations.push(
+          `throughput ${rps.toFixed(1)} req/s below ${sla.minRps} req/s`,
+        );
 
       resolve({
         label: scenario.label,

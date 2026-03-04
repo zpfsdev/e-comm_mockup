@@ -76,8 +76,13 @@ describe('AdminService', () => {
       const inputUserId = 10;
       const inputStatus = UserStatus.Inactive;
 
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: inputUserId });
-      (mockPrisma.user.update as jest.Mock).mockResolvedValue({ id: inputUserId, status: inputStatus });
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: inputUserId,
+      });
+      (mockPrisma.user.update as jest.Mock).mockResolvedValue({
+        id: inputUserId,
+        status: inputStatus,
+      });
 
       const actualUser = await service.setUserStatus(inputUserId, inputStatus);
 
@@ -91,7 +96,9 @@ describe('AdminService', () => {
     it('throws NotFoundException when user does not exist', async () => {
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.setUserStatus(999, UserStatus.Active)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.setUserStatus(999, UserStatus.Active),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -100,10 +107,18 @@ describe('AdminService', () => {
       const inputSellerId = 3;
       const inputStatus = ShopStatus.Active;
 
-      (mockPrisma.seller.findUnique as jest.Mock).mockResolvedValue({ id: inputSellerId });
-      (mockPrisma.seller.update as jest.Mock).mockResolvedValue({ id: inputSellerId, shopStatus: inputStatus });
+      (mockPrisma.seller.findUnique as jest.Mock).mockResolvedValue({
+        id: inputSellerId,
+      });
+      (mockPrisma.seller.update as jest.Mock).mockResolvedValue({
+        id: inputSellerId,
+        shopStatus: inputStatus,
+      });
 
-      const actualSeller = await service.setShopStatus(inputSellerId, inputStatus);
+      const actualSeller = await service.setShopStatus(
+        inputSellerId,
+        inputStatus,
+      );
 
       expect(actualSeller.shopStatus).toBe(inputStatus);
       expect(mockPrisma.seller.update).toHaveBeenCalledWith({
@@ -115,8 +130,9 @@ describe('AdminService', () => {
     it('throws NotFoundException when seller does not exist', async () => {
       (mockPrisma.seller.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.setShopStatus(999, ShopStatus.Inactive)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.setShopStatus(999, ShopStatus.Inactive),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
-

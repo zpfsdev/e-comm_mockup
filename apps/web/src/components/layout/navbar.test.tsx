@@ -2,18 +2,21 @@ import { render, screen } from '@testing-library/react';
 import { Navbar } from './navbar';
 
 jest.mock('next/image', () => {
-  return ({ priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => (
+  const MockImage = (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
     <img {...props} alt={props.alt ?? ''} />
   );
+  MockImage.displayName = 'MockNextImage';
+  return MockImage;
 });
 
 jest.mock('next/link', () => {
-  return ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    // eslint-disable-next-line jsx-a11y/anchor-is-valid
+  const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>
       {children}
     </a>
   );
+  MockLink.displayName = 'MockNextLink';
+  return MockLink;
 });
 
 jest.mock('@tanstack/react-query', () => ({

@@ -11,7 +11,9 @@ export interface JwtPayload {
 /** Extract the authenticated user from the JWT payload. */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): JwtPayload => {
-    const request = ctx.switchToHttp().getRequest<Request & { user: JwtPayload }>();
+    const request = ctx
+      .switchToHttp()
+      .getRequest<Request & { user: JwtPayload }>();
     return request.user;
   },
 );

@@ -6,4 +6,3 @@ export class SetUserActiveDto {
   @IsBoolean()
   isActive: boolean;
 }
-

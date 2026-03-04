@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -59,17 +59,13 @@ function ProductCard({ product }: { readonly product: Product }) {
 
 function ShopContent() {
   const searchParams = useSearchParams();
-  const [page, setPage] = useState(1);
 
   const category = searchParams.get('category') ?? undefined;
   const age = searchParams.get('age') ?? undefined;
   const store = searchParams.get('store') ?? undefined;
   const search = searchParams.get('search') ?? undefined;
-  const sort = searchParams.get('sort') ?? undefined;
 
-  useEffect(() => {
-    setPage(1);
-  }, [category, age, store, search, sort]);
+  const [page, setPage] = useState(1);
 
   const queryString = new URLSearchParams();
   if (search) queryString.set('search', search);

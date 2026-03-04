@@ -1,7 +1,19 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
-import { CurrentUser, type JwtPayload } from '../core/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../core/decorators/current-user.decorator';
 import { Roles } from '../core/decorators/roles.decorator';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderItemStatusDto } from './dto/update-order-item-status.dto';
@@ -21,7 +33,9 @@ export class OrdersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get order history for authenticated user (paginated)' })
+  @ApiOperation({
+    summary: 'Get order history for authenticated user (paginated)',
+  })
   getOrders(
     @CurrentUser() user: JwtPayload,
     @Query('page', new ParseIntPipe({ optional: true })) page = 1,
@@ -32,7 +46,10 @@ export class OrdersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific order with full tracking info' })
-  getOrder(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtPayload) {
+  getOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.ordersService.findOrderById(id, user.sub);
   }
 
@@ -44,6 +61,10 @@ export class OrdersController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateOrderItemStatusDto,
   ) {
-    return this.ordersService.updateOrderItemStatusForUser(orderItemId, user.sub, dto.status);
+    return this.ordersService.updateOrderItemStatusForUser(
+      orderItemId,
+      user.sub,
+      dto.status,
+    );
   }
 }

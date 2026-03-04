@@ -36,9 +36,13 @@ describe('SellersService', () => {
       const inputUserId = 42;
       const mockSeller = { id: 7 };
 
-      (mockPrisma.seller.findUniqueOrThrow as jest.Mock).mockResolvedValue(mockSeller);
+      (mockPrisma.seller.findUniqueOrThrow as jest.Mock).mockResolvedValue(
+        mockSeller,
+      );
       (mockPrisma.product.count as jest.Mock).mockResolvedValue(3);
-      (mockPrisma.orderItem.count as jest.Mock).mockResolvedValueOnce(10).mockResolvedValueOnce(4);
+      (mockPrisma.orderItem.count as jest.Mock)
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(4);
       (mockPrisma.orderItem.aggregate as jest.Mock).mockResolvedValue({
         _sum: { price: 250 },
       });
@@ -51,15 +55,20 @@ describe('SellersService', () => {
         pendingOrders: 4,
         totalRevenue: 250,
       });
-      expect(mockPrisma.seller.findUniqueOrThrow).toHaveBeenCalledWith({ where: { userId: inputUserId } });
+      expect(mockPrisma.seller.findUniqueOrThrow).toHaveBeenCalledWith({
+        where: { userId: inputUserId },
+      });
     });
 
     it('propagates NotFoundException when seller does not exist', async () => {
       const inputUserId = 99;
-      (mockPrisma.seller.findUniqueOrThrow as jest.Mock).mockRejectedValue(new NotFoundException());
+      (mockPrisma.seller.findUniqueOrThrow as jest.Mock).mockRejectedValue(
+        new NotFoundException(),
+      );
 
-      await expect(service.getSellerStats(inputUserId)).rejects.toThrow(NotFoundException);
+      await expect(service.getSellerStats(inputUserId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
-

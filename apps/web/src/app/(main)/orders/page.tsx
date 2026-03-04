@@ -38,7 +38,13 @@ function formatDate(dateStr: string): string {
 }
 
 export default function OrdersPage() {
-  const { data: ordersResponse, isLoading, isError } = useQuery({
+  const {
+    data: ordersResponse,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
       const { data } = await apiClient.get<{ orders: Order[]; total: number; page: number; limit: number; totalPages: number }>('/orders');
@@ -50,9 +56,19 @@ export default function OrdersPage() {
   if (isError) {
     return (
       <div className={styles.page}>
-        <p style={{ color: 'var(--color-error, #ef4444)', padding: 'var(--space-8)' }}>
-          Failed to load your orders. Please try again.
-        </p>
+        <div style={{ padding: 'var(--space-8)' }}>
+          <p style={{ color: 'var(--color-error, #ef4444)', marginBottom: 'var(--space-3)' }}>
+            Failed to load your orders. Please try again.
+          </p>
+          <button
+            type="button"
+            className={styles.retryBtn}
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
       </div>
     );
   }

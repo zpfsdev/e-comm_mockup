@@ -1,73 +1,6 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
-/**
- * Content Security Policy header value.
- *
- * Rules:
- * - default-src 'self'      — only load same-origin by default
- * - script-src              — allows Next.js inline scripts + Google Fonts
- * - style-src               — allows inline styles (CSS Modules inject <style>) + Google Fonts
- * - img-src                 — same-origin, data URIs, and HTTPS (product images from CDN)
- * - font-src                — Google Fonts + CDN used for the Softers brand font
- * - connect-src             — same-origin + API server
- * - frame-ancestors 'none'  — equivalent to X-Frame-Options: DENY (clickjacking)
- * - object-src 'none'       — disallows plugins (Flash, etc.)
- * - base-uri 'self'         — prevents base-tag injection
- * - upgrade-insecure-requests — forces HTTPS sub-resources in production
- */
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-const apiOrigin = apiUrl ? new URL(apiUrl).origin : 'http://localhost:3001';
-
-// unsafe-eval is only required by Next.js in development (HMR, eval source maps).
-// Production builds do not need it and including it defeats CSP's XSS protection.
-const scriptSrc = process.env.NODE_ENV === 'production'
-  ? "script-src 'self' 'unsafe-inline'"
-  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
-
-const CSP = [
-  "default-src 'self'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com",
-  "img-src 'self' data: https:",
-  "font-src 'self' https://fonts.gstatic.com https://db.onlinewebfonts.com",
-  `connect-src 'self' ${apiOrigin}`,
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "upgrade-insecure-requests",
-].join('; ');
-
-/** HTTP response headers applied to every page and API route. */
-const SECURITY_HEADERS = [
-  // ── Clickjacking ─────────────────────────────────────────────────────────
-  { key: 'X-Frame-Options',           value: 'DENY' },
-
-  // ── MIME sniffing ─────────────────────────────────────────────────────────
-  { key: 'X-Content-Type-Options',    value: 'nosniff' },
-
-  // ── XSS auditor (legacy browsers) ────────────────────────────────────────
-  { key: 'X-XSS-Protection',         value: '1; mode=block' },
-
-  // ── Referrer leakage ─────────────────────────────────────────────────────
-  { key: 'Referrer-Policy',          value: 'strict-origin-when-cross-origin' },
-
-  // ── Permissions policy — restrict sensor/camera/mic access ───────────────
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-  },
-
-  // ── HSTS — enforce HTTPS for 1 year with subdomain coverage ──────────────
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=31536000; includeSubDomains; preload',
-  },
-
-  // ── Content Security Policy ───────────────────────────────────────────────
-  { key: 'Content-Security-Policy',  value: CSP },
-];
-
 const nextConfig: NextConfig = {
   // ── Turbopack ─────────────────────────────────────────────────────────────
   // Explicitly set the monorepo root so Next.js does not try to infer it from
@@ -122,13 +55,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   // ── HTTP response headers ─────────────────────────────────────────────────
+  // Security headers (CSP, X-Frame-Options, etc.) are set per-request in
+  // src/middleware.ts so a unique nonce can be injected into each CSP.
   async headers() {
     return [
-      {
-        // Apply to all routes.
-        source: '/(.*)',
-        headers: SECURITY_HEADERS,
-      },
       {
         // Long-lived cache for immutable static assets (JS/CSS chunks).
         source: '/_next/static/(.*)',

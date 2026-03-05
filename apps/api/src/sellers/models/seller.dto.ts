@@ -72,3 +72,12 @@ export interface PaginatedSalesReportDto {
   readonly limit: number;
   readonly totalPages: number;
 }
+
+/** Paginated seller list response. */
+export interface PaginatedSellersResponseDto {
+  readonly sellers: SellerSummaryDto[];
+  readonly total: number;
+  readonly page: number;
+  readonly limit: number;
+  readonly totalPages: number;
+}

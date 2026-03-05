@@ -87,26 +87,44 @@ export class ProductsService {
     return this.mapToProductDto(product);
   }
 
-  /** Returns all products for a given seller ID, newest first. */
+  /** Returns paginated products for a given seller ID, newest first. */
   async findBySeller(
     sellerId: number,
-    limit = SELLER_PRODUCT_PREVIEW_LIMIT,
-  ): Promise<ProductDto[]> {
-    const products = await this.prisma.product.findMany({
-      where: { sellerId },
-      select: PRODUCT_SELECT,
-      orderBy: { dateAdded: 'desc' },
-      take: limit,
-    });
-    return products.map((product) => this.mapToProductDto(product));
+    page = 1,
+    limit = 20,
+  ): Promise<ProductListResponseDto> {
+    const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
+    const skip = (page - 1) * safeLimit;
+    const where = { sellerId };
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        select: PRODUCT_SELECT,
+        orderBy: { dateAdded: 'desc' },
+        skip,
+        take: safeLimit,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+    return {
+      products: products.map((product) => this.mapToProductDto(product)),
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
-  /** Returns all products for the authenticated seller (resolves userId → sellerId). */
-  async findByUserId(userId: number): Promise<ProductDto[]> {
+  /** Returns paginated products for the authenticated seller (resolves userId → sellerId). */
+  async findByUserId(
+    userId: number,
+    page = 1,
+    limit = 20,
+  ): Promise<ProductListResponseDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
     });
-    return this.findBySeller(seller.id);
+    return this.findBySeller(seller.id, page, limit);
   }
 
   /** Creates a new product — resolves userId → sellerId. Caller must pass controller-normalized DTO. */

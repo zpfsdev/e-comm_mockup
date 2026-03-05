@@ -17,6 +17,7 @@ import {
 } from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
 import { Roles } from '../core/decorators/roles.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -43,10 +44,13 @@ export class ProductsController {
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({
-    summary: 'Get all products belonging to the authenticated seller',
+    summary: 'Get products belonging to the authenticated seller (paginated)',
   })
-  getMyProducts(@CurrentUser() user: JwtPayload) {
-    return this.productsService.findByUserId(user.sub);
+  getMyProducts(
+    @CurrentUser() user: JwtPayload,
+    @Query() { page, limit }: PaginationQueryDto,
+  ) {
+    return this.productsService.findByUserId(user.sub, page, limit);
   }
 
   @Get()

@@ -1,97 +1,84 @@
 'use client';
 
-import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
-import { tokenStore } from '@/lib/token-store';
+import { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/providers/auth-provider';
 import type { AuthResponse } from '@/types/auth';
 import styles from '../auth.module.css';
 
-interface RegisterPayload {
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  username: string;
-  email: string;
-  password: string;
-  dateOfBirth: string;
-  contactNumber: string;
-}
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).+$/;
 
-interface FormState {
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  password: string;
-  confirm: string;
-  dateOfBirth: string;
-  contactNumber: string;
-}
+const signUpSchema = z
+  .object({
+    firstName: z.string().min(1, 'First name is required'),
+    middleName: z.string().optional(),
+    lastName: z.string().min(1, 'Last name is required'),
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username must be 30 characters or fewer'),
+    email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+    dateOfBirth: z.string().min(1, 'Date of birth is required'),
+    contactNumber: z.string().min(7, 'Enter a valid phone number'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(PASSWORD_REGEX, 'Password must contain at least one uppercase letter and one number'),
+    confirm: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: 'Passwords do not match',
+    path: ['confirm'],
+  });
 
-const INITIAL_FORM: FormState = {
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  username: '',
-  email: '',
-  password: '',
-  confirm: '',
-  dateOfBirth: '',
-  contactNumber: '',
-};
+type SignUpFields = z.infer<typeof signUpSchema>;
 
 export default function SignUpClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const [serverError, setServerError] = useState('');
 
-  function updateField(field: keyof FormState, value: string): void {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignUpFields>({
+    resolver: zodResolver(signUpSchema),
+    mode: 'onBlur',
+  });
 
-  const mutation = useMutation<AuthResponse, AxiosError<{ message?: string }>, RegisterPayload>({
+  const mutation = useMutation<AuthResponse, AxiosError<{ message?: string }>, Omit<SignUpFields, 'confirm'>>({
     mutationFn: async (payload) => {
       const { data } = await apiClient.post<AuthResponse>('/auth/register', payload);
       return data;
     },
     onSuccess: (data) => {
-      tokenStore.set(data.accessToken);
-      if (data.csrfToken) {
-        sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
-      }
-      document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
+      setServerError('');
+      login(data);
       const rawFrom = searchParams.get('from') ?? '/';
       const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/';
       router.push(from);
     },
     onError: (err) => {
-      setError(err.response?.data?.message ?? 'Registration failed. Please try again.');
+      setServerError(err.response?.data?.message ?? 'Registration failed. Please try again.');
     },
   });
 
-  function handleSubmit(e: React.FormEvent): void {
-    e.preventDefault();
-    setError('');
-    if (form.password !== form.confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
+  function onSubmit({ confirm: _confirm, ...fields }: SignUpFields): void {
+    void _confirm;
+    setServerError('');
     mutation.mutate({
-      firstName: form.firstName,
-      ...(form.middleName ? { middleName: form.middleName } : {}),
-      lastName: form.lastName,
-      username: form.username,
-      email: form.email,
-      password: form.password,
-      dateOfBirth: form.dateOfBirth,
-      contactNumber: form.contactNumber,
+      ...fields,
+      ...(fields.middleName ? { middleName: fields.middleName } : { middleName: undefined }),
     });
   }
 
@@ -101,128 +88,176 @@ export default function SignUpClientPage() {
         <h1 className={styles.titleSignUp}>CREATE AN ACCOUNT</h1>
 
         <div className={styles.formColumn}>
-          {error && <p className={styles.errorBanner} role="alert">{error}</p>}
+          {serverError && <p className={styles.errorBanner} role="alert">{serverError}</p>}
 
-          <form className={styles.form} onSubmit={handleSubmit} noValidate>
-            <label htmlFor="su-firstName" className={styles.srOnly}>
-              First Name
-            </label>
-            <input
-              id="su-firstName"
-              type="text"
-              placeholder="First Name"
-              className={styles.input}
-              value={form.firstName}
-              onChange={(e) => updateField('firstName', e.target.value)}
-              autoComplete="given-name"
-              required
-            />
-            <label htmlFor="su-lastName" className={styles.srOnly}>
-              Last Name
-            </label>
-            <input
-              id="su-lastName"
-              type="text"
-              placeholder="Last Name"
-              className={styles.input}
-              value={form.lastName}
-              onChange={(e) => updateField('lastName', e.target.value)}
-              autoComplete="family-name"
-              required
-            />
-            <label htmlFor="su-middleName" className={styles.srOnly}>
-              Middle Name (optional)
-            </label>
-            <input
-              id="su-middleName"
-              type="text"
-              placeholder="Middle Name (optional)"
-              className={styles.input}
-              value={form.middleName}
-              onChange={(e) => updateField('middleName', e.target.value)}
-              autoComplete="additional-name"
-            />
-            <label htmlFor="su-phone" className={styles.srOnly}>
-              Phone Number
-            </label>
-            <input
-              id="su-phone"
-              type="tel"
-              placeholder="Phone Number"
-              className={styles.input}
-              value={form.contactNumber}
-              onChange={(e) => updateField('contactNumber', e.target.value)}
-              autoComplete="tel"
-              required
-            />
-            <label htmlFor="su-email" className={styles.srOnly}>
-              Email Address
-            </label>
-            <input
-              id="su-email"
-              type="email"
-              placeholder="Email Address"
-              className={styles.input}
-              value={form.email}
-              onChange={(e) => updateField('email', e.target.value)}
-              autoComplete="email"
-              required
-            />
-            <label htmlFor="su-username" className={styles.srOnly}>
-              Username
-            </label>
-            <input
-              id="su-username"
-              type="text"
-              placeholder="Username"
-              className={styles.input}
-              value={form.username}
-              onChange={(e) => updateField('username', e.target.value)}
-              autoComplete="username"
-              required
-            />
-            <label htmlFor="su-dob" className={styles.srOnly}>
-              Date of Birth
-            </label>
-            <input
-              id="su-dob"
-              type="date"
-              placeholder="Date of Birth"
-              className={styles.input}
-              value={form.dateOfBirth}
-              onChange={(e) => updateField('dateOfBirth', e.target.value)}
-              required
-            />
-            <label htmlFor="su-password" className={styles.srOnly}>
-              Password
-            </label>
-            <input
-              id="su-password"
-              type="password"
-              placeholder="Password"
-              className={styles.input}
-              value={form.password}
-              onChange={(e) => updateField('password', e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-            <label htmlFor="su-confirm" className={styles.srOnly}>
-              Confirm Password
-            </label>
-            <input
-              id="su-confirm"
-              type="password"
-              placeholder="Confirm Password"
-              className={styles.input}
-              value={form.confirm}
-              onChange={(e) => updateField('confirm', e.target.value)}
-              autoComplete="new-password"
-              required
-            />
+          <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div>
+              <label htmlFor="su-firstName" className={styles.srOnly}>First Name</label>
+              <input
+                id="su-firstName"
+                type="text"
+                placeholder="First Name"
+                className={styles.input}
+                autoComplete="given-name"
+                aria-invalid={!!errors.firstName}
+                aria-describedby={errors.firstName ? 'su-firstName-error' : undefined}
+                {...register('firstName')}
+              />
+              {errors.firstName && (
+                <p id="su-firstName-error" className={styles.fieldError} role="alert">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-lastName" className={styles.srOnly}>Last Name</label>
+              <input
+                id="su-lastName"
+                type="text"
+                placeholder="Last Name"
+                className={styles.input}
+                autoComplete="family-name"
+                aria-invalid={!!errors.lastName}
+                aria-describedby={errors.lastName ? 'su-lastName-error' : undefined}
+                {...register('lastName')}
+              />
+              {errors.lastName && (
+                <p id="su-lastName-error" className={styles.fieldError} role="alert">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-middleName" className={styles.srOnly}>Middle Name (optional)</label>
+              <input
+                id="su-middleName"
+                type="text"
+                placeholder="Middle Name (optional)"
+                className={styles.input}
+                autoComplete="additional-name"
+                {...register('middleName')}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="su-phone" className={styles.srOnly}>Phone Number</label>
+              <input
+                id="su-phone"
+                type="tel"
+                placeholder="Phone Number"
+                className={styles.input}
+                autoComplete="tel"
+                aria-invalid={!!errors.contactNumber}
+                aria-describedby={errors.contactNumber ? 'su-phone-error' : undefined}
+                {...register('contactNumber')}
+              />
+              {errors.contactNumber && (
+                <p id="su-phone-error" className={styles.fieldError} role="alert">
+                  {errors.contactNumber.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-email" className={styles.srOnly}>Email Address</label>
+              <input
+                id="su-email"
+                type="email"
+                inputMode="email"
+                placeholder="Email Address"
+                className={styles.input}
+                autoComplete="email"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'su-email-error' : undefined}
+                {...register('email')}
+              />
+              {errors.email && (
+                <p id="su-email-error" className={styles.fieldError} role="alert">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-username" className={styles.srOnly}>Username</label>
+              <input
+                id="su-username"
+                type="text"
+                placeholder="Username"
+                className={styles.input}
+                autoComplete="username"
+                aria-invalid={!!errors.username}
+                aria-describedby={errors.username ? 'su-username-error' : undefined}
+                {...register('username')}
+              />
+              {errors.username && (
+                <p id="su-username-error" className={styles.fieldError} role="alert">
+                  {errors.username.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-dob" className={styles.srOnly}>Date of Birth</label>
+              <input
+                id="su-dob"
+                type="date"
+                className={styles.input}
+                aria-invalid={!!errors.dateOfBirth}
+                aria-describedby={errors.dateOfBirth ? 'su-dob-error' : undefined}
+                {...register('dateOfBirth')}
+              />
+              {errors.dateOfBirth && (
+                <p id="su-dob-error" className={styles.fieldError} role="alert">
+                  {errors.dateOfBirth.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-password" className={styles.srOnly}>Password</label>
+              <input
+                id="su-password"
+                type="password"
+                placeholder="Password"
+                className={styles.input}
+                autoComplete="new-password"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'su-password-error' : undefined}
+                {...register('password')}
+              />
+              {errors.password && (
+                <p id="su-password-error" className={styles.fieldError} role="alert">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="su-confirm" className={styles.srOnly}>Confirm Password</label>
+              <input
+                id="su-confirm"
+                type="password"
+                placeholder="Confirm Password"
+                className={styles.input}
+                autoComplete="new-password"
+                aria-invalid={!!errors.confirm}
+                aria-describedby={errors.confirm ? 'su-confirm-error' : undefined}
+                {...register('confirm')}
+              />
+              {errors.confirm && (
+                <p id="su-confirm-error" className={styles.fieldError} role="alert">
+                  {errors.confirm.message}
+                </p>
+              )}
+            </div>
+
             <button
               type="submit"
               className={styles.submitBtn}
-              disabled={mutation.isPending}
+              disabled={isSubmitting || mutation.isPending}
             >
               {mutation.isPending ? 'Creating account...' : 'Create Account'}
             </button>
@@ -258,4 +293,3 @@ export default function SignUpClientPage() {
     </div>
   );
 }
-

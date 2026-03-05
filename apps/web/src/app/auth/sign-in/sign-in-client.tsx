@@ -1,20 +1,25 @@
- 'use client';
+'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
-import { tokenStore } from '@/lib/token-store';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/providers/auth-provider';
 import type { AuthResponse } from '@/types/auth';
 import styles from '../auth.module.css';
 
-interface SignInPayload {
-  email: string;
-  password: string;
-}
+const signInSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type SignInFields = z.infer<typeof signInSchema>;
 
 function EyeIcon() {
   return (
@@ -53,35 +58,39 @@ function EyeOffIcon() {
 export default function SignInClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useAuth();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
 
-  const mutation = useMutation<AuthResponse, AxiosError<{ message?: string }>, SignInPayload>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignInFields>({
+    resolver: zodResolver(signInSchema),
+    mode: 'onBlur',
+  });
+
+  const mutation = useMutation<AuthResponse, AxiosError<{ message?: string }>, SignInFields>({
     mutationFn: async (payload) => {
       const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
       return data;
     },
     onSuccess: (data) => {
-      tokenStore.set(data.accessToken);
-      if (data.csrfToken) {
-        sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
-      }
-      document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
+      setServerError('');
+      login(data);
       const rawFrom = searchParams.get('from') ?? '/';
       const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/';
       router.push(from);
     },
     onError: (err) => {
-      setError(err.response?.data?.message ?? 'Invalid email or password.');
+      setServerError(err.response?.data?.message ?? 'Invalid email or password.');
     },
   });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    mutation.mutate({ email, password });
+  function onSubmit(fields: SignInFields): void {
+    setServerError('');
+    mutation.mutate(fields);
   }
 
   return (
@@ -109,23 +118,33 @@ export default function SignInClientPage() {
           <div className={styles.formBlock}>
             <p className={styles.subtitle}>Sign in to your account</p>
 
-            {error && <p className={styles.errorBanner} role="alert">{error}</p>}
+            {serverError && (
+              <p className={styles.errorBanner} role="alert">{serverError}</p>
+            )}
 
-            <form className={styles.form} onSubmit={handleSubmit} noValidate>
-              <label htmlFor="sign-in-email" className={styles.srOnly}>
-                Email address
-              </label>
-              <input
-                id="sign-in-email"
-                type="email"
-                inputMode="email"
-                placeholder="Email address"
-                className={styles.input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
+            <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+              <div>
+                <label htmlFor="sign-in-email" className={styles.srOnly}>
+                  Email address
+                </label>
+                <input
+                  id="sign-in-email"
+                  type="email"
+                  inputMode="email"
+                  placeholder="Email address"
+                  className={styles.input}
+                  autoComplete="email"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'sign-in-email-error' : undefined}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p id="sign-in-email-error" className={styles.fieldError} role="alert">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
               <div className={styles.inputWrap}>
                 <label htmlFor="sign-in-password" className={styles.srOnly}>
                   Password
@@ -135,10 +154,10 @@ export default function SignInClientPage() {
                   type={isPasswordVisible ? 'text' : 'password'}
                   placeholder="Password"
                   className={styles.input}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  required
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'sign-in-password-error' : undefined}
+                  {...register('password')}
                 />
                 <button
                   type="button"
@@ -149,10 +168,16 @@ export default function SignInClientPage() {
                   {isPasswordVisible ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
+              {errors.password && (
+                <p id="sign-in-password-error" className={styles.fieldError} role="alert">
+                  {errors.password.message}
+                </p>
+              )}
+
               <button
                 type="submit"
                 className={styles.submitBtn}
-                disabled={mutation.isPending}
+                disabled={isSubmitting || mutation.isPending}
               >
                 {mutation.isPending ? 'Signing in...' : 'Sign In'}
               </button>
@@ -185,4 +210,3 @@ export default function SignInClientPage() {
     </div>
   );
 }
-

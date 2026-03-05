@@ -5,21 +5,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
 import { API_BASE_URL } from '@/lib/constants';
 import { tokenStore } from '@/lib/token-store';
+import type { AuthResponse, AuthUser } from '@/types/auth';
 
-interface User {
-  id: number;
-  email: string;
-  username: string;
-  firstName: string;
-  lastName: string;
-  roles: string[];
+interface RefreshResponse {
+  accessToken: string;
+  user: AuthUser;
 }
 
 interface AuthContextValue {
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  setUser: (user: User | null) => void;
+  /** Call after a successful login/register API response to hydrate auth state. */
+  login: (data: AuthResponse) => void;
   logout: () => void;
 }
 
@@ -36,7 +34,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,20 +44,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
     // Restore the in-memory access token by silently refreshing via the
-    // HttpOnly refresh-token cookie. The CSRF token in sessionStorage confirms
-    // this tab belongs to an authenticated session.
+    // HttpOnly refresh-token cookie. The refresh response now includes the
+    // user summary, eliminating the separate GET /auth/me round-trip.
     axios
-      .post<{ accessToken: string }>(
+      .post<RefreshResponse>(
         `${API_BASE_URL}/auth/refresh`,
         {},
         { withCredentials: true, headers: { 'X-CSRF-Token': csrfToken } },
       )
       .then(({ data }) => {
         tokenStore.set(data.accessToken);
-        return apiClient.get<User>('/auth/me');
-      })
-      .then((res) => {
-        setUser(res.data);
+        setUser(data.user);
         document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
       })
       .catch(() => {
@@ -69,6 +64,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         document.cookie = 'at=; path=/; max-age=0; Secure';
       })
       .finally(() => setIsLoading(false));
+  }, []);
+
+  const login = useCallback((data: AuthResponse): void => {
+    tokenStore.set(data.accessToken);
+    if (data.csrfToken) {
+      sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
+    }
+    document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
+    setUser(data.user);
   }, []);
 
   const logout = useCallback((): void => {
@@ -84,8 +88,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: !!user, setUser, logout }),
-    [user, isLoading, logout],
+    () => ({ user, isLoading, isAuthenticated: !!user, login, logout }),
+    [user, isLoading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

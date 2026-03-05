@@ -3,6 +3,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { RoleName } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -40,6 +41,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -156,9 +158,12 @@ export class AuthService {
       { ...payload, ver: user.refreshTokenVersion },
       { expiresIn: '7d' },
     );
+    // CSRF token uses a dedicated secret so a compromised JWT_SECRET alone
+    // cannot forge a valid CSRF token (defense-in-depth).
+    const csrfSecret = this.configService.getOrThrow<string>('CSRF_SECRET');
     const csrfToken = this.jwtService.sign(
       { sub: user.id, purpose: CSRF_TOKEN_PURPOSE },
-      { expiresIn: CSRF_TOKEN_EXPIRY },
+      { expiresIn: CSRF_TOKEN_EXPIRY, secret: csrfSecret },
     );
 
     return {
@@ -179,19 +184,32 @@ export class AuthService {
   /**
    * Issues a new access token from a valid refresh token.
    * Requires csrfToken to match the user from the refresh token (CSRF protection).
+   * Returns the fresh access token and a minimal user summary so clients can
+   * hydrate auth state in a single round-trip (no follow-up GET /auth/me needed).
    */
   async refresh(
     refreshToken: string,
     csrfToken: string | undefined,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    user: {
+      id: number;
+      email: string;
+      username: string;
+      firstName: string;
+      lastName: string;
+      roles: string[];
+    };
+  }> {
     try {
       if (!csrfToken) {
         throw new UnauthorizedException('CSRF token required.');
       }
+      const csrfSecret = this.configService.getOrThrow<string>('CSRF_SECRET');
       const csrfPayload = this.jwtService.verify<{
         sub: number;
         purpose?: string;
-      }>(csrfToken);
+      }>(csrfToken, { secret: csrfSecret });
       if (csrfPayload.purpose !== CSRF_TOKEN_PURPOSE) {
         throw new UnauthorizedException('Invalid CSRF token.');
       }
@@ -217,7 +235,17 @@ export class AuthService {
       const accessToken = this.jwtService.sign(newPayload, {
         expiresIn: '15m',
       });
-      return { accessToken };
+      return {
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roles,
+        },
+      };
     } catch (err) {
       this.logger.debug(err);
       const ex = new UnauthorizedException('Invalid refresh token.');

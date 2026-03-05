@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSellerDto } from './dto/create-seller.dto';
 import type {
   PaginatedSalesReportDto,
+  PaginatedSellersResponseDto,
   SellerDashboardDto,
   SellerPublicDto,
   SellerSaleItemDto,
@@ -15,7 +16,7 @@ import type {
   SellerSummaryDto,
 } from './models/seller.dto';
 
-const MAX_SHOPS_LIST_SIZE = 200;
+const MAX_SELLERS_PAGE_SIZE = 50;
 const SHOP_PRODUCT_PREVIEW_LIMIT = 24;
 const SALES_REPORT_PAGE_SIZE = 100;
 const DASHBOARD_CACHE_TTL_MS = 30_000;
@@ -32,19 +33,30 @@ export class SellersService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(limit = MAX_SHOPS_LIST_SIZE): Promise<SellerSummaryDto[]> {
-    return this.prisma.seller.findMany({
-      where: { shopStatus: 'Active' },
-      select: {
-        id: true,
-        shopName: true,
-        shopLogoUrl: true,
-        shopDescription: true,
-        registeredAt: true,
-      },
-      orderBy: { shopName: 'asc' },
-      take: limit,
-    });
+  async findAll(
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedSellersResponseDto> {
+    const safeLimit = Math.min(limit, MAX_SELLERS_PAGE_SIZE);
+    const skip = (page - 1) * safeLimit;
+    const where = { shopStatus: 'Active' as const };
+    const [sellers, total] = await Promise.all([
+      this.prisma.seller.findMany({
+        where,
+        select: {
+          id: true,
+          shopName: true,
+          shopLogoUrl: true,
+          shopDescription: true,
+          registeredAt: true,
+        },
+        orderBy: { shopName: 'asc' },
+        skip,
+        take: safeLimit,
+      }),
+      this.prisma.seller.count({ where }),
+    ]);
+    return { sellers, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
   }
 
   async findById(

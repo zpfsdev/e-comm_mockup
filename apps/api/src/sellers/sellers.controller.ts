@@ -26,9 +26,9 @@ export class SellersController {
 
   @Get()
   @Public()
-  @ApiOperation({ summary: 'List all active shops' })
-  findAll() {
-    return this.sellersService.findAll();
+  @ApiOperation({ summary: 'List active shops (paginated)' })
+  findAll(@Query() { page, limit }: PaginationQueryDto) {
+    return this.sellersService.findAll(page, limit);
   }
 
   /** Static "me/*" routes must be declared before ":id" so Express doesn't

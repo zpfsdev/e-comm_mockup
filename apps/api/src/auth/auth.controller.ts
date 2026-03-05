@@ -93,7 +93,17 @@ export class AuthController {
       cookies?: Record<string, unknown>;
     },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    user: {
+      id: number;
+      email: string;
+      username: string;
+      firstName: string;
+      lastName: string;
+      roles: string[];
+    };
+  }> {
     const rawCookies: unknown = req.cookies;
     const cookies =
       rawCookies && typeof rawCookies === 'object'

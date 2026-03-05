@@ -264,6 +264,14 @@
   cursor: not-allowed;
 }
 
+/* ─── Per-field validation error ─────────────────────────────────────────── */
+.fieldError {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-error);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
 /* ─── Error banner ────────────────────────────────────────────────────────── */
 .errorBanner {
   font-size: var(--text-sm);

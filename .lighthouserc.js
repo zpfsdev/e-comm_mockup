@@ -82,8 +82,9 @@ module.exports = {
     },
 
     upload: {
-      // Use 'filesystem' locally; change to 'lhci' with a server URL in CI.
-      target: 'filesystem',
+      // In CI, upload to the LHCI public storage so GitHub Actions can gate on
+      // pass/fail. Locally, write results to the filesystem for inspection.
+      target: process.env.CI ? 'temporary-public-storage' : 'filesystem',
       outputDir: '.lighthouseci',
     },
   },

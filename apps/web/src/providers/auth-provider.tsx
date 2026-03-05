@@ -55,13 +55,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .then(({ data }) => {
         tokenStore.set(data.accessToken);
         setUser(data.user);
-        document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
       })
       .catch(() => {
         tokenStore.clear();
         sessionStorage.removeItem(CSRF_TOKEN_KEY);
-        document.cookie = 'session=; path=/; max-age=0';
-        document.cookie = 'at=; path=/; max-age=0; Secure';
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -81,7 +78,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     apiClient.post('/auth/logout').finally(() => {
       tokenStore.clear();
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
-      document.cookie = 'session=; path=/; max-age=0';
       setUser(null);
       window.location.href = '/';
     });

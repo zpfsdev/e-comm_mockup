@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -13,6 +13,8 @@ describe('API contracts', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api/v1');
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     await app.init();
     httpServer = app.getHttpServer();
   });
@@ -24,7 +26,7 @@ describe('API contracts', () => {
   describe('/products contract', () => {
     it('returns paginated product list shape expected by frontend', async () => {
       const res = await request(httpServer as any)
-        .get('/products?limit=12&offset=0')
+        .get('/api/v1/products?limit=12&page=1')
         .expect(200);
 
       expect(res.body).toEqual(

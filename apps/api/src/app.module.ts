@@ -19,7 +19,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       validate(config: Record<string, string | undefined>) {
-        const required = ['DATABASE_URL', 'JWT_SECRET', 'CSRF_SECRET', 'FRONTEND_URL'] as const;
+        const required = ['DATABASE_URL', 'JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'CSRF_SECRET', 'FRONTEND_URL'] as const;
         const missing = required.filter((key) => !config[key]);
         if (missing.length > 0) {
           throw new Error(

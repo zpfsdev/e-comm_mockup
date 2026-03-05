@@ -20,6 +20,16 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+    # Only ignore major bumps for specific packages with known breaking changes.
+    # Do NOT use a wildcard so security-fix major releases are still proposed.
     ignore:
-      - dependency-name: "*"
+      - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"

@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 import { requireAuth } from '@/lib/server-api';
 
 export const metadata: Metadata = {
-  title: 'My Profile | Artistryx',
-  description: 'Manage your Artistryx account details and preferences.',
+  title: 'My Orders | Artistryx',
+  description: 'View and track all your Artistryx orders.',
 };
 
-export default async function ProfileLayout({ children }: { children: ReactNode }) {
+export default async function OrdersLayout({ children }: { children: ReactNode }) {
   await requireAuth();
   return <>{children}</>;
 }

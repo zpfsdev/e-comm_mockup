@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend:
-    name: API – lint, type-check, test
+    name: API – lint, type-check, build, test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,16 +25,18 @@ jobs:
         with:
           node-version: '20'
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
       - run: pnpm lint
       - run: pnpm type-check
+      - run: pnpm build
       - run: pnpm test --passWithNoTests
 
   frontend:
-    name: Web – lint, type-check, test
+    name: Web – lint, type-check, build, test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -51,10 +53,19 @@ jobs:
         with:
           node-version: '20'
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
         working-directory: .
 
+      - name: Create .env for build
+        run: |
+          echo "NEXT_PUBLIC_API_URL=http://localhost:3001" >> .env
+          echo "NEXT_TELEMETRY_DISABLED=1" >> .env
+
       - run: pnpm lint
       - run: pnpm type-check
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
       - run: pnpm test --passWithNoTests

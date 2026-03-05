@@ -63,8 +63,8 @@ export class SellersService {
     id: number,
     productLimit = SHOP_PRODUCT_PREVIEW_LIMIT,
   ): Promise<SellerPublicDto> {
-    const seller = await this.prisma.seller.findUnique({
-      where: { id },
+    const seller = await this.prisma.seller.findFirst({
+      where: { id, shopStatus: 'Active' },
       select: {
         id: true,
         shopName: true,

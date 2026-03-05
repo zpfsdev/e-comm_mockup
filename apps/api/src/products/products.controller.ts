@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -63,6 +65,7 @@ export class ProductsController {
   }
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Create a new product (Seller only)' })

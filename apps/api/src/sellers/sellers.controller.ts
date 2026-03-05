@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -61,6 +63,7 @@ export class SellersController {
   }
 
   @Post('register')
+  @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @Roles(RoleName.Customer)
   @ApiOperation({ summary: 'Register current user as a seller' })

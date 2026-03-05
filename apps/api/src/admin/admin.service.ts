@@ -30,13 +30,18 @@ export class AdminService {
   }
 
   async setUserStatus(userId: number, status: UserStatus) {
-    return this.prisma.user.update({ where: { id: userId }, data: { status } });
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { status },
+      select: { id: true, email: true, username: true, status: true },
+    });
   }
 
   async setShopStatus(sellerId: number, status: ShopStatus) {
     return this.prisma.seller.update({
       where: { id: sellerId },
       data: { shopStatus: status },
+      select: { id: true, shopName: true, shopStatus: true },
     });
   }
 
@@ -52,7 +57,7 @@ export class AdminService {
         }),
       ]);
 
-    const totalRevenue = Number(revenueAgg._sum.paymentAmount ?? 0);
+    const totalRevenue = (revenueAgg._sum.paymentAmount ?? 0).toString();
 
     return { totalUsers, totalSellers, totalOrders, totalRevenue };
   }

@@ -79,8 +79,8 @@ export class ProductsService {
    * Throws `NotFoundException` when the product does not exist.
    */
   async findById(id: number): Promise<ProductDto> {
-    const product = await this.prisma.product.findUnique({
-      where: { id },
+    const product = await this.prisma.product.findFirst({
+      where: { id, status: 'Available' },
       select: PRODUCT_SELECT,
     });
     if (!product) throw new NotFoundException('Product not found.');

@@ -153,10 +153,11 @@ export class AuthService {
   }): AuthTokens {
     const roles = user.userRoles.map((ur) => ur.role.roleName);
     const payload: JwtPayload = { sub: user.id, email: user.email, roles };
+    const refreshSecret = this.configService.getOrThrow<string>('REFRESH_TOKEN_SECRET');
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(
       { ...payload, ver: user.refreshTokenVersion },
-      { expiresIn: '7d' },
+      { expiresIn: '7d', secret: refreshSecret },
     );
     // CSRF token uses a dedicated secret so a compromised JWT_SECRET alone
     // cannot forge a valid CSRF token (defense-in-depth).
@@ -213,8 +214,10 @@ export class AuthService {
       if (csrfPayload.purpose !== CSRF_TOKEN_PURPOSE) {
         throw new UnauthorizedException('Invalid CSRF token.');
       }
+      const refreshSecret = this.configService.getOrThrow<string>('REFRESH_TOKEN_SECRET');
       const payload = this.jwtService.verify<JwtPayload & { ver?: number }>(
         refreshToken,
+        { secret: refreshSecret },
       );
       if (payload.sub !== csrfPayload.sub) {
         throw new UnauthorizedException('Invalid refresh token.');

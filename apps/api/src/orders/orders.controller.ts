@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -27,6 +29,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @Roles(RoleName.Customer)
   @ApiOperation({ summary: 'Place a new order (Customer only)' })
   createOrder(@CurrentUser() user: JwtPayload, @Body() dto: CreateOrderDto) {

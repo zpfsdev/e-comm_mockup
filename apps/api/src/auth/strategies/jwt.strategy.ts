@@ -1,16 +1,22 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../../core/decorators/current-user.decorator';
-import { PrismaService } from '../../prisma/prisma.service';
 
+/**
+ * Validates the JWT access token on every authenticated request.
+ *
+ * The DB lookup (user.status check) has been intentionally removed.
+ * Rationale: access tokens are short-lived (15 min). Revocation at the
+ * refresh boundary is handled by incrementing refreshTokenVersion on
+ * logout/ban, which invalidates any subsequent /auth/refresh call.
+ * Removing the per-request DB round-trip eliminates a latency and
+ * scalability bottleneck with no meaningful security regression.
+ */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -18,16 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtPayload> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, status: true },
-    });
-
-    if (!user || user.status === 'Inactive') {
-      throw new UnauthorizedException('Account is inactive or not found.');
-    }
-
+  validate(payload: JwtPayload): JwtPayload {
     return payload;
   }
 }

@@ -28,6 +28,22 @@ interface FetchOptions extends Omit<RequestInit, 'headers' | 'cache'> {
 }
 
 /**
+ * Asserts an authenticated session exists by checking for the `at` HttpOnly
+ * cookie.  Must be called at the top of any Server Component or layout that
+ * requires authentication.  Redirects to /auth/sign-in when absent.
+ *
+ * Per Next.js App Router docs, calling `redirect()` inside a Server Component
+ * throws a special internal error that Next.js catches to perform the redirect,
+ * so this function never actually returns when unauthenticated.
+ */
+export async function requireAuth(): Promise<void> {
+  const cookieStore = await cookies();
+  if (!cookieStore.get('at')?.value) {
+    redirect('/auth/sign-in');
+  }
+}
+
+/**
  * Fetches a resource from the NestJS API using the access token stored in the
  * `at` cookie.  Redirects to `/auth/sign-in` when no token is present.
  * Throws on non-2xx responses other than 401 (which also redirects).

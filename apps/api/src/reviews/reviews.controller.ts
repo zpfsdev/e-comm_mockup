@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -37,6 +39,7 @@ export class ReviewsController {
   }
 
   @Post('order-items/:orderItemId')
+  @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Customer)

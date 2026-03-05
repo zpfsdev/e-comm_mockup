@@ -7,37 +7,53 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
-import { CATEGORIES, STORES } from '@/lib/home-data';
+import { STORES } from '@/lib/home-data';
 import { AddToCartInline } from '@/components/add-to-cart-inline';
 import styles from './products.module.css';
+
+interface ProductCategory {
+  readonly id: number;
+  readonly categoryName: string;
+}
+
+interface ProductAgeRange {
+  readonly id: number;
+  readonly label: string | null;
+  readonly minAge: number;
+  readonly maxAge: number | null;
+}
 
 interface Product {
   readonly id: number;
   readonly name: string;
-  readonly price: number;
-  readonly imageUrl?: string;
-  readonly ageRange?: string;
-  readonly category?: string;
-  readonly store?: string;
+  readonly price: string;
+  readonly imageUrl: string;
+  readonly category: ProductCategory;
+  readonly ageRange: ProductAgeRange;
 }
 
 interface ProductsResponse {
-  products: Product[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  readonly products: Product[];
+  readonly total: number;
+  readonly page: number;
+  readonly limit: number;
+  readonly totalPages: number;
 }
 
-const AGE_RANGES = ['3+', '5+', '8+'] as const;
 const PAGE_SIZE = 12;
+
+function formatAgeLabel(ar: ProductAgeRange): string {
+  if (ar.label) return ar.label;
+  if (ar.maxAge === null) return `${ar.minAge}+`;
+  return `${ar.minAge}–${ar.maxAge} yrs`;
+}
 
 function ProductCard({ product }: { readonly product: Product }) {
   return (
     <li className={styles.productCard}>
       <Link href={`/products/${product.id}`} className={styles.productImageWrap}>
         <Image
-          src={product.imageUrl ?? '/product1.png'}
+          src={product.imageUrl || '/product1.png'}
           alt={product.name}
           fill
           sizes="(max-width: 768px) 50vw, 33vw"
@@ -60,21 +76,40 @@ function ProductCard({ product }: { readonly product: Product }) {
 function ShopContent() {
   const searchParams = useSearchParams();
 
-  const category = searchParams.get('category') ?? undefined;
-  const age = searchParams.get('age') ?? undefined;
+  const categoryId = searchParams.get('categoryId') ?? undefined;
+  const ageRangeId = searchParams.get('ageRangeId') ?? undefined;
   const store = searchParams.get('store') ?? undefined;
   const search = searchParams.get('search') ?? undefined;
 
   const [page, setPage] = useState(1);
 
+  const { data: categories } = useQuery<ProductCategory[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ProductCategory[]>('/categories');
+      return data;
+    },
+    staleTime: 3_600_000,
+  });
+
+  const { data: ageRanges } = useQuery<ProductAgeRange[]>({
+    queryKey: ['age-ranges'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ProductAgeRange[]>('/categories/age-ranges');
+      return data;
+    },
+    staleTime: 3_600_000,
+  });
+
   const queryString = new URLSearchParams();
   if (search) queryString.set('search', search);
-  // Category/age/store/sort are currently UI-only filters; backend supports search + page/limit.
+  if (categoryId) queryString.set('categoryId', categoryId);
+  if (ageRangeId) queryString.set('ageRangeId', ageRangeId);
   queryString.set('page', String(page));
   queryString.set('limit', String(PAGE_SIZE));
 
   const { data, isLoading, isError } = useQuery<ProductsResponse>({
-    queryKey: ['products', search, page],
+    queryKey: ['products', search, categoryId, ageRangeId, page],
     queryFn: async () => {
       const { data: res } = await apiClient.get<ProductsResponse>(`/products?${queryString.toString()}`);
       return res;
@@ -82,11 +117,15 @@ function ShopContent() {
   });
 
   const totalPages = data?.totalPages ?? 1;
+  const activeCategory = categories?.find((c) => String(c.id) === categoryId);
+  const activeAge = ageRanges?.find((a) => String(a.id) === ageRangeId);
 
   const pageTitle =
     search
       ? `Results for "${search}"`
-      : category ?? (age ? `Age ${age}` : undefined) ?? (store ?? 'All Products');
+      : activeCategory?.categoryName
+      ?? (activeAge ? formatAgeLabel(activeAge) : undefined)
+      ?? (store ?? 'All Products');
 
   function handleFilterLinkClick() {
     setPage(1);
@@ -102,20 +141,22 @@ function ShopContent() {
               <li>
                 <Link
                   href="/products"
-                  className={!category && !age && !store ? styles.sidebarLinkActive : styles.sidebarLink}
+                  className={!categoryId && !ageRangeId && !store ? styles.sidebarLinkActive : styles.sidebarLink}
+                  aria-current={!categoryId && !ageRangeId && !store ? 'page' : undefined}
                   onClick={handleFilterLinkClick}
                 >
-                  All Categories
+                  All Products
                 </Link>
               </li>
-              {CATEGORIES.map((c) => (
-                <li key={c}>
+              {categories?.map((c) => (
+                <li key={c.id}>
                   <Link
-                    href={`/products?category=${encodeURIComponent(c)}`}
-                    className={category === c ? styles.sidebarLinkActive : styles.sidebarLink}
+                    href={`/products?categoryId=${c.id}`}
+                    className={categoryId === String(c.id) ? styles.sidebarLinkActive : styles.sidebarLink}
+                    aria-current={categoryId === String(c.id) ? 'page' : undefined}
                     onClick={handleFilterLinkClick}
                   >
-                    {c}
+                    {c.categoryName}
                   </Link>
                 </li>
               ))}
@@ -124,14 +165,15 @@ function ShopContent() {
             <div className={styles.sidebarSection}>
               <h2 className={styles.sidebarTitle}>Age Range</h2>
               <ul className={styles.sidebarList}>
-                {AGE_RANGES.map((a) => (
-                  <li key={a}>
+                {ageRanges?.map((a) => (
+                  <li key={a.id}>
                     <Link
-                      href={`/products?age=${encodeURIComponent(a)}`}
-                      className={age === a ? styles.sidebarLinkActive : styles.sidebarLink}
+                      href={`/products?ageRangeId=${a.id}`}
+                      className={ageRangeId === String(a.id) ? styles.sidebarLinkActive : styles.sidebarLink}
+                      aria-current={ageRangeId === String(a.id) ? 'page' : undefined}
                       onClick={handleFilterLinkClick}
                     >
-                      {a}
+                      {formatAgeLabel(a)}
                     </Link>
                   </li>
                 ))}
@@ -146,6 +188,7 @@ function ShopContent() {
                     key={s}
                     href={`/products?store=${encodeURIComponent(s)}`}
                     className={styles.storeCircleLink}
+                    aria-current={store === s ? 'page' : undefined}
                     onClick={handleFilterLinkClick}
                   >
                     <span className={styles.storeCircle} />
@@ -160,10 +203,10 @@ function ShopContent() {
             <h1 className={styles.mainTitle}>{pageTitle}</h1>
 
             {isError ? (
-            <p className={styles.emptyState} style={{ color: 'var(--color-error, #ef4444)' }}>
-              Failed to load products. Please try again.
-            </p>
-          ) : isLoading ? (
+              <p className={styles.emptyState} style={{ color: 'var(--color-error, #ef4444)' }}>
+                Failed to load products. Please try again.
+              </p>
+            ) : isLoading ? (
               <ul className={styles.productGrid}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <li key={i} className={styles.skeletonCard}>

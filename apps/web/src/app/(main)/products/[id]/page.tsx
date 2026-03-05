@@ -6,16 +6,40 @@ import { API_BASE_URL } from '@/lib/constants';
 import { AddToCartButton } from './add-to-cart-button';
 import styles from './product-detail.module.css';
 
+interface ProductCategory {
+  readonly id: number;
+  readonly categoryName: string;
+}
+
+interface ProductAgeRange {
+  readonly id: number;
+  readonly label: string | null;
+  readonly minAge: number;
+  readonly maxAge: number | null;
+}
+
+interface ProductSeller {
+  readonly id: number;
+  readonly shopName: string;
+  readonly shopLogoUrl: string | null;
+}
+
 interface Product {
   readonly id: number;
   readonly name: string;
-  readonly price: number;
-  readonly description?: string;
-  readonly imageUrl?: string;
-  readonly ageRange?: string;
-  readonly stock?: number;
-  readonly category?: string;
-  readonly store?: string;
+  readonly price: string;
+  readonly description: string;
+  readonly imageUrl: string;
+  readonly stockQuantity: number;
+  readonly category: ProductCategory;
+  readonly ageRange: ProductAgeRange;
+  readonly seller: ProductSeller;
+}
+
+function formatAgeRange(ar: ProductAgeRange): string {
+  if (ar.label) return ar.label;
+  if (ar.maxAge === null) return `${ar.minAge}+`;
+  return `${ar.minAge}–${ar.maxAge} yrs`;
 }
 
 async function fetchProduct(id: string): Promise<Product | null> {
@@ -45,20 +69,10 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) notFound();
 
   const stockLabel =
-    product.stock !== undefined
-      ? product.stock > 0
-        ? 'In Stock'
-        : 'Out of Stock'
-      : 'In Stock';
-
-  const specs = {
-    category: product.category ?? '—',
-    stock: stockLabel,
-    age: product.ageRange ?? '—',
-  };
+    product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock';
 
   const description =
-    product.description ??
+    product.description ||
     'Premium early childhood learning product designed to support hands-on play, creativity, and exploration. Safe materials and age-appropriate design.';
 
   return (
@@ -72,7 +86,7 @@ export default async function ProductDetailPage({ params }: Props) {
         <div className={styles.topSection}>
           <div className={styles.imageSection}>
             <Image
-              src={product.imageUrl ?? '/product1.png'}
+              src={product.imageUrl || '/product1.png'}
               alt={product.name}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -81,36 +95,39 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
 
           <div className={styles.infoSection}>
-            {product.store && <p className={styles.shopName}>{product.store}</p>}
+            <p className={styles.shopName}>{product.seller.shopName}</p>
             <h1 className={styles.productName}>{product.name}</h1>
 
             <div className={styles.metaGrid}>
               <span className={styles.metaLabel}>Price:</span>
               <span>₱{Number(product.price).toFixed(2)}</span>
               <span className={styles.metaLabel}>Stock:</span>
-              <span>{specs.stock}</span>
+              <span>{stockLabel}</span>
             </div>
 
-            <AddToCartButton productId={product.id} stock={product.stock} />
+            <AddToCartButton productId={product.id} stock={product.stockQuantity} />
           </div>
         </div>
 
-        {product.store && (
-          <div className={styles.shopCard}>
-            <span className={styles.shopAvatar} aria-hidden />
-            <h2 className={styles.shopCardName}>{product.store}</h2>
-          </div>
-        )}
+        <div className={styles.shopCard}>
+          {product.seller.shopLogoUrl && (
+            <div style={{ position: 'relative', width: '3rem', height: '3rem', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+              <Image src={product.seller.shopLogoUrl} alt={product.seller.shopName} fill sizes="3rem" style={{ objectFit: 'cover' }} />
+            </div>
+          )}
+          {!product.seller.shopLogoUrl && <span className={styles.shopAvatar} aria-hidden />}
+          <h2 className={styles.shopCardName}>{product.seller.shopName}</h2>
+        </div>
 
         <div className={styles.specsBlock}>
           <h2 className={styles.specsTitle}>Product Specifications</h2>
           <dl className={styles.specsGrid}>
             <dt className={styles.specsLabel}>Category</dt>
-            <dd>{specs.category}</dd>
+            <dd>{product.category.categoryName}</dd>
             <dt className={styles.specsLabel}>Stock</dt>
-            <dd>{specs.stock}</dd>
+            <dd>{stockLabel}</dd>
             <dt className={styles.specsLabel}>Age Range</dt>
-            <dd>{specs.age}</dd>
+            <dd>{formatAgeRange(product.ageRange)}</dd>
           </dl>
         </div>
 

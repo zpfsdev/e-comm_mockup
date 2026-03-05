@@ -116,8 +116,25 @@ export function Navbar() {
             )
           )}
 
-          {/* Icon group: search · profile · cart */}
+          {/* Icon group: [seller/admin shortcut] · search · profile · cart */}
           <div className={styles.iconGroup}>
+            {/* Seller dashboard shortcut — quick icon access to store management */}
+            {isSeller && (
+              <Link href="/seller/dashboard" className={styles.iconBtn} aria-label="Seller dashboard">
+                <svg className={styles.icon} viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </Link>
+            )}
+            {/* Admin dashboard shortcut */}
+            {isAdmin && (
+              <Link href="/admin/dashboard" className={styles.iconBtn} aria-label="Admin dashboard">
+                <svg className={styles.icon} viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </Link>
+            )}
             {/* Search */}
             <div ref={searchRef} className={styles.searchWrapper}>
               <button

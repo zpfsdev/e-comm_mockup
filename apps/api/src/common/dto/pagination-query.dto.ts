@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsInt, Min } from 'class-validator';
+import { IsInt, Max, Min } from 'class-validator';
 
-/** Validated query DTO for paginated endpoints. Rejects page < 1 or limit < 1. */
+/** Validated query DTO for paginated endpoints. Rejects page < 1 or limit < 1 or limit > 100. */
 export class PaginationQueryDto {
   @Type(() => Number)
   @IsInt()
@@ -11,5 +11,6 @@ export class PaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100)
   limit: number = 20;
 }

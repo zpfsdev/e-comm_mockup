@@ -42,4 +42,11 @@ export class ProductQueryDto {
   @IsPositive()
   @Type(() => Number)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Filter by seller ID' })
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  sellerId?: number;
 }

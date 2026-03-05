@@ -2,31 +2,53 @@ import { Injectable } from '@nestjs/common';
 import { ShopStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+export interface PaginatedUsersResponseDto {
+  readonly users: {
+    readonly id: number;
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly username: string;
+    readonly email: string;
+    readonly status: string;
+    readonly dateTimeRegistered: Date;
+    readonly lastLogin: Date | null;
+    readonly userRoles: { role: { roleName: string } }[];
+  }[];
+  readonly total: number;
+  readonly page: number;
+  readonly limit: number;
+  readonly totalPages: number;
+}
+
 const DEFAULT_PAGE_SIZE = 50;
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllUsers(page = 1, limit = DEFAULT_PAGE_SIZE) {
+  async findAllUsers(page = 1, limit = DEFAULT_PAGE_SIZE): Promise<PaginatedUsersResponseDto> {
     const safeLimit = Math.min(limit, DEFAULT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        username: true,
-        email: true,
-        status: true,
-        dateTimeRegistered: true,
-        lastLogin: true,
-        userRoles: { include: { role: true } },
-      },
-      orderBy: { dateTimeRegistered: 'desc' },
-      take: safeLimit,
-      skip,
-    });
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          email: true,
+          status: true,
+          dateTimeRegistered: true,
+          lastLogin: true,
+          userRoles: { include: { role: true } },
+        },
+        orderBy: { dateTimeRegistered: 'desc' },
+        take: safeLimit,
+        skip,
+      }),
+      this.prisma.user.count(),
+    ]);
+    return { users, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
   }
 
   async setUserStatus(userId: number, status: UserStatus) {

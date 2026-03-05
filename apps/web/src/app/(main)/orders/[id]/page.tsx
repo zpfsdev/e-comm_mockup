@@ -1,10 +1,8 @@
-'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { serverFetch } from '@/lib/server-api';
 import styles from '../orders.module.css';
 
 interface Product { id: number; name: string; imageUrl?: string; seller?: { shopName: string }; }
@@ -15,7 +13,17 @@ interface UserAddress { address: Address; }
 interface Payment { paymentStatus: string; paymentAmount: string | number; paymentMethod?: string; }
 type OrderStatus = keyof typeof STATUS_CLASS;
 
-interface Order { id: number; orderStatus: OrderStatus; totalAmount: string | number; shippingFee: string | number; orderDate: string; notes?: string; orderItems: OrderItem[]; payment?: Payment; userAddress?: UserAddress; }
+interface Order {
+  id: number;
+  orderStatus: OrderStatus;
+  totalAmount: string | number;
+  shippingFee: string | number;
+  orderDate: string;
+  notes?: string;
+  orderItems: OrderItem[];
+  payment?: Payment;
+  userAddress?: UserAddress;
+}
 
 const STATUS_CLASS = {
   Pending:   styles.statusPending,
@@ -27,37 +35,24 @@ function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export default function OrderDetailPage() {
-  const { id } = useParams<{ id: string }>();
+type Props = { params: Promise<{ id: string }> };
 
-  const { data: order, isLoading, error } = useQuery<Order>({
-    queryKey: ['order', id],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Order>(`/orders/${id}`);
-      return data;
-    },
-  });
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  return {
+    title: `Order #${id} | Artistryx`,
+    description: 'Track and review your Artistryx order details.',
+  };
+}
 
-  if (isLoading) {
-    return (
-      <div className={styles.page}>
-        <Skeleton height="2.5rem" width="10rem" />
-        <div style={{ marginTop: 'var(--space-8)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <Skeleton height="10rem" style={{ borderRadius: 'var(--radius-xl)' }} />
-          <Skeleton height="6rem" style={{ borderRadius: 'var(--radius-xl)' }} />
-        </div>
-      </div>
-    );
-  }
+export default async function OrderDetailPage({ params }: Props) {
+  const { id } = await params;
 
-  if (error || !order) {
-    return (
-      <div className={styles.page}>
-        <h1 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)' }}>Order not found</h1>
-        <p>This order does not exist or you do not have access to it.</p>
-        <Link href="/orders" style={{ color: 'var(--color-primary)' }}>← Back to Orders</Link>
-      </div>
-    );
+  let order: Order;
+  try {
+    order = await serverFetch<Order>(`/orders/${id}`);
+  } catch {
+    notFound();
   }
 
   const address = order.userAddress?.address;

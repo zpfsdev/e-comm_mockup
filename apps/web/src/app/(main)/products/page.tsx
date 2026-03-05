@@ -1,11 +1,12 @@
 import { API_BASE_URL } from '@/lib/constants';
-import type { ProductAgeRange, ProductCategory, ProductsResponse } from './products-client';
+import type { ProductAgeRange, ProductCategory, ProductSeller, ProductsResponse } from './products-client';
 import { ProductsClient } from './products-client';
 
 interface SearchParams {
   search?: string;
   categoryId?: string;
   ageRangeId?: string;
+  sellerId?: string;
   page?: string;
 }
 
@@ -32,10 +33,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.search) qs.set('search', params.search);
   if (params.categoryId) qs.set('categoryId', params.categoryId);
   if (params.ageRangeId) qs.set('ageRangeId', params.ageRangeId);
+  if (params.sellerId) qs.set('sellerId', params.sellerId);
   qs.set('page', params.page ?? '1');
   qs.set('limit', '12');
 
-  const [initialProducts, initialCategories, initialAgeRanges] = await Promise.all([
+  const [initialProducts, initialCategories, initialAgeRanges, initialSellers] = await Promise.all([
     publicFetch<ProductsResponse>(`/products?${qs.toString()}`).catch(() => ({
       products: [],
       total: 0,
@@ -45,6 +47,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     })),
     publicFetch<ProductCategory[]>('/categories').catch(() => []),
     publicFetch<ProductAgeRange[]>('/categories/age-ranges').catch(() => []),
+    publicFetch<{ sellers: ProductSeller[] }>('/sellers?limit=50').catch(() => ({ sellers: [] })),
   ]);
 
   return (
@@ -52,6 +55,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       initialProducts={initialProducts}
       initialCategories={initialCategories}
       initialAgeRanges={initialAgeRanges}
+      initialSellers={initialSellers.sellers}
     />
   );
 }

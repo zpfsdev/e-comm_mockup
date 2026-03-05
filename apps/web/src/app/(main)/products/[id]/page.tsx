@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { ArrowLeftIcon } from '@/components/icons';
 import { API_BASE_URL } from '@/lib/constants';
@@ -42,7 +43,12 @@ function formatAgeRange(ar: ProductAgeRange): string {
   return `${ar.minAge}–${ar.maxAge} yrs`;
 }
 
-async function fetchProduct(id: string): Promise<Product | null> {
+/**
+ * React.cache() deduplicates calls within a single request lifecycle.
+ * Both generateMetadata and the page component call this function, so
+ * without cache() Next.js would make two identical upstream fetches per page load.
+ */
+const fetchProduct = cache(async (id: string): Promise<Product | null> => {
   try {
     const res = await fetch(`${API_BASE_URL}/products/${id}`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
@@ -50,7 +56,7 @@ async function fetchProduct(id: string): Promise<Product | null> {
   } catch {
     return null;
   }
-}
+});
 
 type Props = { params: Promise<{ id: string }> };
 

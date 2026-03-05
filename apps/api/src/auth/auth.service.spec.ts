@@ -1,4 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, RoleName } from '@prisma/client';
@@ -33,6 +34,19 @@ const mockPrisma = {
 
 const mockJwt = {
   sign: jest.fn().mockReturnValue('mock-token'),
+  verify: jest.fn(),
+};
+
+const mockConfig = {
+  getOrThrow: jest.fn((key: string) => {
+    const values: Record<string, string> = {
+      JWT_SECRET: 'test-jwt-secret',
+      REFRESH_TOKEN_SECRET: 'test-refresh-secret',
+      CSRF_SECRET: 'test-csrf-secret',
+    };
+    if (!(key in values)) throw new Error(`Config key "${key}" not found in test mock`);
+    return values[key];
+  }),
 };
 
 describe('AuthService', () => {
@@ -44,6 +58,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
+        { provide: ConfigService, useValue: mockConfig },
       ],
     }).compile();
 

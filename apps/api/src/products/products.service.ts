@@ -37,7 +37,7 @@ export class ProductsService {
    * plus optional filtering by category and age range.
    */
   async findAll(query: ProductQueryDto): Promise<ProductListResponseDto> {
-    const { search, categoryId, ageRangeId, page = 1, limit = 20 } = query;
+    const { search, categoryId, ageRangeId, sellerId, page = 1, limit = 20 } = query;
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     const searchStr = search != null ? ensureString(search) : undefined;
@@ -52,6 +52,7 @@ export class ProductsService {
       }),
       ...(categoryId && { categoryId }),
       ...(ageRangeId && { ageRangeId }),
+      ...(sellerId && { sellerId }),
     };
 
     const [products, total] = await Promise.all([

@@ -36,35 +36,37 @@ export class ReviewsService {
     orderItemId: number,
     dto: CreateReviewDto,
   ): Promise<CreateReviewResponseDto> {
-    const orderItem = await this.prisma.orderItem.findFirst({
-      where: { id: orderItemId, order: { userId } },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const orderItem = await tx.orderItem.findFirst({
+        where: { id: orderItemId, order: { userId } },
+      });
 
-    if (!orderItem) throw new NotFoundException('Order item not found.');
-    if (orderItem.orderItemStatus !== 'Completed') {
-      throw new BadRequestException(
-        'You can only review completed order items.',
-      );
-    }
+      if (!orderItem) throw new NotFoundException('Order item not found.');
+      if (orderItem.orderItemStatus !== 'Completed') {
+        throw new BadRequestException(
+          'You can only review completed order items.',
+        );
+      }
 
-    const existingReview = await this.prisma.review.findFirst({
-      where: { userId, orderItemId },
-      select: { id: true },
-    });
-    if (existingReview) {
-      throw new BadRequestException(
-        'You have already reviewed this order item.',
-      );
-    }
+      const existingReview = await tx.review.findFirst({
+        where: { userId, orderItemId },
+        select: { id: true },
+      });
+      if (existingReview) {
+        throw new BadRequestException(
+          'You have already reviewed this order item.',
+        );
+      }
 
-    return this.prisma.review.create({
-      data: {
-        userId,
-        orderItemId,
-        rating: dto.rating,
-        comment: dto.comment,
-      },
-      select: { id: true, rating: true, comment: true, datePosted: true },
+      return tx.review.create({
+        data: {
+          userId,
+          orderItemId,
+          rating: dto.rating,
+          comment: dto.comment,
+        },
+        select: { id: true, rating: true, comment: true, datePosted: true },
+      });
     });
   }
 

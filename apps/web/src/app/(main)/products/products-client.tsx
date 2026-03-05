@@ -7,7 +7,6 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
-import { STORES } from '@/lib/home-data';
 import { AddToCartInline } from '@/components/add-to-cart-inline';
 import styles from './products.module.css';
 
@@ -30,6 +29,12 @@ export interface Product {
   readonly imageUrl: string;
   readonly category: ProductCategory;
   readonly ageRange: ProductAgeRange;
+}
+
+export interface ProductSeller {
+  readonly id: number;
+  readonly shopName: string;
+  readonly shopLogoUrl: string | null;
 }
 
 export interface ProductsResponse {
@@ -77,14 +82,15 @@ interface ShopContentProps {
   readonly initialProducts: ProductsResponse;
   readonly initialCategories: ProductCategory[];
   readonly initialAgeRanges: ProductAgeRange[];
+  readonly initialSellers: ProductSeller[];
 }
 
-function ShopContent({ initialProducts, initialCategories, initialAgeRanges }: ShopContentProps) {
+function ShopContent({ initialProducts, initialCategories, initialAgeRanges, initialSellers }: ShopContentProps) {
   const searchParams = useSearchParams();
 
   const categoryId = searchParams.get('categoryId') ?? undefined;
   const ageRangeId = searchParams.get('ageRangeId') ?? undefined;
-  const store = searchParams.get('store') ?? undefined;
+  const sellerId = searchParams.get('sellerId') ?? undefined;
   const search = searchParams.get('search') ?? undefined;
 
   const [page, setPage] = useState(1);
@@ -109,15 +115,26 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges }: S
     staleTime: 3_600_000,
   });
 
+  const { data: sellers } = useQuery<ProductSeller[]>({
+    queryKey: ['sellers-filter'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ sellers: ProductSeller[] }>('/sellers?limit=50');
+      return data.sellers;
+    },
+    initialData: initialSellers,
+    staleTime: 3_600_000,
+  });
+
   const queryString = new URLSearchParams();
   if (search) queryString.set('search', search);
   if (categoryId) queryString.set('categoryId', categoryId);
   if (ageRangeId) queryString.set('ageRangeId', ageRangeId);
+  if (sellerId) queryString.set('sellerId', sellerId);
   queryString.set('page', String(page));
   queryString.set('limit', String(PAGE_SIZE));
 
   const { data, isLoading, isError } = useQuery<ProductsResponse>({
-    queryKey: ['products', search, categoryId, ageRangeId, page],
+    queryKey: ['products', search, categoryId, ageRangeId, sellerId, page],
     queryFn: async () => {
       const { data: res } = await apiClient.get<ProductsResponse>(`/products?${queryString.toString()}`);
       return res;
@@ -129,13 +146,14 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges }: S
   const totalPages = data?.totalPages ?? 1;
   const activeCategory = categories?.find((c) => String(c.id) === categoryId);
   const activeAge = ageRanges?.find((a) => String(a.id) === ageRangeId);
+  const activeSeller = sellers?.find((s) => String(s.id) === sellerId);
 
   const pageTitle =
     search
       ? `Results for "${search}"`
       : activeCategory?.categoryName
       ?? (activeAge ? formatAgeLabel(activeAge) : undefined)
-      ?? (store ?? 'All Products');
+      ?? (activeSeller?.shopName ?? 'All Products');
 
   function handleFilterLinkClick() {
     setPage(1);
@@ -151,8 +169,8 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges }: S
               <li>
                 <Link
                   href="/products"
-                  className={!categoryId && !ageRangeId && !store ? styles.sidebarLinkActive : styles.sidebarLink}
-                  aria-current={!categoryId && !ageRangeId && !store ? 'page' : undefined}
+                  className={!categoryId && !ageRangeId && !sellerId ? styles.sidebarLinkActive : styles.sidebarLink}
+                  aria-current={!categoryId && !ageRangeId && !sellerId ? 'page' : undefined}
                   onClick={handleFilterLinkClick}
                 >
                   All Products
@@ -193,16 +211,16 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges }: S
             <div className={styles.sidebarSection}>
               <h2 className={styles.sidebarTitle}>All Shops</h2>
               <div className={styles.storeCircles}>
-                {STORES.map((s) => (
+                {sellers?.map((s) => (
                   <Link
-                    key={s}
-                    href={`/products?store=${encodeURIComponent(s)}`}
+                    key={s.id}
+                    href={`/products?sellerId=${s.id}`}
                     className={styles.storeCircleLink}
-                    aria-current={store === s ? 'page' : undefined}
+                    aria-current={sellerId === String(s.id) ? 'page' : undefined}
                     onClick={handleFilterLinkClick}
                   >
                     <span className={styles.storeCircle} />
-                    <span>{s}</span>
+                    <span>{s.shopName}</span>
                   </Link>
                 ))}
               </div>
@@ -287,6 +305,7 @@ export function ProductsClient({
   initialProducts,
   initialCategories,
   initialAgeRanges,
+  initialSellers,
 }: ShopContentProps) {
   return (
     <Suspense
@@ -316,6 +335,7 @@ export function ProductsClient({
         initialProducts={initialProducts}
         initialCategories={initialCategories}
         initialAgeRanges={initialAgeRanges}
+        initialSellers={initialSellers}
       />
     </Suspense>
   );

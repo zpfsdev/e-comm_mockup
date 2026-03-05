@@ -84,6 +84,8 @@ export class AuthService {
     });
 
     if (!user || user.status === 'Inactive') {
+      // Constant-time dummy compare prevents timing-based email enumeration.
+      await bcrypt.compare(dto.password, '$2b$12$invalidhashedpasswordpadding000');
       throw new UnauthorizedException('Invalid credentials.');
     }
 

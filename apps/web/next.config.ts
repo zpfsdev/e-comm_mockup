@@ -87,7 +87,13 @@ const nextConfig: NextConfig = {
         .split(',')
         .map((h) => h.trim())
         .filter(Boolean);
-      if (process.env.NODE_ENV === 'production' && configured.length > 0) {
+      if (process.env.NODE_ENV === 'production') {
+        if (configured.length === 0) {
+          throw new Error(
+            'NEXT_PUBLIC_IMAGE_HOSTNAMES must be set in production. ' +
+            'Set it to a comma-separated list of allowed image CDN hostnames.',
+          );
+        }
         return configured.map((hostname) => ({
           protocol: 'https' as const,
           hostname,

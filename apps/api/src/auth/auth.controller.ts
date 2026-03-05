@@ -8,6 +8,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -26,15 +27,16 @@ import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('auth')
 @Controller('auth')
-@Throttle({ auth: {} })
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('register')
   @Public()
+  @Throttle({ auth: {} })
   @ApiOperation({ summary: 'Register a new customer account' })
   async register(
     @Body() dto: RegisterDto,
@@ -49,6 +51,7 @@ export class AuthController {
 
   @Post('login')
   @Public()
+  @Throttle({ auth: {} })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(
@@ -76,6 +79,7 @@ export class AuthController {
    */
   @Post('refresh')
   @Public()
+  @Throttle({ auth: {} })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh access token',
@@ -132,6 +136,18 @@ export class AuthController {
     await this.authService.changePassword(user.sub, dto);
   }
 
+  @Post('logout')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Logout: clear auth cookies server-side' })
+  async logout(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.authService.logoutAll(user.sub);
+    this.clearAuthCookies(res);
+  }
+
   @Post('logout-all')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -151,7 +167,7 @@ export class AuthController {
 
   /** Sets both the HttpOnly refresh-token cookie and the HttpOnly at (access-token) cookie. */
   private setAuthCookies(res: Response, tokens: AuthTokens): void {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -164,12 +180,21 @@ export class AuthController {
 
   /** Sets the HttpOnly at cookie carrying the short-lived access token for RSC use. */
   private setAccessTokenCookie(res: Response, accessToken: string): void {
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('at', accessToken, {
       httpOnly: true,
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       path: '/',
     });
+  }
+
+  /** Clears auth cookies on logout. */
+  private clearAuthCookies(res: Response): void {
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const shared = { httpOnly: true, maxAge: 0, path: '/', secure: isProduction };
+    res.cookie('at', '', { ...shared, sameSite: 'strict' });
+    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax' });
   }
 }

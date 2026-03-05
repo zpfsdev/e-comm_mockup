@@ -22,6 +22,7 @@
     "dev": "pnpm --parallel run dev",
     "build": "pnpm --recursive run build",
     "lint": "pnpm --recursive run lint",
+    "type-check": "pnpm --recursive run type-check",
     "test": "pnpm --recursive run test"
   },
   "engines": {

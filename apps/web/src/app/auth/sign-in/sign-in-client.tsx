@@ -117,8 +117,9 @@ export default function SignInClientPage() {
               </label>
               <input
                 id="sign-in-email"
-                type="text"
-                placeholder="Email / Phone Number"
+                type="email"
+                inputMode="email"
+                placeholder="Email address"
                 className={styles.input}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

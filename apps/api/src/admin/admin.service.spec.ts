@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ShopStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,12 +6,10 @@ import { AdminService } from './admin.service';
 const mockPrisma = {
   user: {
     count: jest.fn(),
-    findUnique: jest.fn(),
     update: jest.fn(),
   },
   seller: {
     count: jest.fn(),
-    findUnique: jest.fn(),
     update: jest.fn(),
   },
   order: {
@@ -72,13 +69,10 @@ describe('AdminService', () => {
   });
 
   describe('setUserStatus', () => {
-    it('updates status when user exists', async () => {
+    it('updates status without a pre-read when user exists', async () => {
       const inputUserId = 10;
       const inputStatus = UserStatus.Inactive;
 
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
-        id: inputUserId,
-      });
       (mockPrisma.user.update as jest.Mock).mockResolvedValue({
         id: inputUserId,
         status: inputStatus,
@@ -93,23 +87,21 @@ describe('AdminService', () => {
       });
     });
 
-    it('throws NotFoundException when user does not exist', async () => {
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    it('propagates Prisma P2025 when user does not exist', async () => {
+      const p2025 = Object.assign(new Error('Record not found'), { code: 'P2025' });
+      (mockPrisma.user.update as jest.Mock).mockRejectedValue(p2025);
 
       await expect(
         service.setUserStatus(999, UserStatus.Active),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toMatchObject({ code: 'P2025' });
     });
   });
 
   describe('setShopStatus', () => {
-    it('updates shop status when seller exists', async () => {
+    it('updates shop status without a pre-read when seller exists', async () => {
       const inputSellerId = 3;
       const inputStatus = ShopStatus.Active;
 
-      (mockPrisma.seller.findUnique as jest.Mock).mockResolvedValue({
-        id: inputSellerId,
-      });
       (mockPrisma.seller.update as jest.Mock).mockResolvedValue({
         id: inputSellerId,
         shopStatus: inputStatus,
@@ -127,12 +119,13 @@ describe('AdminService', () => {
       });
     });
 
-    it('throws NotFoundException when seller does not exist', async () => {
-      (mockPrisma.seller.findUnique as jest.Mock).mockResolvedValue(null);
+    it('propagates Prisma P2025 when seller does not exist', async () => {
+      const p2025 = Object.assign(new Error('Record not found'), { code: 'P2025' });
+      (mockPrisma.seller.update as jest.Mock).mockRejectedValue(p2025);
 
       await expect(
         service.setShopStatus(999, ShopStatus.Inactive),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toMatchObject({ code: 'P2025' });
     });
   });
 });

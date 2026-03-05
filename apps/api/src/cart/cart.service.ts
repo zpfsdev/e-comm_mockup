@@ -175,10 +175,10 @@ export class CartService {
 
   /** Removes all items from the cart (called after a successful order placement). */
   async clearCart(userId: number): Promise<void> {
-    const cart = await this.prisma.cart.findUniqueOrThrow({
-      where: { userId },
+    await this.prisma.$transaction(async (tx) => {
+      const cart = await tx.cart.findUniqueOrThrow({ where: { userId } });
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
     });
-    await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
   }
 
   private mapToCartItemDto(

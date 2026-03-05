@@ -72,12 +72,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback((): void => {
-    tokenStore.clear();
-    sessionStorage.removeItem(CSRF_TOKEN_KEY);
-    document.cookie = 'session=; path=/; max-age=0';
-    document.cookie = 'at=; path=/; max-age=0; Secure';
-    setUser(null);
-    window.location.href = '/';
+    // Call the server-side logout endpoint to clear HttpOnly cookies, then
+    // tear down the local session regardless of network outcome.
+    apiClient.post('/auth/logout').finally(() => {
+      tokenStore.clear();
+      sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      document.cookie = 'session=; path=/; max-age=0';
+      setUser(null);
+      window.location.href = '/';
+    });
   }, []);
 
   const value = useMemo<AuthContextValue>(

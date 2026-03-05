@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsEmail,
@@ -33,6 +34,7 @@ export class RegisterDto {
   username: string;
 
   @ApiProperty({ example: 'juan@email.com' })
+  @Transform(({ value }: { value: string }) => value?.toLowerCase())
   @IsEmail()
   @MaxLength(100)
   email: string;

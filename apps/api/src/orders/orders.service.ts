@@ -350,8 +350,16 @@ export class OrdersService {
     return this.updateOrderItemStatus(orderItemId, seller.id, status);
   }
 
+  /** Valid forward-only status transitions for order items. */
+  private static readonly ALLOWED_TRANSITIONS: Record<OrderItemStatus, OrderItemStatus[]> = {
+    Pending: ['InTransit'],
+    InTransit: ['Completed'],
+    Completed: [],
+  };
+
   /**
    * Allows a seller to update the status of a specific order item they own.
+   * Enforces forward-only transitions (Pending→InTransit→Completed).
    * Sets `dateDelivered` automatically when status becomes `Completed`.
    * Throws `ForbiddenException` if the seller does not manage the product.
    */
@@ -362,12 +370,23 @@ export class OrdersService {
   ): Promise<OrderItemStatusUpdateResponseDto> {
     const orderItem = await this.prisma.orderItem.findUnique({
       where: { id: orderItemId },
-      select: { id: true, product: { select: { sellerId: true } } },
+      select: {
+        id: true,
+        orderItemStatus: true,
+        product: { select: { sellerId: true } },
+      },
     });
 
     if (!orderItem) throw new NotFoundException('Order item not found.');
     if (orderItem.product.sellerId !== sellerId) {
       throw new ForbiddenException('You do not manage this order item.');
+    }
+
+    const allowed = OrdersService.ALLOWED_TRANSITIONS[orderItem.orderItemStatus];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(
+        `Cannot transition order item from '${orderItem.orderItemStatus}' to '${status}'.`,
+      );
     }
 
     const data: Prisma.OrderItemUpdateInput = { orderItemStatus: status };

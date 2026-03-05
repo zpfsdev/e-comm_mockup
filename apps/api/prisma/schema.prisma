@@ -82,6 +82,7 @@ model City {
   barangays  Barangay[]
 
   @@unique([city, provinceId])
+  @@index([provinceId])
   @@map("cities")
 }
 
@@ -94,6 +95,7 @@ model Barangay {
   addresses Address[]
 
   @@unique([barangay, cityId])
+  @@index([cityId])
   @@map("barangays")
 }
 
@@ -171,6 +173,7 @@ model UserAddress {
   orders  Order[]
 
   @@unique([userId, addressId])
+  @@index([userId])
   @@map("user_addresses")
 }
 
@@ -202,6 +205,7 @@ model AgeRange {
 
   products Product[]
 
+  @@unique([minAge, maxAge])
   @@map("age_ranges")
 }
 
@@ -335,6 +339,7 @@ model CartItem {
   product Product @relation(fields: [productId], references: [id])
 
   @@unique([cartId, productId])
+  @@index([cartId])
   @@map("cart_items")
 }
 

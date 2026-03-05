@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ShopStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -30,16 +30,10 @@ export class AdminService {
   }
 
   async setUserStatus(userId: number, status: UserStatus) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found.');
     return this.prisma.user.update({ where: { id: userId }, data: { status } });
   }
 
   async setShopStatus(sellerId: number, status: ShopStatus) {
-    const seller = await this.prisma.seller.findUnique({
-      where: { id: sellerId },
-    });
-    if (!seller) throw new NotFoundException('Shop not found.');
     return this.prisma.seller.update({
       where: { id: sellerId },
       data: { shopStatus: status },

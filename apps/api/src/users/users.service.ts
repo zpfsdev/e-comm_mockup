@@ -17,8 +17,13 @@ export interface UserProfileDto {
   readonly status: string;
   readonly userRoles: Array<{ role: { roleName: string } }>;
   readonly userAddresses: Array<{
-    address: {
-      barangay: { barangayName: string; city: { cityName: string; province: { provinceName: string } } };
+    readonly addressType: string | null;
+    readonly isDefault: boolean;
+    readonly address: {
+      readonly barangay: {
+        readonly barangay: string;
+        readonly city: { readonly city: string; readonly province: { readonly province: string } };
+      };
     };
   }>;
 }
@@ -45,7 +50,9 @@ export class UsersService {
         status: true,
         userRoles: { include: { role: true } },
         userAddresses: {
-          include: {
+          select: {
+            addressType: true,
+            isDefault: true,
             address: {
               include: {
                 barangay: {

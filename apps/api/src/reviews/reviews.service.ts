@@ -6,6 +6,25 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
+export interface ReviewDto {
+  readonly id: number;
+  readonly rating: number;
+  readonly comment: string | null;
+  readonly datePosted: Date;
+  readonly user: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly profilePictureUrl: string | null;
+  };
+}
+
+export interface CreateReviewResponseDto {
+  readonly id: number;
+  readonly rating: number;
+  readonly comment: string | null;
+  readonly datePosted: Date;
+}
+
 @Injectable()
 export class ReviewsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -16,7 +35,7 @@ export class ReviewsService {
     userId: number,
     orderItemId: number,
     dto: CreateReviewDto,
-  ) {
+  ): Promise<CreateReviewResponseDto> {
     const orderItem = await this.prisma.orderItem.findFirst({
       where: { id: orderItemId, order: { userId } },
     });
@@ -45,15 +64,20 @@ export class ReviewsService {
         rating: dto.rating,
         comment: dto.comment,
       },
+      select: { id: true, rating: true, comment: true, datePosted: true },
     });
   }
 
-  findByProduct(productId: number, page = 1, limit = 20) {
+  async findByProduct(productId: number, page = 1, limit = 20): Promise<ReviewDto[]> {
     const safeLimit = Math.min(limit, ReviewsService.MAX_REVIEW_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     return this.prisma.review.findMany({
       where: { orderItem: { productId } },
-      include: {
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        datePosted: true,
         user: {
           select: { firstName: true, lastName: true, profilePictureUrl: true },
         },

@@ -251,8 +251,8 @@ describe('OrdersService', () => {
     it('updates order item status for the owning seller', async () => {
       mockPrisma.orderItem.findUnique.mockResolvedValue({
         id: 201,
+        orderItemStatus: 'Pending',
         product: { sellerId: 5 },
-        order: { id: 100 },
       });
       mockPrisma.orderItem.update.mockResolvedValue({
         id: 201,
@@ -272,8 +272,8 @@ describe('OrdersService', () => {
     it('sets dateDelivered when status becomes Completed', async () => {
       mockPrisma.orderItem.findUnique.mockResolvedValue({
         id: 201,
+        orderItemStatus: 'InTransit',
         product: { sellerId: 5 },
-        order: { id: 100 },
       });
       mockPrisma.orderItem.update.mockResolvedValue({
         id: 201,
@@ -289,8 +289,8 @@ describe('OrdersService', () => {
     it('throws ForbiddenException when seller does not own the order item', async () => {
       mockPrisma.orderItem.findUnique.mockResolvedValue({
         id: 201,
+        orderItemStatus: 'Pending',
         product: { sellerId: 99 },
-        order: { id: 100 },
       });
 
       await expect(
@@ -304,6 +304,18 @@ describe('OrdersService', () => {
       await expect(
         service.updateOrderItemStatus(999, 5, 'InTransit'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException for an invalid backward transition', async () => {
+      mockPrisma.orderItem.findUnique.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Completed',
+        product: { sellerId: 5 },
+      });
+
+      await expect(
+        service.updateOrderItemStatus(201, 5, 'Pending'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

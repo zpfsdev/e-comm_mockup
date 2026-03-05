@@ -56,7 +56,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       )
       .then(({ data }) => {
         tokenStore.set(data.accessToken);
-        document.cookie = `at=${data.accessToken}; path=/; SameSite=Strict; max-age=900; Secure`;
         return apiClient.get<User>('/auth/me');
       })
       .then((res) => {

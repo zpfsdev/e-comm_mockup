@@ -2,17 +2,16 @@
  * Server-side API client for React Server Components.
  *
  * Auth mechanism:
- *   The browser client writes the access token into a non-HttpOnly `at` cookie
- *   (max-age 900 s, SameSite=Strict) alongside localStorage on every successful
+ *   The NestJS API sets the access token in an HttpOnly `at` cookie
+ *   (max-age 900 s, SameSite=Strict, Secure) on every successful
  *   login / register / token refresh.  Server components read that cookie via
  *   next/headers and forward it as a Bearer token to the NestJS API.
  *
- *   Limitations:
- *   - If the `at` cookie has expired before the page loads the RSC will receive
- *     a 401 and should redirect to /auth/sign-in.
- *   - This cookie is not HttpOnly (by design), so it is readable by JS.  The
- *     access token is already in localStorage, so there is no additional
- *     exposure.  The refresh token remains HttpOnly and is never accessible here.
+ *   Client components use the in-memory tokenStore (see token-store.ts) which
+ *   is populated by the silent /auth/refresh call in AuthProvider on mount.
+ *
+ *   If the `at` cookie has expired before the page loads the RSC will receive
+ *   a 401 and redirect to /auth/sign-in.
  */
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';

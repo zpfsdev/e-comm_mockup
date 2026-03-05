@@ -36,13 +36,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<Omit<AuthTokens, 'refreshToken'>> {
     const tokens = await this.authService.register(dto);
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
+    this.setAuthCookies(res, tokens);
     const { refreshToken: _refreshToken, ...safeTokens } = tokens;
     void _refreshToken;
     return safeTokens;
@@ -57,13 +51,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<Omit<AuthTokens, 'refreshToken'>> {
     const tokens = await this.authService.login(dto);
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-    });
+    this.setAuthCookies(res, tokens);
     const { refreshToken: _refreshToken, ...safeTokens } = tokens;
     void _refreshToken;
     return safeTokens;
@@ -90,11 +78,12 @@ export class AuthController {
       'Cookie-only flow: reads `refreshToken` from HttpOnly cookie. ' +
       'Requires the CSRF token (received at login) in the `X-CSRF-Token` header.',
   })
-  refresh(
+  async refresh(
     @Req()
     req: Request & {
       cookies?: Record<string, unknown>;
     },
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string }> {
     const rawCookies: unknown = req.cookies;
     const cookies =
@@ -113,7 +102,9 @@ export class AuthController {
     const refreshToken =
       typeof rawRefresh === 'string' ? rawRefresh : undefined;
 
-    return this.authService.refresh(refreshToken ?? '', csrfToken);
+    const result = await this.authService.refresh(refreshToken ?? '', csrfToken);
+    this.setAccessTokenCookie(res, result.accessToken);
+    return result;
   }
 
   @Get('me')
@@ -151,5 +142,29 @@ export class AuthController {
   @ApiOperation({ summary: 'Smoke test endpoint' })
   test(): { status: string } {
     return { status: 'auth module ok' };
+  }
+
+  /** Sets both the HttpOnly refresh-token cookie and the HttpOnly at (access-token) cookie. */
+  private setAuthCookies(res: Response, tokens: AuthTokens): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: isProduction,
+      path: '/',
+    });
+    this.setAccessTokenCookie(res, tokens.accessToken);
+  }
+
+  /** Sets the HttpOnly at cookie carrying the short-lived access token for RSC use. */
+  private setAccessTokenCookie(res: Response, accessToken: string): void {
+    res.cookie('at', accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    });
   }
 }

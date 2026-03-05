@@ -57,9 +57,11 @@ export interface SellerSaleItemDto {
   readonly id: number;
   readonly orderItemStatus: string;
   readonly quantity: number;
+  /** Price at the time of sale — the canonical sold price from the order item. */
   readonly price: string;
   readonly productName: string;
-  readonly productPrice: string;
+  /** Current product price — may differ from the price-at-sale. */
+  readonly currentProductPrice: string;
   readonly orderDate: Date;
 }
 

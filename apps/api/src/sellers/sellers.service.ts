@@ -251,7 +251,7 @@ export class SellersService {
       quantity: row.quantity,
       price: row.price.toString(),
       productName: row.product.name,
-      productPrice: row.product.price.toString(),
+      currentProductPrice: row.product.price.toString(),
       orderDate: row.order.orderDate,
     }));
 

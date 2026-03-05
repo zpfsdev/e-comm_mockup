@@ -73,6 +73,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
           );
         case 'P2025':
           return new NotFoundException('The requested record was not found.');
+        case 'P2003':
+          return new BadRequestException('Referenced record does not exist.');
         default:
           return null;
       }

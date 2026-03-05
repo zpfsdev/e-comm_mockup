@@ -90,6 +90,8 @@ async function bootstrap(): Promise<void> {
     );
   }
 
+  app.enableShutdownHooks();
+
   const port = configService.get<number>('PORT', 3001);
   await app.listen(port);
   Logger.log(

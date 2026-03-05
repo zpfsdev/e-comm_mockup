@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   CurrentUser,
   type JwtPayload,
@@ -38,8 +39,7 @@ export class OrdersController {
   })
   getOrders(
     @CurrentUser() user: JwtPayload,
-    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 20,
+    @Query() { page, limit }: PaginationQueryDto,
   ) {
     return this.ordersService.findUserOrders(user.sub, page, limit);
   }

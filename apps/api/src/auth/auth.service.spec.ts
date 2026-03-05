@@ -1,9 +1,7 @@
-// auth.service.spec.ts intentionally left empty for now; tests will be added later.
-
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoleName } from '@prisma/client';
+import { Prisma, RoleName } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
@@ -67,7 +65,6 @@ describe('AuthService', () => {
     };
 
     it('creates user and returns access token when email and username are unique', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.role.findUniqueOrThrow.mockResolvedValue({
         id: 1,
         roleName: RoleName.Customer,
@@ -83,7 +80,6 @@ describe('AuthService', () => {
     });
 
     it('hashes the password before storing', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.role.findUniqueOrThrow.mockResolvedValue({
         id: 1,
         roleName: RoleName.Customer,
@@ -96,13 +92,21 @@ describe('AuthService', () => {
       expect(createCall.data.password).not.toBe('P@ssw0rd123');
     });
 
-    it('throws ConflictException when email is already registered', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+    it('propagates P2002 when email or username is already registered (caught by HttpExceptionFilter in production)', async () => {
+      mockPrisma.role.findUniqueOrThrow.mockResolvedValue({
+        id: 1,
+        roleName: RoleName.Customer,
+      });
+      mockPrisma.user.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: '',
+        }),
+      );
 
       await expect(service.register(inputRegisterDto)).rejects.toThrow(
-        ConflictException,
+        Prisma.PrismaClientKnownRequestError,
       );
-      expect(mockPrisma.user.create).not.toHaveBeenCalled();
     });
   });
 

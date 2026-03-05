@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
@@ -18,7 +17,6 @@ import {
 } from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
 import { Roles } from '../core/decorators/roles.decorator';
-import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -42,7 +40,6 @@ export class ProductsController {
   }
 
   @Get('mine')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({
@@ -62,7 +59,6 @@ export class ProductsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Create a new product (Seller only)' })
@@ -72,7 +68,6 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Update a product (Seller only, own products)' })
@@ -86,7 +81,6 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({

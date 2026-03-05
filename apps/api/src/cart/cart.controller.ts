@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
@@ -56,17 +57,19 @@ export class CartController {
   }
 
   @Delete('items/:productId')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove item from cart' })
-  removeItem(
+  async removeItem(
     @CurrentUser() user: JwtPayload,
     @Param('productId', ParseIntPipe) productId: number,
-  ) {
-    return this.cartService.removeItem(user.sub, productId);
+  ): Promise<void> {
+    await this.cartService.removeItem(user.sub, productId);
   }
 
   @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Clear the entire cart' })
-  clearCart(@CurrentUser() user: JwtPayload) {
-    return this.cartService.clearCart(user.sub);
+  async clearCart(@CurrentUser() user: JwtPayload): Promise<void> {
+    await this.cartService.clearCart(user.sub);
   }
 }

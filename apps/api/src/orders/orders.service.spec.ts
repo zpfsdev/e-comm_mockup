@@ -64,7 +64,7 @@ const mockTx = {
     update: jest.fn(),
   },
   order: { create: jest.fn().mockResolvedValue(mockCreatedOrder) },
-  commission: { create: jest.fn() },
+  commission: { create: jest.fn(), createMany: jest.fn() },
   cartItem: { deleteMany: jest.fn() },
 };
 
@@ -129,7 +129,7 @@ describe('OrdersService', () => {
 
       expect(actualResult.id).toBe(100);
       expect(mockTx.product.update).toHaveBeenCalledTimes(2);
-      expect(mockTx.commission.create).toHaveBeenCalledTimes(2);
+      expect(mockTx.commission.createMany).toHaveBeenCalledTimes(1);
     });
 
     it('throws BadRequestException when a product is unavailable', async () => {
@@ -183,8 +183,8 @@ describe('OrdersService', () => {
         userAddressId: 7,
       });
 
-      const commissionCall = mockTx.commission.create.mock.calls[0][0];
-      expect(Number(commissionCall.data.commissionAmount)).toBeCloseTo(
+      const commissionCall = mockTx.commission.createMany.mock.calls[0][0];
+      expect(Number(commissionCall.data[0].commissionAmount)).toBeCloseTo(
         199 * 2 * 0.05,
         2,
       );

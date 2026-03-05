@@ -9,6 +9,7 @@ import { OrderItemStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import type {
+  OrderItemStatusUpdateResponseDto,
   OrderSummaryDto,
   PaginatedOrdersResponseDto,
 } from './models/order.dto';
@@ -247,21 +248,18 @@ export class OrdersService {
     products: Array<{ id: number; sellerId: number }>,
   ): Promise<void> {
     const sellerMap = new Map(products.map((p) => [p.id, p.sellerId]));
-    await Promise.all(
-      orderItems.map((orderItem) => {
-        const sellerId = sellerMap.get(orderItem.productId);
-        if (sellerId === undefined) return Promise.resolve();
-        return tx.commission.create({
-          data: {
-            sellerId,
-            orderItemId: orderItem.id,
-            commissionAmount: new Prisma.Decimal(orderItem.price)
-              .mul(orderItem.quantity)
-              .mul(this.commissionRate),
-          },
-        });
-      }),
-    );
+    const commissionData = orderItems
+      .filter((item) => sellerMap.has(item.productId))
+      .map((item) => ({
+        sellerId: sellerMap.get(item.productId)!,
+        orderItemId: item.id,
+        commissionAmount: new Prisma.Decimal(item.price)
+          .mul(item.quantity)
+          .mul(this.commissionRate),
+      }));
+    if (commissionData.length > 0) {
+      await tx.commission.createMany({ data: commissionData });
+    }
   }
 
   /** Returns a paginated list of orders for a user, newest first, with total/page metadata. */
@@ -344,9 +342,10 @@ export class OrdersService {
     orderItemId: number,
     userId: number,
     status: OrderItemStatus,
-  ) {
+  ): Promise<OrderItemStatusUpdateResponseDto> {
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
+      select: { id: true },
     });
     return this.updateOrderItemStatus(orderItemId, seller.id, status);
   }
@@ -354,16 +353,16 @@ export class OrdersService {
   /**
    * Allows a seller to update the status of a specific order item they own.
    * Sets `dateDelivered` automatically when status becomes `Completed`.
-   * Throws `BadRequestException` if the seller does not manage the product.
+   * Throws `ForbiddenException` if the seller does not manage the product.
    */
   async updateOrderItemStatus(
     orderItemId: number,
     sellerId: number,
     status: OrderItemStatus,
-  ) {
+  ): Promise<OrderItemStatusUpdateResponseDto> {
     const orderItem = await this.prisma.orderItem.findUnique({
       where: { id: orderItemId },
-      include: { product: { select: { sellerId: true } }, order: true },
+      select: { id: true, product: { select: { sellerId: true } } },
     });
 
     if (!orderItem) throw new NotFoundException('Order item not found.');
@@ -374,7 +373,16 @@ export class OrdersService {
     const data: Prisma.OrderItemUpdateInput = { orderItemStatus: status };
     if (status === 'Completed') data.dateDelivered = new Date();
 
-    return this.prisma.orderItem.update({ where: { id: orderItemId }, data });
+    return this.prisma.orderItem.update({
+      where: { id: orderItemId },
+      data,
+      select: {
+        id: true,
+        orderItemStatus: true,
+        dateDelivered: true,
+        productId: true,
+      },
+    });
   }
 
   private mapToOrderSummaryDto(

@@ -6,17 +6,16 @@ import {
   ParseIntPipe,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   CurrentUser,
   type JwtPayload,
 } from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
 import { Roles } from '../core/decorators/roles.decorator';
-import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { CreateSellerDto } from './dto/create-seller.dto';
 import { SellersService } from './sellers.service';
 
@@ -35,7 +34,6 @@ export class SellersController {
   /** Static "me/*" routes must be declared before ":id" so Express doesn't
    *  swallow "me" as a numeric id parameter. */
   @Get('me/dashboard')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Get seller dashboard stats' })
@@ -44,7 +42,6 @@ export class SellersController {
   }
 
   @Get('me/stats')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Get aggregate seller stats for dashboard' })
@@ -53,20 +50,17 @@ export class SellersController {
   }
 
   @Get('me/sales-report')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Seller)
   @ApiOperation({ summary: 'Get seller sales report (paginated)' })
   getSalesReport(
     @CurrentUser() user: JwtPayload,
-    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 100,
+    @Query() { page, limit }: PaginationQueryDto,
   ) {
     return this.sellersService.getSalesReport(user.sub, page, limit);
   }
 
   @Post('register')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Roles(RoleName.Customer)
   @ApiOperation({ summary: 'Register current user as a seller' })

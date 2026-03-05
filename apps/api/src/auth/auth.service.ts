@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -45,18 +44,10 @@ export class AuthService {
 
   /**
    * Creates a new Customer account.
-   * Throws `ConflictException` if the email or username is already taken.
+   * Throws `ConflictException` (via P2002 in HttpExceptionFilter) if email/username is already taken.
    * Automatically provisions an empty cart for the new user.
    */
   async register(dto: RegisterDto): Promise<AuthTokens> {
-    const existingUser = await this.prisma.user.findFirst({
-      where: { OR: [{ email: dto.email }, { username: dto.username }] },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Email or username is already in use.');
-    }
-
     const hashedPassword = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const customerRole = await this.prisma.role.findUniqueOrThrow({
       where: { roleName: RoleName.Customer },

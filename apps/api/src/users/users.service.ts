@@ -2,11 +2,32 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
+export interface UserProfileDto {
+  readonly id: number;
+  readonly firstName: string;
+  readonly middleName: string | null;
+  readonly lastName: string;
+  readonly username: string;
+  readonly email: string;
+  readonly contactNumber: string | null;
+  readonly profilePictureUrl: string | null;
+  readonly dateOfBirth: Date | null;
+  readonly dateTimeRegistered: Date;
+  readonly lastLogin: Date | null;
+  readonly status: string;
+  readonly userRoles: Array<{ role: { roleName: string } }>;
+  readonly userAddresses: Array<{
+    address: {
+      barangay: { barangayName: string; city: { cityName: string; province: { provinceName: string } } };
+    };
+  }>;
+}
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: number) {
+  async findById(id: number): Promise<UserProfileDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {

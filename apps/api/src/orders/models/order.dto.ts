@@ -1,3 +1,10 @@
+export interface OrderItemStatusUpdateResponseDto {
+  readonly id: number;
+  readonly orderItemStatus: string;
+  readonly dateDelivered: Date | null;
+  readonly productId: number;
+}
+
 export interface OrderItemProductSummaryDto {
   readonly id: number;
   readonly name: string;

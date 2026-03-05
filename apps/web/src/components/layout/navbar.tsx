@@ -4,14 +4,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth-provider';
-import { apiClient } from '@/lib/api-client';
+import { CartBadge } from './cart-badge';
 import styles from './navbar.module.css';
-
-interface CartSummary {
-  items: Array<{ quantity: number }>;
-}
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -88,20 +83,6 @@ export function Navbar() {
   const initials = user
     ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
     : '';
-
-  const { data: cartData, isError: cartError } = useQuery<CartSummary>({
-    queryKey: ['cart'],
-    queryFn: async () => {
-      const { data } = await apiClient.get<CartSummary>('/cart');
-      return data;
-    },
-    enabled: isAuthenticated,
-    staleTime: 30_000,
-  });
-
-  const cartCount = !cartError
-    ? cartData?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
-    : 0;
 
   return (
     <nav className={styles.nav} aria-label="Main navigation">
@@ -234,33 +215,8 @@ export function Navbar() {
               </div>
             </div>
 
-            {/* Cart */}
-            <Link
-              href="/cart"
-              className={styles.iconBtn}
-              aria-label={
-                cartError
-                  ? 'Shopping cart, count unavailable'
-                  : `Shopping cart${cartCount > 0 ? `, ${cartCount} items` : ''}`
-              }
-            >
-              <svg className={styles.icon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              {cartError ? (
-                <span className={styles.cartBadge} aria-hidden>
-                  ?
-                </span>
-              ) : (
-                cartCount > 0 && (
-                  <span className={styles.cartBadge} aria-hidden>
-                    {cartCount > 99 ? '99+' : cartCount}
-                  </span>
-                )
-              )}
-            </Link>
+            {/* Cart — isolated client island; does not trigger full Navbar re-renders */}
+            <CartBadge />
           </div>
         </div>
       </div>

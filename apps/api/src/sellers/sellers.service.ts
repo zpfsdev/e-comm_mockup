@@ -18,9 +18,18 @@ import type {
 const MAX_SHOPS_LIST_SIZE = 200;
 const SHOP_PRODUCT_PREVIEW_LIMIT = 24;
 const SALES_REPORT_PAGE_SIZE = 100;
+const DASHBOARD_CACHE_TTL_MS = 30_000;
+
+interface CacheEntry<T> {
+  readonly data: T;
+  readonly expiresAt: number;
+}
 
 @Injectable()
 export class SellersService {
+  private readonly dashboardCache = new Map<number, CacheEntry<SellerDashboardDto>>();
+  private readonly statsCache = new Map<number, CacheEntry<SellerStatsDto>>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(limit = MAX_SHOPS_LIST_SIZE): Promise<SellerSummaryDto[]> {
@@ -125,6 +134,9 @@ export class SellersService {
   }
 
   async getSellerDashboard(userId: number): Promise<SellerDashboardDto> {
+    const cached = this.dashboardCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
+
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
       select: { id: true, shopName: true, shopLogoUrl: true },
@@ -156,7 +168,7 @@ export class SellersService {
       }),
     ]);
 
-    return {
+    const result: SellerDashboardDto = {
       shopName: seller.shopName,
       shopLogoUrl: seller.shopLogoUrl,
       stats: {
@@ -173,9 +185,14 @@ export class SellersService {
         orderDate: item.order.orderDate,
       })),
     };
+    this.dashboardCache.set(userId, { data: result, expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS });
+    return result;
   }
 
   async getSellerStats(userId: number): Promise<SellerStatsDto> {
+    const cached = this.statsCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
+
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { userId },
       select: { id: true },
@@ -202,12 +219,14 @@ export class SellersService {
         }),
       ]);
 
-    return {
+    const stats: SellerStatsDto = {
       totalProducts,
       totalOrders,
       pendingOrders,
       totalRevenue: (revenueAgg._sum.price ?? 0).toString(),
     };
+    this.statsCache.set(userId, { data: stats, expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS });
+    return stats;
   }
 
   async getSalesReport(

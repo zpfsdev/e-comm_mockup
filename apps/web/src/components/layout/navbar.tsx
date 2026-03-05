@@ -174,7 +174,7 @@ export function Navbar() {
                 )}
               </button>
 
-              <div className={`${styles.dropdown} ${isMenuOpen ? styles.dropdownOpen : ''}`} role="menu">
+              <div className={`${styles.dropdown} ${isMenuOpen ? styles.dropdownOpen : ''}`} role="menu" aria-label="Account options">
                 <div className={styles.dropdownArrow} aria-hidden />
                 <div className={styles.dropdownPanel}>
                   {isAuthenticated ? (

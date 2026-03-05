@@ -28,10 +28,10 @@ async function fetchProduct(id: string): Promise<Product | null> {
   }
 }
 
-type Props = { params: { id: string } };
+type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props) {
-  const { id } = params;
+  const { id } = await params;
   const product = await fetchProduct(id);
   return {
     title: product ? `${product.name} | Artistryx` : 'Product | Artistryx',
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { id } = params;
+  const { id } = await params;
   const product = await fetchProduct(id);
   if (!product) notFound();
 

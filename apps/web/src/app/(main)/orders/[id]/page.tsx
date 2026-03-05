@@ -1,7 +1,7 @@
 'use client';
-// Note: params is typed as Promise in Next.js 15+ for future server component compatibility.
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
@@ -27,8 +27,8 @@ function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-  const { id } = params;
+export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
 
   const { data: order, isLoading, error } = useQuery<Order>({
     queryKey: ['order', id],

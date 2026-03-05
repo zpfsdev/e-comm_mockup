@@ -2,6 +2,11 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import OrderDetailPage from './page';
 
+jest.mock('next/navigation', () => ({
+  useParams: jest.fn().mockReturnValue({ id: '101' }),
+  useRouter: jest.fn(),
+}));
+
 jest.mock('next/link', () => {
   const MockLink = ({
     children,
@@ -51,12 +56,10 @@ describe('OrderDetailPage', () => {
   const useQueryMock = () =>
     (jest.requireMock('@tanstack/react-query') as { useQuery: jest.Mock }).useQuery;
 
-  const inputParams = { id: '101' };
-
   it('shows loading skeleton while fetching', () => {
     useQueryMock().mockReturnValue({ data: undefined, isLoading: true, error: null });
 
-    render(<OrderDetailPage params={inputParams} />);
+    render(<OrderDetailPage />);
 
     expect(screen.queryByText(/order #101/i)).not.toBeInTheDocument();
   });
@@ -64,7 +67,7 @@ describe('OrderDetailPage', () => {
   it('renders order details when data is available', () => {
     useQueryMock().mockReturnValue({ data: mockOrder, isLoading: false, error: null });
 
-    render(<OrderDetailPage params={inputParams} />);
+    render(<OrderDetailPage />);
 
     expect(screen.getByText(/order #101/i)).toBeInTheDocument();
     expect(screen.getByText(/story book/i)).toBeInTheDocument();
@@ -75,7 +78,7 @@ describe('OrderDetailPage', () => {
   it('shows not found message when order is null', () => {
     useQueryMock().mockReturnValue({ data: null, isLoading: false, error: new Error('Not found') });
 
-    render(<OrderDetailPage params={inputParams} />);
+    render(<OrderDetailPage />);
 
     expect(screen.getByText(/order not found/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to orders/i })).toBeInTheDocument();

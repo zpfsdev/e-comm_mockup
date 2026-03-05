@@ -57,7 +57,7 @@ export class SellersService {
             name: true,
             imageUrl: true,
             price: true,
-            category: true,
+            category: { select: { categoryName: true } },
           },
           take: productLimit,
           orderBy: { dateAdded: 'desc' },
@@ -78,7 +78,7 @@ export class SellersService {
         name: p.name,
         imageUrl: p.imageUrl,
         price: p.price.toString(),
-        category: p.category,
+        category: p.category?.categoryName ?? null,
       })),
     };
   }

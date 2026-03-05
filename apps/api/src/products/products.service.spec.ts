@@ -130,10 +130,13 @@ describe('ProductsService', () => {
     });
 
     it('throws NotFoundException when product not found or not owned by seller', async () => {
-      const p2025 = new Prisma.PrismaClientKnownRequestError('Record not found', {
-        code: 'P2025',
-        clientVersion: '',
-      });
+      const p2025 = new Prisma.PrismaClientKnownRequestError(
+        'Record not found',
+        {
+          code: 'P2025',
+          clientVersion: '',
+        },
+      );
       mockPrisma.product.update.mockRejectedValue(p2025);
 
       await expect(service.remove(1, 99)).rejects.toThrow(NotFoundException);

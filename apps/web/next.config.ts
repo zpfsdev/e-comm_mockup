@@ -19,9 +19,15 @@ import path from 'path';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 const apiOrigin = apiUrl ? new URL(apiUrl).origin : 'http://localhost:3001';
 
+// unsafe-eval is only required by Next.js in development (HMR, eval source maps).
+// Production builds do not need it and including it defeats CSP's XSS protection.
+const scriptSrc = process.env.NODE_ENV === 'production'
+  ? "script-src 'self' 'unsafe-inline'"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",   // Next.js RSC requires unsafe-eval in dev
+  scriptSrc,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com",
   "img-src 'self' data: https:",
   "font-src 'self' https://fonts.gstatic.com https://db.onlinewebfonts.com",
@@ -73,10 +79,22 @@ const nextConfig: NextConfig = {
   // ── Image optimization ────────────────────────────────────────────────────
   images: {
     // Product images served from external storage (CDN / object storage).
-    // Update remotePatterns to match production storage domains.
-    remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-    ],
+    // In production, set NEXT_PUBLIC_IMAGE_HOSTNAMES to a comma-separated list
+    // of allowed CDN hostnames (e.g. "assets.example.com,cdn.example.com").
+    // Leaving it unset in production falls back to wildcard (dev convenience only).
+    remotePatterns: (() => {
+      const configured = (process.env.NEXT_PUBLIC_IMAGE_HOSTNAMES ?? '')
+        .split(',')
+        .map((h) => h.trim())
+        .filter(Boolean);
+      if (process.env.NODE_ENV === 'production' && configured.length > 0) {
+        return configured.map((hostname) => ({
+          protocol: 'https' as const,
+          hostname,
+        }));
+      }
+      return [{ protocol: 'https' as const, hostname: '**' }];
+    })(),
     formats: ['image/avif', 'image/webp'],
     // Largest image size displayed in the product grid.
     deviceSizes: [480, 768, 1024, 1280, 1440],

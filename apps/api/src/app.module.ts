@@ -16,7 +16,19 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate(config: Record<string, string | undefined>) {
+        const required = ['DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'] as const;
+        const missing = required.filter((key) => !config[key]);
+        if (missing.length > 0) {
+          throw new Error(
+            `Application startup failed: missing required environment variables: ${missing.join(', ')}`,
+          );
+        }
+        return config;
+      },
+    }),
 
     // ── Rate limiting ─────────────────────────────────────────────────────────
     // Two tiers: a generous global limit and a tight auth-endpoint limit.

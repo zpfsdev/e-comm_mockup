@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
+import { tokenStore } from '@/lib/token-store';
 import styles from '../auth.module.css';
 
 interface RegisterPayload {
@@ -65,7 +66,7 @@ export default function SignUpClientPage() {
       return data;
     },
     onSuccess: (data) => {
-      localStorage.setItem('accessToken', data.accessToken);
+      tokenStore.set(data.accessToken);
       if (data.csrfToken) {
         sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
       }

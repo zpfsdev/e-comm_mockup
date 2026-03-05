@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from './constants';
+import { tokenStore } from './token-store';
 
 /** SessionStorage key for CSRF token (sent in X-CSRF-Token on /auth/refresh). */
 export const CSRF_TOKEN_KEY = 'csrfToken';
@@ -13,11 +14,9 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  const token = tokenStore.get();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -56,8 +55,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (!localStorage.getItem('accessToken')) {
-      localStorage.removeItem('accessToken');
+    if (!tokenStore.get()) {
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
       document.cookie = 'at=; path=/; max-age=0; Secure';
@@ -91,15 +89,14 @@ apiClient.interceptors.response.use(
         },
       );
       const { accessToken } = data;
-      localStorage.setItem('accessToken', accessToken);
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      tokenStore.set(accessToken);
       processQueue(null, accessToken);
       originalRequest.headers = originalRequest.headers ?? {};
       originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
       return apiClient(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      localStorage.removeItem('accessToken');
+      tokenStore.clear();
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; max-age=0';
       document.cookie = 'at=; path=/; max-age=0; Secure';

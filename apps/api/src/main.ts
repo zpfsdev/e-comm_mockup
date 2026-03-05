@@ -72,7 +72,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // ── Swagger (development only) ───────────────────────────────────────────────
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProd) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Artistryx API')
       .setDescription(

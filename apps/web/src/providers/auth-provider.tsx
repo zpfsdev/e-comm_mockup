@@ -1,7 +1,10 @@
 'use client';
 
+import axios from 'axios';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
+import { API_BASE_URL } from '@/lib/constants';
+import { tokenStore } from '@/lib/token-store';
 
 interface User {
   id: number;
@@ -37,33 +40,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setTimeout(() => setIsLoading(false), 0);
+    const csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+    if (!csrfToken) {
+      setIsLoading(false);
       return;
     }
-    apiClient
-      .get<User>('/auth/me')
+    // Restore the in-memory access token by silently refreshing via the
+    // HttpOnly refresh-token cookie. The CSRF token in sessionStorage confirms
+    // this tab belongs to an authenticated session.
+    axios
+      .post<{ accessToken: string }>(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true, headers: { 'X-CSRF-Token': csrfToken } },
+      )
+      .then(({ data }) => {
+        tokenStore.set(data.accessToken);
+        document.cookie = `at=${data.accessToken}; path=/; SameSite=Strict; max-age=900; Secure`;
+        return apiClient.get<User>('/auth/me');
+      })
       .then((res) => {
         setUser(res.data);
         document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
-        const at = localStorage.getItem('accessToken');
-        if (at) {
-          document.cookie = `at=${at}; path=/; SameSite=Strict; max-age=900; Secure`;
-        }
       })
       .catch(() => {
-        localStorage.removeItem('accessToken');
+        tokenStore.clear();
         sessionStorage.removeItem(CSRF_TOKEN_KEY);
+        document.cookie = 'session=; path=/; max-age=0';
+        document.cookie = 'at=; path=/; max-age=0; Secure';
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   const logout = useCallback((): void => {
-    localStorage.removeItem('accessToken');
+    tokenStore.clear();
     sessionStorage.removeItem(CSRF_TOKEN_KEY);
     document.cookie = 'session=; path=/; max-age=0';
-    document.cookie = 'at=; path=/; max-age=0';
+    document.cookie = 'at=; path=/; max-age=0; Secure';
     setUser(null);
     window.location.href = '/';
   }, []);

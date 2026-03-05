@@ -16,6 +16,8 @@ import {
   type JwtPayload,
 } from '../core/decorators/current-user.decorator';
 import { Public } from '../core/decorators/public.decorator';
+import type { UserProfileDto } from '../users/users.service';
+import { UsersService } from '../users/users.service';
 import type { AuthTokens } from './auth.service';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -26,7 +28,10 @@ import { RegisterDto } from './dto/register.dto';
 @Controller('auth')
 @Throttle({ auth: {} })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post('register')
   @Public()
@@ -110,8 +115,8 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the currently authenticated user' })
-  getMe(@CurrentUser() user: JwtPayload) {
-    return user;
+  getMe(@CurrentUser() user: JwtPayload): Promise<UserProfileDto> {
+    return this.usersService.findById(user.sub);
   }
 
   @Post('change-password')

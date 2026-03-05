@@ -2,19 +2,6 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import CartPage from './page';
 
-jest.mock('next/image', () => {
-  const MockImage = ({
-    priority: _priority,
-    fill: _fill,
-    ...props
-  }: React.ImgHTMLAttributes<HTMLImageElement> & {
-    priority?: boolean;
-    fill?: boolean;
-  }) => <img {...props} alt={props.alt ?? ''} />;
-  MockImage.displayName = 'MockNextImage';
-  return MockImage;
-});
-
 jest.mock('next/link', () => {
   const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>

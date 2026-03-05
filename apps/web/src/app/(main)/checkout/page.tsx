@@ -11,15 +11,8 @@ import { Input } from '@/components/ui/input/input';
 import { Button } from '@/components/ui/button/button';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { SHIPPING_FEE } from '@/lib/constants';
+import type { Cart } from '@/types/cart';
 import styles from './checkout.module.css';
-
-interface CartItem {
-  id: number;
-  quantity: number;
-  product: { id: number; name: string; price: number; imageUrl?: string };
-}
-
-interface Cart { items: CartItem[]; }
 
 interface DeliveryAddress {
   streetLine: string;

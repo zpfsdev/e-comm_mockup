@@ -7,17 +7,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { SHIPPING_FEE } from '@/lib/constants';
+import type { Cart } from '@/types/cart';
 import styles from './cart.module.css';
-
-interface CartItem {
-  id: number;
-  quantity: number;
-  product: { id: number; name: string; price: number; imageUrl?: string; stock?: number };
-}
-
-interface Cart {
-  items: CartItem[];
-}
 
 
 export default function CartPage() {
@@ -227,6 +218,7 @@ export default function CartPage() {
                       className={styles.removeBtn}
                       onClick={() => removeMutation.mutate(item.product.id)}
                       disabled={isMutating}
+                      aria-label={`Remove ${item.product.name} from cart`}
                     >
                       Remove
                     </button>

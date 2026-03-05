@@ -1,4 +1,5 @@
 'use client';
+// Note: params is typed as Promise in Next.js 15+ for future server component compatibility.
 import Image from 'next/image';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -22,11 +23,11 @@ const STATUS_CLASS = {
   Completed: styles.statusCompleted,
 } as const;
 
-function formatDate(d: string) {
+function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const { id } = params;
 
   const { data: order, isLoading, error } = useQuery<Order>({
@@ -52,7 +53,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   if (error || !order) {
     return (
       <div className={styles.page}>
-        <p>Order not found.</p>
+        <h1 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)' }}>Order not found</h1>
+        <p>This order does not exist or you do not have access to it.</p>
         <Link href="/orders" style={{ color: 'var(--color-primary)' }}>← Back to Orders</Link>
       </div>
     );

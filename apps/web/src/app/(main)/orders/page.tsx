@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { serverFetch } from '@/lib/server-api';
+
+export const metadata: Metadata = {
+  title: 'My Orders | Artistryx',
+  description: 'View your Artistryx order history and track order status.',
+};
 import { OrdersError } from './orders-error';
 import styles from './orders.module.css';
 

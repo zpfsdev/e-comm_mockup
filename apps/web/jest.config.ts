@@ -10,6 +10,7 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': '<rootDir>/test/style-mock.ts',
+    '^next/image$': '<rootDir>/test/mocks/next-image.tsx',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setup-tests.ts'],
 };

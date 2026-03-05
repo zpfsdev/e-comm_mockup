@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient, CSRF_TOKEN_KEY } from '@/lib/api-client';
 import { tokenStore } from '@/lib/token-store';
+import type { AuthResponse } from '@/types/auth';
 import styles from '../auth.module.css';
 
 interface RegisterPayload {
@@ -19,11 +20,6 @@ interface RegisterPayload {
   password: string;
   dateOfBirth: string;
   contactNumber: string;
-}
-
-interface AuthResponse {
-  accessToken: string;
-  csrfToken?: string;
 }
 
 interface FormState {
@@ -105,7 +101,7 @@ export default function SignUpClientPage() {
         <h1 className={styles.titleSignUp}>CREATE AN ACCOUNT</h1>
 
         <div className={styles.formColumn}>
-          {error && <p className={styles.errorBanner}>{error}</p>}
+          {error && <p className={styles.errorBanner} role="alert">{error}</p>}
 
           <form className={styles.form} onSubmit={handleSubmit} noValidate>
             <label htmlFor="su-firstName" className={styles.srOnly}>

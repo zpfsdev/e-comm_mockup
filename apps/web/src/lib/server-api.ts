@@ -17,8 +17,14 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { API_BASE_URL } from './constants';
 
-interface FetchOptions extends Omit<RequestInit, 'headers'> {
+interface FetchOptions extends Omit<RequestInit, 'headers' | 'cache'> {
   headers?: Record<string, string>;
+  /**
+   * Pass `next` to opt into ISR or static caching for specific routes.
+   * When omitted, defaults to `no-store` to ensure fresh data per request.
+   * Example: `{ next: { revalidate: 60 } }` for 60-second ISR.
+   */
+  next?: NextFetchRequestConfig;
 }
 
 /**
@@ -42,7 +48,7 @@ export async function serverFetch<T>(path: string, options: FetchOptions = {}): 
       Authorization: `Bearer ${accessToken}`,
       ...options.headers,
     },
-    cache: 'no-store',
+    ...(options.next ? { next: options.next } : { cache: 'no-store' }),
   });
 
   if (response.status === 401) {

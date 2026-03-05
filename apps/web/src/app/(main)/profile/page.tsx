@@ -38,11 +38,21 @@ function formatDate(dateStr?: string): string {
   return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<EditForm>({ firstName: '', middleName: '', lastName: '', contactNumber: '', profilePictureUrl: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasInitializedForm = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -58,11 +68,9 @@ export default function ProfilePage() {
     },
   });
 
-  // Sync loaded profile into the edit form once the query resolves.
   useEffect(() => {
-    if (!profile) return;
-    // Intentional: syncing external server state into controlled form inputs.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!profile || hasInitializedForm.current) return;
+    hasInitializedForm.current = true;
     setForm({
       firstName: profile.firstName,
       middleName: profile.middleName ?? '',
@@ -129,7 +137,7 @@ export default function ProfilePage() {
       {/* Profile header */}
       <div className={styles.profileHeader}>
         <div className={styles.avatar} style={{ position: 'relative', overflow: 'hidden' }}>
-          {profile?.profilePictureUrl
+          {profile?.profilePictureUrl && isSafeImageUrl(profile.profilePictureUrl)
             ? (
               <Image
                 src={profile.profilePictureUrl}

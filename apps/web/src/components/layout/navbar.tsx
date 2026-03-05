@@ -66,7 +66,21 @@ export function Navbar() {
     if (event.key === 'Escape') {
       setIsMenuOpen(false);
       dropdownRef.current?.querySelector<HTMLElement>('button')?.focus();
+      return;
     }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const items = Array.from(
+      dropdownRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+    );
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    let nextIndex: number;
+    if (event.key === 'ArrowDown') nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+    else if (event.key === 'ArrowUp') nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+    else if (event.key === 'Home') nextIndex = 0;
+    else nextIndex = items.length - 1;
+    items[nextIndex]?.focus();
   }
 
   const isSeller = user?.roles?.includes('Seller');

@@ -37,7 +37,7 @@ export class ProductsService {
    * plus optional filtering by category and age range.
    */
   async findAll(query: ProductQueryDto): Promise<ProductListResponseDto> {
-    const { search, categoryId, ageRangeId, sellerId, page = 1, limit = 20 } = query;
+    const { search, categoryId, ageRangeId, sellerId, sort, page = 1, limit = 20 } = query;
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     const searchStr = search != null ? ensureString(search) : undefined;
@@ -55,13 +55,18 @@ export class ProductsService {
       ...(sellerId && { sellerId }),
     };
 
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      sort === 'popular'
+        ? { orderItems: { _count: 'desc' } }
+        : { dateAdded: 'desc' };
+
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
         skip,
         take: safeLimit,
         select: PRODUCT_SELECT,
-        orderBy: { dateAdded: 'desc' },
+        orderBy,
       }),
       this.prisma.product.count({ where }),
     ]);

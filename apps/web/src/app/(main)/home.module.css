@@ -339,12 +339,15 @@
 .productImageWrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 265 / 371;
   margin-bottom: var(--space-3);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .productImage {
   width: 100%;
-  aspect-ratio: 265 / 371;
+  height: 100%;
   object-fit: cover;
   border-radius: var(--radius-md);
   display: block;
@@ -367,6 +370,7 @@
   flex-direction: column;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
+  min-width: 0;
 }
 
 .productName {
@@ -374,6 +378,12 @@
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .productPrice {
@@ -381,6 +391,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text);
+  flex-shrink: 0;
 }
 
 .addToCart {
@@ -452,6 +463,18 @@
 .storeImage {
   object-fit: cover;
   object-position: center;
+}
+
+.storeLogoPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #6b7280);
+  background-color: var(--color-card-border);
 }
 
 .storeName {

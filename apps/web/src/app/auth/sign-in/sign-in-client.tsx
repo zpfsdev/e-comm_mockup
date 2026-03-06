@@ -118,6 +118,11 @@ export default function SignInClientPage() {
           <div className={styles.formBlock}>
             <p className={styles.subtitle}>Sign in to your account</p>
 
+            {searchParams.get('reason') === 'session_expired' && (
+              <p className={styles.sessionExpiredBanner} role="alert" aria-live="polite">
+                Your session expired. Please sign in again.
+              </p>
+            )}
             {serverError && (
               <p className={styles.errorBanner} role="alert">{serverError}</p>
             )}

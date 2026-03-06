@@ -7,6 +7,7 @@ interface SearchParams {
   categoryId?: string;
   ageRangeId?: string;
   sellerId?: string;
+  sort?: string;
   page?: string;
 }
 
@@ -34,6 +35,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.categoryId) qs.set('categoryId', params.categoryId);
   if (params.ageRangeId) qs.set('ageRangeId', params.ageRangeId);
   if (params.sellerId) qs.set('sellerId', params.sellerId);
+  if (params.sort) qs.set('sort', params.sort);
   qs.set('page', params.page ?? '1');
   qs.set('limit', '12');
 

@@ -149,6 +149,7 @@
   overflow: hidden;
   display: block;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .productImage {
@@ -162,6 +163,7 @@
   flex-direction: column;
   gap: var(--space-sm);
   flex: 1;
+  min-width: 0;
 }
 
 .productName {
@@ -169,6 +171,12 @@
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .productPrice {
@@ -176,13 +184,14 @@
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
+  flex-shrink: 0;
 }
 
 .addToCartBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: var(--space-sm);
+  margin-top: auto;
   padding: var(--space-sm) var(--space-lg);
   font-family: var(--font-outfit), var(--font-sans);
   font-size: 1rem;
@@ -194,6 +203,7 @@
   cursor: pointer;
   text-decoration: none;
   transition: background-color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .addToCartBtn:hover {

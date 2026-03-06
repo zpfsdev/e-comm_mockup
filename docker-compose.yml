@@ -4,7 +4,7 @@ services:
     container_name: artistryx-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required. Set it in a .env file in the project root.}
       MYSQL_DATABASE: artistryx
     ports:
       - "3307:3306"

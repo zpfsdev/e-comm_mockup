@@ -20,13 +20,3 @@ export const AGE_COLOR_PALETTE = [
   { bg: '#e8c7f5', text: '#5c2080' },
   { bg: '#c7e0f5', text: '#1a4060' },
 ] as const;
-
-export const STORES = ['KIDOS', 'PLAYBOOK', 'LARANA', 'WONDERS', 'GIGGLING'] as const;
-
-export const STORE_IMAGES: Record<(typeof STORES)[number], string> = {
-  KIDOS:    '/kidos.png',
-  PLAYBOOK: '/playbook.png',
-  LARANA:   '/larana.png',
-  WONDERS:  '/wonders.png',
-  GIGGLING: '/giggling.png',
-};

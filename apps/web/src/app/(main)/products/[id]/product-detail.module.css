@@ -115,6 +115,8 @@
   line-height: 1.26;
   color: var(--color-accent-soft);
   margin: 0 0 var(--space-lg);
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 767px) {

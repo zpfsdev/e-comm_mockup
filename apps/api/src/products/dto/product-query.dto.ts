@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsPositive,
@@ -49,4 +50,10 @@ export class ProductQueryDto {
   @IsPositive()
   @Type(() => Number)
   sellerId?: number;
+
+  @ApiPropertyOptional({ description: 'newest = by date added desc, popular = by order count desc', enum: ['newest', 'popular'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['newest', 'popular'])
+  sort?: 'newest' | 'popular';
 }

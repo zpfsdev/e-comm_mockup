@@ -92,6 +92,7 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
   const ageRangeId = searchParams.get('ageRangeId') ?? undefined;
   const sellerId = searchParams.get('sellerId') ?? undefined;
   const search = searchParams.get('search') ?? undefined;
+  const sort = searchParams.get('sort') ?? undefined;
 
   const [page, setPage] = useState(1);
 
@@ -130,11 +131,12 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
   if (categoryId) queryString.set('categoryId', categoryId);
   if (ageRangeId) queryString.set('ageRangeId', ageRangeId);
   if (sellerId) queryString.set('sellerId', sellerId);
+  if (sort) queryString.set('sort', sort);
   queryString.set('page', String(page));
   queryString.set('limit', String(PAGE_SIZE));
 
   const { data, isLoading, isError } = useQuery<ProductsResponse>({
-    queryKey: ['products', search, categoryId, ageRangeId, sellerId, page],
+    queryKey: ['products', search, categoryId, ageRangeId, sellerId, sort, page],
     queryFn: async () => {
       const { data: res } = await apiClient.get<ProductsResponse>(`/products?${queryString.toString()}`);
       return res;

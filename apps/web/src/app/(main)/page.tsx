@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { CATEGORY_GRADIENT_PALETTE, AGE_COLOR_PALETTE, STORES, STORE_IMAGES } from '@/lib/home-data';
+import { CATEGORY_GRADIENT_PALETTE, AGE_COLOR_PALETTE } from '@/lib/home-data';
 import { API_BASE_URL } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { AddToCartInline } from '@/components/add-to-cart-inline';
@@ -72,12 +72,12 @@ async function fetchAgeRanges(): Promise<AgeRange[]> {
 
 async function fetchSellers(): Promise<Seller[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/sellers?limit=6`, {
+    const res = await fetch(`${API_BASE_URL}/sellers?limit=12`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
-    const json = await res.json();
-    return Array.isArray(json) ? (json as Seller[]) : ((json as { data?: Seller[] }).data ?? []);
+    const json = (await res.json()) as { sellers?: Seller[] };
+    return json.sellers ?? [];
   } catch {
     return [];
   }
@@ -232,30 +232,25 @@ async function AgeCards() {
 
 async function StoreList() {
   const sellers = await fetchSellers();
+  if (!sellers.length) {
+    return (
+      <p style={{ color: 'var(--color-text-muted, #6b7280)', padding: 'var(--space-4) 0', fontSize: 'var(--text-sm)' }}>
+        No stores yet. Check back soon.
+      </p>
+    );
+  }
   return (
     <ul className={styles.storeList}>
-      {STORES.map((name) => (
-        <li key={name}>
-          <Link href={`/stores?store=${encodeURIComponent(name)}`} className={styles.storeLink}>
-            <span className={styles.storeImageWrap}>
-              <Image
-                src={STORE_IMAGES[name]}
-                alt={name}
-                fill
-                sizes="11rem"
-                className={styles.storeImage}
-              />
-            </span>
-            <span className={styles.storeName}>{name}</span>
-          </Link>
-        </li>
-      ))}
       {sellers.map((s) => (
         <li key={s.id}>
           <Link href={`/stores/${s.id}`} className={styles.storeLink}>
             <span className={styles.storeImageWrap}>
-              {s.shopLogoUrl && (
+              {s.shopLogoUrl ? (
                 <Image src={s.shopLogoUrl} alt={s.shopName} fill sizes="11rem" className={styles.storeImage} />
+              ) : (
+                <span className={styles.storeLogoPlaceholder} aria-hidden>
+                  {(s.shopName ?? '?').charAt(0).toUpperCase()}
+                </span>
               )}
             </span>
             <span className={styles.storeName}>{s.shopName}</span>

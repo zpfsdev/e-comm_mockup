@@ -6,6 +6,18 @@ import { tokenStore } from './token-store';
 /** SessionStorage key for CSRF token (sent in X-CSRF-Token on /auth/refresh). */
 export const CSRF_TOKEN_KEY = 'csrfToken';
 
+/** Query param set when redirecting to sign-in after session expiry (refresh failed or no token). */
+export const SESSION_EXPIRED_PARAM = 'reason=session_expired';
+
+const LOGOUT_TIMEOUT_MS = 2500;
+
+function redirectToSignIn(reason?: 'session_expired'): void {
+  const url = reason === 'session_expired'
+    ? `/auth/sign-in?${SESSION_EXPIRED_PARAM}`
+    : '/auth/sign-in';
+  window.location.href = url;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -57,7 +69,11 @@ apiClient.interceptors.response.use(
 
     if (!tokenStore.get()) {
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
-      window.location.href = '/auth/sign-in';
+      const logoutPromise = apiClient.post('/auth/logout').catch(() => {});
+      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, LOGOUT_TIMEOUT_MS));
+      void Promise.race([logoutPromise, timeoutPromise]).then(() => {
+        redirectToSignIn('session_expired');
+      });
       return Promise.reject(error);
     }
 
@@ -96,7 +112,11 @@ apiClient.interceptors.response.use(
       processQueue(refreshError, null);
       tokenStore.clear();
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
-      window.location.href = '/auth/sign-in';
+      const logoutPromise = apiClient.post('/auth/logout').catch(() => {});
+      const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, LOGOUT_TIMEOUT_MS));
+      void Promise.race([logoutPromise, timeoutPromise]).then(() => {
+        redirectToSignIn('session_expired');
+      });
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

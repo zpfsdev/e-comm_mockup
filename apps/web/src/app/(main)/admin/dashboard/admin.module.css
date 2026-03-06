@@ -69,3 +69,12 @@
 .roleBuyer  { background-color: var(--color-card-border); color: var(--color-text-muted); }
 
 .empty { text-align: center; padding: var(--space-8); color: var(--color-text-muted); }
+
+.accessDeniedLink {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-primary);
+  text-decoration: underline;
+  font-size: var(--text-sm);
+}
+.accessDeniedLink:hover { opacity: 0.85; }

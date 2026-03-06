@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import styles from './admin.module.css';
@@ -21,34 +23,69 @@ interface AdminStats {
   totalRevenue: number;
 }
 
+interface AdminUsersResponse {
+  users: Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+    userRoles: Array<{ role: { roleName: string } }>;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 const ROLE_CLASS: Record<string, string> = {
-  ADMIN:  styles.roleAdmin,
-  SELLER: styles.roleSeller,
-  BUYER:  styles.roleBuyer,
+  Admin:    styles.roleAdmin,
+  Seller:   styles.roleSeller,
+  Customer: styles.roleBuyer,
 };
+
+function mapApiUserToUser(apiUser: AdminUsersResponse['users'][number]): User {
+  const roleName = apiUser.userRoles[0]?.role?.roleName ?? 'Customer';
+  return {
+    id: apiUser.id,
+    firstName: apiUser.firstName,
+    lastName: apiUser.lastName,
+    email: apiUser.email,
+    role: roleName,
+    isActive: apiUser.status === 'Active',
+  };
+}
+
+function getResponseStatus(err: unknown): number | undefined {
+  return (err as AxiosError<unknown>)?.response?.status;
+}
 
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
 
-  const { data: stats, isLoading: loadingStats, isError: statsError } = useQuery<AdminStats>({
+  const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<AdminStats>({
     queryKey: ['admin-stats'],
     queryFn: async () => {
       const { data } = await apiClient.get<AdminStats>('/admin/stats');
       return data;
     },
+    retry: (_, error) => getResponseStatus(error) !== 403,
   });
 
-  const { data: users = [], isLoading: loadingUsers, isError: usersError } = useQuery<User[]>({
-    queryKey: ['admin-users'],
+  const { data: usersData, isLoading: loadingUsers, isError: usersError, error: usersErrorObj } = useQuery<AdminUsersResponse>({
+    queryKey: ['admin-users', 1],
     queryFn: async () => {
-      const { data } = await apiClient.get<User[]>('/users');
+      const { data } = await apiClient.get<AdminUsersResponse>('/admin/users', { params: { page: 1, limit: 50 } });
       return data;
     },
+    retry: (_, error) => getResponseStatus(error) !== 403,
   });
 
+  const users: User[] = usersData?.users?.map(mapApiUserToUser) ?? [];
+
   const toggleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
-      apiClient.patch(`/users/${id}`, { isActive }),
+    mutationFn: ({ id, status }: { id: number; status: 'Active' | 'Inactive' }) =>
+      apiClient.patch(`/admin/users/${id}/status`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   });
 
@@ -59,10 +96,21 @@ export default function AdminDashboardPage() {
     { label: 'Total Revenue', value: `₱${Number(stats?.totalRevenue ?? 0).toFixed(2)}` },
   ];
 
+  const isForbidden = getResponseStatus(statsErrorObj ?? usersErrorObj) === 403;
+  if (isForbidden) {
+    return (
+      <div className={styles.page}>
+        <p style={{ color: 'var(--color-error)', padding: 'var(--space-8)', marginBottom: 'var(--space-4)' }}>
+          Access denied. Admin role required.
+        </p>
+        <Link href="/" className={styles.accessDeniedLink}>Return to home</Link>
+      </div>
+    );
+  }
   if (statsError || usersError) {
     return (
       <div className={styles.page}>
-        <p style={{ color: 'var(--color-error, #ef4444)', padding: 'var(--space-8)' }}>
+        <p style={{ color: 'var(--color-error)', padding: 'var(--space-8)' }}>
           Failed to load dashboard data. Please try again.
         </p>
       </div>
@@ -123,7 +171,10 @@ export default function AdminDashboardPage() {
                       onClick={() => {
                         const action = user.isActive ? 'suspend' : 'activate';
                         if (window.confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
-                          toggleMutation.mutate({ id: user.id, isActive: !user.isActive });
+                          toggleMutation.mutate({
+                            id: user.id,
+                            status: user.isActive ? 'Inactive' : 'Active',
+                          });
                         }
                       }}
                       disabled={toggleMutation.isPending}

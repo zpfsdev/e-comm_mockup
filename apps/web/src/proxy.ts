@@ -57,11 +57,12 @@ export function proxy(request: NextRequest): NextResponse {
   requestHeaders.set('x-csp', csp);
 
   const { pathname } = request.nextUrl;
-  const hasSession = request.cookies.has('session');
+  // Use HttpOnly access-token cookie; we no longer set a JS-writable "session" cookie.
+  const hasAuth = request.cookies.has('at');
   const isProtectedRoute = PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
 
-  if (isProtectedRoute && !hasSession) {
+  if (isProtectedRoute && !hasAuth) {
     const signInUrl = new URL('/auth/sign-in', request.url);
     signInUrl.searchParams.set('from', request.nextUrl.pathname + request.nextUrl.search);
     const res = NextResponse.redirect(signInUrl);
@@ -69,7 +70,7 @@ export function proxy(request: NextRequest): NextResponse {
     return res;
   }
 
-  if (isAuthRoute && hasSession) {
+  if (isAuthRoute && hasAuth) {
     const res = NextResponse.redirect(new URL('/', request.url));
     setSecurityHeaders(res, csp);
     return res;

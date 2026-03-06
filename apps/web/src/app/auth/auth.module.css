@@ -272,6 +272,20 @@
   margin-bottom: 0;
 }
 
+/* ─── Session expired banner ───────────────────────────────────────────────── */
+.sessionExpiredBanner {
+  font-size: var(--text-sm);
+  color: var(--color-text, #1a1a1a);
+  background-color: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  width: 100%;
+  max-width: 28rem;
+  text-align: left;
+}
+
 /* ─── Error banner ────────────────────────────────────────────────────────── */
 .errorBanner {
   font-size: var(--text-sm);

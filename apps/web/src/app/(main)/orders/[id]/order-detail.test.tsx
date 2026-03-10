@@ -1,35 +1,17 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import OrderDetailPage from './page';
+import { notFound } from 'next/navigation';
+import { serverFetch } from '@/lib/server-api';
 
 jest.mock('next/navigation', () => ({
-  useParams: jest.fn().mockReturnValue({ id: '101' }),
-  useRouter: jest.fn(),
+  notFound: jest.fn(() => {
+    throw new Error('NEXT_NOT_FOUND');
+  }),
 }));
 
-jest.mock('next/link', () => {
-  const MockLink = ({
-    children,
-    href,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  );
-  MockLink.displayName = 'MockNextLink';
-  return MockLink;
-});
-
-jest.mock('@tanstack/react-query', () => ({
-  useQuery: jest.fn(),
-}));
-
-jest.mock('@/lib/api-client', () => ({
-  apiClient: { get: jest.fn() },
+jest.mock('@/lib/server-api', () => ({
+  serverFetch: jest.fn(),
 }));
 
 const mockOrder = {
@@ -52,22 +34,19 @@ const mockOrder = {
   userAddress: undefined,
 };
 
-describe.skip('OrderDetailPage', () => {
-  const useQueryMock = () =>
-    (jest.requireMock('@tanstack/react-query') as { useQuery: jest.Mock }).useQuery;
+describe('OrderDetailPage', () => {
+  const serverFetchMock = serverFetch as jest.Mock;
+  const notFoundMock = notFound as jest.Mock;
 
-  it('shows loading skeleton while fetching', () => {
-    useQueryMock().mockReturnValue({ data: undefined, isLoading: true, error: null });
-
-    render(<OrderDetailPage />);
-
-    expect(screen.queryByText(/order #101/i)).not.toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('renders order details when data is available', () => {
-    useQueryMock().mockReturnValue({ data: mockOrder, isLoading: false, error: null });
+  it('renders order details when data is available', async () => {
+    serverFetchMock.mockResolvedValue(mockOrder);
 
-    render(<OrderDetailPage />);
+    const ui = await OrderDetailPage({ params: Promise.resolve({ id: '101' }) });
+    render(ui);
 
     expect(screen.getByText(/order #101/i)).toBeInTheDocument();
     expect(screen.getByText(/story book/i)).toBeInTheDocument();
@@ -75,12 +54,12 @@ describe.skip('OrderDetailPage', () => {
     expect(screen.getByText(/leave at door/i)).toBeInTheDocument();
   });
 
-  it('shows not found message when order is null', () => {
-    useQueryMock().mockReturnValue({ data: null, isLoading: false, error: new Error('Not found') });
+  it('invokes notFound when the order fetch fails', async () => {
+    serverFetchMock.mockRejectedValue(new Error('Not found'));
 
-    render(<OrderDetailPage />);
-
-    expect(screen.getByText(/order not found/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to orders/i })).toBeInTheDocument();
+    await expect(
+      OrderDetailPage({ params: Promise.resolve({ id: '999' }) }),
+    ).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(notFoundMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,49 +1,16 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { parseAsInteger, useQueryState } from 'nuqs';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { AddToCartInline } from '@/components/add-to-cart-inline';
+import type { ProductAgeRange, ProductCategory, ProductListItem, ProductSeller, ProductsResponse } from '@/types/product';
 import styles from './products.module.css';
-
-export interface ProductCategory {
-  readonly id: number;
-  readonly categoryName: string;
-}
-
-export interface ProductAgeRange {
-  readonly id: number;
-  readonly label: string | null;
-  readonly minAge: number;
-  readonly maxAge: number | null;
-}
-
-export interface Product {
-  readonly id: number;
-  readonly name: string;
-  readonly price: string;
-  readonly imageUrl: string;
-  readonly category: ProductCategory;
-  readonly ageRange: ProductAgeRange;
-}
-
-export interface ProductSeller {
-  readonly id: number;
-  readonly shopName: string;
-  readonly shopLogoUrl: string | null;
-}
-
-export interface ProductsResponse {
-  readonly products: Product[];
-  readonly total: number;
-  readonly page: number;
-  readonly limit: number;
-  readonly totalPages: number;
-}
 
 const PAGE_SIZE = 12;
 
@@ -53,7 +20,7 @@ function formatAgeLabel(ar: ProductAgeRange): string {
   return `${ar.minAge}–${ar.maxAge} yrs`;
 }
 
-function ProductCard({ product }: { readonly product: Product }) {
+function ProductCard({ product }: { readonly product: ProductListItem }) {
   return (
     <li className={styles.productCard}>
       <Link href={`/products/${product.id}`} className={styles.productImageWrap}>
@@ -67,7 +34,7 @@ function ProductCard({ product }: { readonly product: Product }) {
       </Link>
       <div className={styles.productBody}>
         <span className={styles.productName}>{product.name}</span>
-        <span className={styles.productPrice}>₱{Number(product.price).toFixed(2)}</span>
+        <span className={styles.productPrice}>₱{product.price.toFixed(2)}</span>
         <AddToCartInline
           productId={product.id}
           productName={product.name}
@@ -94,7 +61,7 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
   const search = searchParams.get('search') ?? undefined;
   const sort = searchParams.get('sort') ?? undefined;
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));
 
   const { data: categories } = useQuery<ProductCategory[]>({
     queryKey: ['categories'],
@@ -158,7 +125,7 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
       ?? (activeSeller?.shopName ?? 'All Products');
 
   function handleFilterLinkClick() {
-    setPage(1);
+    void setPage(1);
   }
 
   return (
@@ -263,7 +230,7 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
                     <button
                       type="button"
                       className={styles.pageBtn}
-                      onClick={() => setPage((p) => p - 1)}
+                      onClick={() => void setPage(page - 1)}
                       disabled={page === 1}
                       aria-label="Previous page"
                     >
@@ -283,7 +250,7 @@ function ShopContent({ initialProducts, initialCategories, initialAgeRanges, ini
                     <button
                       type="button"
                       className={styles.pageBtn}
-                      onClick={() => setPage((p) => p + 1)}
+                      onClick={() => void setPage(page + 1)}
                       disabled={page === totalPages}
                       aria-label="Next page"
                     >

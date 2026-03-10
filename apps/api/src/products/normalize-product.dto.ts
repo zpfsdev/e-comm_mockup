@@ -8,7 +8,8 @@ import type { UpdateProductDto } from './dto/update-product.dto';
  * and would otherwise bypass string-based sanitizers (CWE-843 Type Confusion).
  */
 export function ensureString(value: unknown): string {
-  if (Array.isArray(value)) throw new BadRequestException('Expected a string value, not an array.');
+  if (Array.isArray(value))
+    throw new BadRequestException('Expected a string value, not an array.');
   if (typeof value === 'string') return value;
   throw new BadRequestException('Expected a string value.');
 }
@@ -18,7 +19,8 @@ export function ensureString(value: unknown): string {
  * Explicitly rejects arrays for the same type-confusion reason as ensureString.
  */
 export function ensureNumber(value: unknown): number {
-  if (Array.isArray(value)) throw new BadRequestException('Expected a number, not an array.');
+  if (Array.isArray(value))
+    throw new BadRequestException('Expected a number, not an array.');
   if (typeof value === 'number' && !Number.isNaN(value)) return value;
   throw new BadRequestException('Expected a number.');
 }
@@ -30,8 +32,10 @@ export function ensureNumber(value: unknown): number {
  */
 export function ensureOptionalString(value: unknown): string | undefined {
   if (value == null) return undefined;
-  if (Array.isArray(value)) throw new BadRequestException('Expected a string value, not an array.');
-  if (typeof value !== 'string') throw new BadRequestException('Expected a string value.');
+  if (Array.isArray(value))
+    throw new BadRequestException('Expected a string value, not an array.');
+  if (typeof value !== 'string')
+    throw new BadRequestException('Expected a string value.');
   return value;
 }
 

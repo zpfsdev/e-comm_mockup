@@ -121,7 +121,10 @@ export class AuthController {
     const refreshToken =
       typeof rawRefresh === 'string' ? rawRefresh : undefined;
 
-    const result = await this.authService.refresh(refreshToken ?? '', csrfToken);
+    const result = await this.authService.refresh(
+      refreshToken ?? '',
+      csrfToken,
+    );
     this.setAccessTokenCookie(res, result.accessToken);
     return result;
   }
@@ -177,7 +180,8 @@ export class AuthController {
 
   /** Sets both the HttpOnly refresh-token cookie and the HttpOnly at (access-token) cookie. */
   private setAuthCookies(res: Response, tokens: AuthTokens): void {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -190,7 +194,8 @@ export class AuthController {
 
   /** Sets the HttpOnly at cookie carrying the short-lived access token for RSC use. */
   private setAccessTokenCookie(res: Response, accessToken: string): void {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('at', accessToken, {
       httpOnly: true,
       sameSite: 'strict',
@@ -202,8 +207,14 @@ export class AuthController {
 
   /** Clears auth cookies on logout. */
   private clearAuthCookies(res: Response): void {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
-    const shared = { httpOnly: true, maxAge: 0, path: '/', secure: isProduction };
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const shared = {
+      httpOnly: true,
+      maxAge: 0,
+      path: '/',
+      secure: isProduction,
+    };
     res.cookie('at', '', { ...shared, sameSite: 'strict' });
     res.cookie('refreshToken', '', { ...shared, sameSite: 'lax' });
   }

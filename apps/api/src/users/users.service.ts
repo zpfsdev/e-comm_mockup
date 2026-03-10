@@ -22,7 +22,10 @@ export interface UserProfileDto {
     readonly address: {
       readonly barangay: {
         readonly barangay: string;
-        readonly city: { readonly city: string; readonly province: { readonly province: string } };
+        readonly city: {
+          readonly city: string;
+          readonly province: { readonly province: string };
+        };
       };
     };
   }>;

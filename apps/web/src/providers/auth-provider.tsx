@@ -38,29 +38,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
-    if (!csrfToken) {
-      setIsLoading(false);
-      return;
-    }
-    // Restore the in-memory access token by silently refreshing via the
-    // HttpOnly refresh-token cookie. The refresh response now includes the
-    // user summary, eliminating the separate GET /auth/me round-trip.
-    axios
-      .post<RefreshResponse>(
-        `${API_BASE_URL}/auth/refresh`,
-        {},
-        { withCredentials: true, headers: { 'X-CSRF-Token': csrfToken } },
-      )
-      .then(({ data }) => {
+    let isMounted = true;
+    const bootstrap = async () => {
+      const csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+      if (!csrfToken) {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        return;
+      }
+      // Restore the in-memory access token by silently refreshing via the
+      // HttpOnly refresh-token cookie. The refresh response now includes the
+      // user summary, eliminating the separate GET /auth/me round-trip.
+      try {
+        const { data } = await axios.post<RefreshResponse>(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true, headers: { 'X-CSRF-Token': csrfToken } },
+        );
+        if (!isMounted) return;
         tokenStore.set(data.accessToken);
         setUser(data.user);
-      })
-      .catch(() => {
+      } catch {
         tokenStore.clear();
         sessionStorage.removeItem(CSRF_TOKEN_KEY);
-      })
-      .finally(() => setIsLoading(false));
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    void bootstrap();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback((data: AuthResponse): void => {

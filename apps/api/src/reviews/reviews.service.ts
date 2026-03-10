@@ -70,7 +70,11 @@ export class ReviewsService {
     });
   }
 
-  async findByProduct(productId: number, page = 1, limit = 20): Promise<ReviewDto[]> {
+  async findByProduct(
+    productId: number,
+    page = 1,
+    limit = 20,
+  ): Promise<ReviewDto[]> {
     const safeLimit = Math.min(limit, ReviewsService.MAX_REVIEW_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     return this.prisma.review.findMany({

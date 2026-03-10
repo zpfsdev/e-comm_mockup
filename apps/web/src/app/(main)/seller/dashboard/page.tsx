@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button/button';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
@@ -22,11 +24,16 @@ interface SellerStats {
   pendingOrders: number;
 }
 
+function getStatus(err: unknown): number | undefined {
+  return (err as AxiosError<unknown>)?.response?.status;
+}
+
 export default function SellerDashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [confirmingDeleteProductId, setConfirmingDeleteProductId] = useState<number | null>(null);
 
-  const { data: stats, isLoading: loadingStats, isError: statsError } = useQuery<SellerStats>({
+  const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<SellerStats>({
     queryKey: ['seller-stats'],
     queryFn: async () => {
       const { data } = await apiClient.get<SellerStats>('/sellers/me/stats');
@@ -34,7 +41,7 @@ export default function SellerDashboardPage() {
     },
   });
 
-  const { data: products = [], isLoading: loadingProducts, isError: productsError } = useQuery<Product[]>({
+  const { data: products = [], isLoading: loadingProducts, isError: productsError, error: productsErrorObj } = useQuery<Product[]>({
     queryKey: ['seller-products'],
     queryFn: async () => {
       const { data } = await apiClient.get<Product[]>('/products/mine');
@@ -44,7 +51,10 @@ export default function SellerDashboardPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiClient.delete(`/products/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['seller-products'] }),
+    onSuccess: () => {
+      setConfirmingDeleteProductId(null);
+      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+    },
   });
 
   const STATS = [
@@ -53,6 +63,17 @@ export default function SellerDashboardPage() {
     { label: 'Pending Orders', value: stats?.pendingOrders ?? 0 },
     { label: 'Total Revenue',  value: `₱${Number(stats?.totalRevenue ?? 0).toFixed(2)}` },
   ];
+
+  const sellerStatus = getStatus(statsErrorObj ?? productsErrorObj);
+  if (sellerStatus === 403) {
+    return (
+      <div className={styles.page}>
+        <p style={{ color: 'var(--color-error, #ef4444)', padding: 'var(--space-8)', marginBottom: 'var(--space-4)' }}>
+          Access denied. Seller account required.
+        </p>
+      </div>
+    );
+  }
 
   if (statsError || productsError) {
     return (
@@ -116,18 +137,42 @@ export default function SellerDashboardPage() {
                   <td>₱{Number(p.price).toFixed(2)}</td>
                   <td>{p.stock ?? '—'}</td>
                   <td style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <button
-                      type="button"
-                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                      onClick={() => {
-                        if (window.confirm(`Delete product "${p.name}"? This cannot be undone.`)) {
-                          deleteMutation.mutate(p.id);
-                        }
-                      }}
-                      disabled={deleteMutation.isPending}
-                    >
-                      Delete
-                    </button>
+                    {confirmingDeleteProductId === p.id ? (
+                      <div className={styles.confirmInline} role="group" aria-label="Confirm delete">
+                        <span
+                          className={styles.confirmText}
+                          aria-live="polite"
+                        >
+                          Delete this product? This cannot be undone.
+                        </span>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.confirmDeleteBtn}`}
+                          autoFocus
+                          onClick={() => deleteMutation.mutate(p.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.cancelBtn}`}
+                          onClick={() => setConfirmingDeleteProductId(null)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                        onClick={() => setConfirmingDeleteProductId(p.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -25,6 +25,7 @@ const mockPrisma = {
   product: {
     findMany: jest.fn(),
     count: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -95,7 +96,7 @@ describe('ProductsService', () => {
 
   describe('findById', () => {
     it('returns a product when found', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrisma.product.findFirst.mockResolvedValue(mockProduct);
 
       const actualResult = await service.findById(1);
 
@@ -104,7 +105,7 @@ describe('ProductsService', () => {
     });
 
     it('throws NotFoundException when product does not exist', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue(null);
+      mockPrisma.product.findFirst.mockResolvedValue(null);
 
       await expect(service.findById(999)).rejects.toThrow(NotFoundException);
     });

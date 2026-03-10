@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { RoleName } from '@prisma/client';
@@ -87,7 +83,10 @@ export class AuthService {
 
     if (!user || user.status === 'Inactive') {
       // Constant-time dummy compare prevents timing-based email enumeration.
-      await bcrypt.compare(dto.password, '$2b$12$invalidhashedpasswordpadding000');
+      await bcrypt.compare(
+        dto.password,
+        '$2b$12$invalidhashedpasswordpadding000',
+      );
       throw new UnauthorizedException('Invalid credentials.');
     }
 
@@ -153,7 +152,9 @@ export class AuthService {
   }): AuthTokens {
     const roles = user.userRoles.map((ur) => ur.role.roleName);
     const payload: JwtPayload = { sub: user.id, email: user.email, roles };
-    const refreshSecret = this.configService.getOrThrow<string>('REFRESH_TOKEN_SECRET');
+    const refreshSecret = this.configService.getOrThrow<string>(
+      'REFRESH_TOKEN_SECRET',
+    );
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(
       { ...payload, ver: user.refreshTokenVersion },
@@ -214,7 +215,9 @@ export class AuthService {
       if (csrfPayload.purpose !== CSRF_TOKEN_PURPOSE) {
         throw new UnauthorizedException('Invalid CSRF token.');
       }
-      const refreshSecret = this.configService.getOrThrow<string>('REFRESH_TOKEN_SECRET');
+      const refreshSecret = this.configService.getOrThrow<string>(
+        'REFRESH_TOKEN_SECRET',
+      );
       const payload = this.jwtService.verify<JwtPayload & { ver?: number }>(
         refreshToken,
         { secret: refreshSecret },

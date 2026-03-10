@@ -1,12 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ShopStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminService } from './admin.service';
 
-const mockPrisma = {
+const mockPrisma: {
+  user: {
+    count: jest.Mock;
+    update: jest.Mock;
+    findMany: jest.Mock;
+  };
+  seller: {
+    count: jest.Mock;
+    update: jest.Mock;
+  };
+  order: {
+    count: jest.Mock;
+  };
+  payment: {
+    aggregate: jest.Mock;
+  };
+} = {
   user: {
     count: jest.fn(),
     update: jest.fn(),
+    findMany: jest.fn(),
   },
   seller: {
     count: jest.fn(),
@@ -18,7 +34,7 @@ const mockPrisma = {
   payment: {
     aggregate: jest.fn(),
   },
-} as unknown as PrismaService;
+};
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -37,10 +53,10 @@ describe('AdminService', () => {
 
   describe('getPlatformStats', () => {
     it('returns aggregate platform statistics with numeric revenue', async () => {
-      (mockPrisma.user.count as jest.Mock).mockResolvedValue(5);
-      (mockPrisma.seller.count as jest.Mock).mockResolvedValue(2);
-      (mockPrisma.order.count as jest.Mock).mockResolvedValue(8);
-      (mockPrisma.payment.aggregate as jest.Mock).mockResolvedValue({
+      mockPrisma.user.count.mockResolvedValue(5);
+      mockPrisma.seller.count.mockResolvedValue(2);
+      mockPrisma.order.count.mockResolvedValue(8);
+      mockPrisma.payment.aggregate.mockResolvedValue({
         _sum: { paymentAmount: 1234.56 },
       });
 
@@ -55,10 +71,10 @@ describe('AdminService', () => {
     });
 
     it('treats missing revenue aggregate as zero', async () => {
-      (mockPrisma.user.count as jest.Mock).mockResolvedValue(0);
-      (mockPrisma.seller.count as jest.Mock).mockResolvedValue(0);
-      (mockPrisma.order.count as jest.Mock).mockResolvedValue(0);
-      (mockPrisma.payment.aggregate as jest.Mock).mockResolvedValue({
+      mockPrisma.user.count.mockResolvedValue(0);
+      mockPrisma.seller.count.mockResolvedValue(0);
+      mockPrisma.order.count.mockResolvedValue(0);
+      mockPrisma.payment.aggregate.mockResolvedValue({
         _sum: { paymentAmount: null },
       });
 
@@ -71,9 +87,9 @@ describe('AdminService', () => {
   describe('setUserStatus', () => {
     it('updates status without a pre-read when user exists', async () => {
       const inputUserId = 10;
-      const inputStatus = UserStatus.Inactive;
+      const inputStatus = 'Inactive';
 
-      (mockPrisma.user.update as jest.Mock).mockResolvedValue({
+      mockPrisma.user.update.mockResolvedValue({
         id: inputUserId,
         status: inputStatus,
       });
@@ -83,26 +99,37 @@ describe('AdminService', () => {
       expect(actualUser.status).toBe(inputStatus);
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: inputUserId },
-        data: { status: inputStatus },
+        data: {
+          status: inputStatus,
+          refreshTokenVersion: { increment: 1 },
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          status: true,
+        },
       });
     });
 
     it('propagates Prisma P2025 when user does not exist', async () => {
-      const p2025 = Object.assign(new Error('Record not found'), { code: 'P2025' });
-      (mockPrisma.user.update as jest.Mock).mockRejectedValue(p2025);
+      const p2025 = Object.assign(new Error('Record not found'), {
+        code: 'P2025',
+      });
+      mockPrisma.user.update.mockRejectedValue(p2025);
 
-      await expect(
-        service.setUserStatus(999, UserStatus.Active),
-      ).rejects.toMatchObject({ code: 'P2025' });
+      await expect(service.setUserStatus(999, 'Active')).rejects.toMatchObject({
+        code: 'P2025',
+      });
     });
   });
 
   describe('setShopStatus', () => {
     it('updates shop status without a pre-read when seller exists', async () => {
       const inputSellerId = 3;
-      const inputStatus = ShopStatus.Active;
+      const inputStatus = 'Active';
 
-      (mockPrisma.seller.update as jest.Mock).mockResolvedValue({
+      mockPrisma.seller.update.mockResolvedValue({
         id: inputSellerId,
         shopStatus: inputStatus,
       });
@@ -116,16 +143,25 @@ describe('AdminService', () => {
       expect(mockPrisma.seller.update).toHaveBeenCalledWith({
         where: { id: inputSellerId },
         data: { shopStatus: inputStatus },
+        select: {
+          id: true,
+          shopName: true,
+          shopStatus: true,
+        },
       });
     });
 
     it('propagates Prisma P2025 when seller does not exist', async () => {
-      const p2025 = Object.assign(new Error('Record not found'), { code: 'P2025' });
-      (mockPrisma.seller.update as jest.Mock).mockRejectedValue(p2025);
+      const p2025 = Object.assign(new Error('Record not found'), {
+        code: 'P2025',
+      });
+      mockPrisma.seller.update.mockRejectedValue(p2025);
 
       await expect(
-        service.setShopStatus(999, ShopStatus.Inactive),
-      ).rejects.toMatchObject({ code: 'P2025' });
+        service.setShopStatus(999, 'Inactive'),
+      ).rejects.toMatchObject({
+        code: 'P2025',
+      });
     });
   });
 });

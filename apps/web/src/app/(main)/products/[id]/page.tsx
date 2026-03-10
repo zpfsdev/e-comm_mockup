@@ -4,38 +4,9 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { ArrowLeftIcon } from '@/components/icons';
 import { API_BASE_URL } from '@/lib/constants';
+import type { ProductAgeRange, ProductDetail } from '@/types/product';
 import { AddToCartButton } from './add-to-cart-button';
 import styles from './product-detail.module.css';
-
-interface ProductCategory {
-  readonly id: number;
-  readonly categoryName: string;
-}
-
-interface ProductAgeRange {
-  readonly id: number;
-  readonly label: string | null;
-  readonly minAge: number;
-  readonly maxAge: number | null;
-}
-
-interface ProductSeller {
-  readonly id: number;
-  readonly shopName: string;
-  readonly shopLogoUrl: string | null;
-}
-
-interface Product {
-  readonly id: number;
-  readonly name: string;
-  readonly price: string;
-  readonly description: string;
-  readonly imageUrl: string;
-  readonly stockQuantity: number;
-  readonly category: ProductCategory;
-  readonly ageRange: ProductAgeRange;
-  readonly seller: ProductSeller;
-}
 
 function formatAgeRange(ar: ProductAgeRange): string {
   if (ar.label) return ar.label;
@@ -48,11 +19,11 @@ function formatAgeRange(ar: ProductAgeRange): string {
  * Both generateMetadata and the page component call this function, so
  * without cache() Next.js would make two identical upstream fetches per page load.
  */
-const fetchProduct = cache(async (id: string): Promise<Product | null> => {
+const fetchProduct = cache(async (id: string): Promise<ProductDetail | null> => {
   try {
     const res = await fetch(`${API_BASE_URL}/products/${id}`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
-    return (await res.json()) as Product;
+    return (await res.json()) as ProductDetail;
   } catch {
     return null;
   }

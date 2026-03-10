@@ -28,15 +28,15 @@ interface CacheEntry<T> {
 
 @Injectable()
 export class SellersService {
-  private readonly dashboardCache = new Map<number, CacheEntry<SellerDashboardDto>>();
+  private readonly dashboardCache = new Map<
+    number,
+    CacheEntry<SellerDashboardDto>
+  >();
   private readonly statsCache = new Map<number, CacheEntry<SellerStatsDto>>();
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(
-    page = 1,
-    limit = 20,
-  ): Promise<PaginatedSellersResponseDto> {
+  async findAll(page = 1, limit = 20): Promise<PaginatedSellersResponseDto> {
     const safeLimit = Math.min(limit, MAX_SELLERS_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     const where = { shopStatus: 'Active' as const };
@@ -56,7 +56,13 @@ export class SellersService {
       }),
       this.prisma.seller.count({ where }),
     ]);
-    return { sellers, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+    return {
+      sellers,
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async findById(
@@ -197,7 +203,10 @@ export class SellersService {
         orderDate: item.order.orderDate,
       })),
     };
-    this.dashboardCache.set(userId, { data: result, expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS });
+    this.dashboardCache.set(userId, {
+      data: result,
+      expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS,
+    });
     return result;
   }
 
@@ -237,7 +246,10 @@ export class SellersService {
       pendingOrders,
       totalRevenue: (revenueAgg._sum.price ?? 0).toString(),
     };
-    this.statsCache.set(userId, { data: stats, expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS });
+    this.statsCache.set(userId, {
+      data: stats,
+      expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS,
+    });
     return stats;
   }
 

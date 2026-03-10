@@ -29,8 +29,9 @@ module.exports = {
       ],
       numberOfRuns: 3,
       // Ensures the app server is running before Lighthouse attempts to collect.
-      startServerCommand: 'pnpm start',
-      startServerReadyPattern: 'ready on',
+      // In CI, this is executed from apps/web and will run `next start --port 3000`.
+      startServerCommand: 'pnpm start -- --port 3000',
+      startServerReadyPattern: 'started server on',
       startServerReadyTimeout: 30_000,
     },
 

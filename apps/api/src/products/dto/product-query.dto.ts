@@ -51,7 +51,10 @@ export class ProductQueryDto {
   @Type(() => Number)
   sellerId?: number;
 
-  @ApiPropertyOptional({ description: 'newest = by date added desc, popular = by order count desc', enum: ['newest', 'popular'] })
+  @ApiPropertyOptional({
+    description: 'newest = by date added desc, popular = by order count desc',
+    enum: ['newest', 'popular'],
+  })
   @IsOptional()
   @IsString()
   @IsIn(['newest', 'popular'])

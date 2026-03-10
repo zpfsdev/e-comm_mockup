@@ -3,6 +3,15 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SignInClientPage from './sign-in-client';
 
+jest.mock('@/providers/auth-provider', () => ({
+  useAuth: () => ({
+    user: null,
+    isAuthenticated: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+  }),
+}));
+
 jest.mock('next/link', () => {
   const MockLink = ({
     children,

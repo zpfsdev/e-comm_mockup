@@ -351,7 +351,10 @@ export class OrdersService {
   }
 
   /** Valid forward-only status transitions for order items. */
-  private static readonly ALLOWED_TRANSITIONS: Record<OrderItemStatus, OrderItemStatus[]> = {
+  private static readonly ALLOWED_TRANSITIONS: Record<
+    OrderItemStatus,
+    OrderItemStatus[]
+  > = {
     Pending: ['InTransit'],
     InTransit: ['Completed'],
     Completed: [],
@@ -382,7 +385,8 @@ export class OrdersService {
       throw new ForbiddenException('You do not manage this order item.');
     }
 
-    const allowed = OrdersService.ALLOWED_TRANSITIONS[orderItem.orderItemStatus];
+    const allowed =
+      OrdersService.ALLOWED_TRANSITIONS[orderItem.orderItemStatus];
     if (!allowed.includes(status)) {
       throw new BadRequestException(
         `Cannot transition order item from '${orderItem.orderItemStatus}' to '${status}'.`,

@@ -20,20 +20,22 @@ const nextConfig: NextConfig = {
         .split(',')
         .map((h) => h.trim())
         .filter(Boolean);
-      if (process.env.NODE_ENV === 'production') {
-        if (configured.length === 0) {
-          console.warn(
-            '[Artistryx] NEXT_PUBLIC_IMAGE_HOSTNAMES is unset — external images will be blocked. ' +
-            'Set it to a comma-separated list of allowed CDN hostnames (e.g. res.cloudinary.com) to enable.',
-          );
-          return [];
-        }
-        return configured.map((hostname) => ({
-          protocol: 'https' as const,
-          hostname,
-        }));
+      const localDevHostnames = ['localhost', '127.0.0.1'];
+      const allowedHostnames =
+        process.env.NODE_ENV === 'production'
+          ? configured
+          : [...new Set([...configured, ...localDevHostnames])];
+      if (allowedHostnames.length === 0) {
+        console.warn(
+          '[Artistryx] NEXT_PUBLIC_IMAGE_HOSTNAMES is unset — external images will be blocked. ' +
+          'Set it to a comma-separated list of allowed CDN hostnames (e.g. res.cloudinary.com) to enable.',
+        );
+        return [];
       }
-      return [{ protocol: 'https' as const, hostname: '**' }];
+      return allowedHostnames.map((hostname) => ({
+        protocol: 'https' as const,
+        hostname,
+      }));
     })(),
     formats: ['image/avif', 'image/webp'],
     // Largest image size displayed in the product grid.

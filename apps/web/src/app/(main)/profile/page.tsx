@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import { apiClient } from '@/lib/api-client';
 import { Input } from '@/components/ui/input/input';
 import { Button } from '@/components/ui/button/button';
@@ -49,10 +50,11 @@ function isSafeImageUrl(url: string): boolean {
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<EditForm>({ firstName: '', middleName: '', lastName: '', contactNumber: '', profilePictureUrl: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasInitializedForm = useRef(false);
+  const { register, handleSubmit, reset } = useForm<EditForm>({
+    defaultValues: { firstName: '', middleName: '', lastName: '', contactNumber: '', profilePictureUrl: '' },
+  });
 
   useEffect(() => {
     return () => {
@@ -69,16 +71,15 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!profile || hasInitializedForm.current) return;
-    hasInitializedForm.current = true;
-    setForm({
+    if (!profile) return;
+    reset({
       firstName: profile.firstName,
       middleName: profile.middleName ?? '',
       lastName: profile.lastName,
       contactNumber: profile.contactNumber ?? '',
       profilePictureUrl: profile.profilePictureUrl ?? '',
     });
-  }, [profile]);
+  }, [profile, reset]);
 
   const mutation = useMutation({
     mutationFn: (payload: Partial<EditForm>) => apiClient.patch('/users/profile', payload),
@@ -93,8 +94,7 @@ export default function ProfilePage() {
     },
   });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function onSubmit(form: EditForm): void {
     mutation.mutate({
       ...(form.firstName && { firstName: form.firstName }),
       ...(form.lastName && { lastName: form.lastName }),
@@ -105,7 +105,9 @@ export default function ProfilePage() {
   }
 
   const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : '';
-  const initials  = profile ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : '';
+  const initials  = profile
+    ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
+    : '';
   const roleNames = profile?.userRoles.map((ur) => ur.role.roleName) ?? [];
 
   if (isError) {
@@ -168,41 +170,50 @@ export default function ProfilePage() {
         </div>
         <div className={styles.sectionBody}>
           {feedback && (
-            <p className={feedback.type === 'success' ? styles.successMsg : styles.errorMsg}>
+            <p
+              className={feedback.type === 'success' ? styles.successMsg : styles.errorMsg}
+              role={feedback.type === 'success' ? 'status' : 'alert'}
+              aria-live="polite"
+            >
               {feedback.message}
             </p>
           )}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
             <div className={styles.row}>
               <Input
+                id="profile-first-name"
                 label="First Name"
-                value={form.firstName}
-                onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+                autoComplete="given-name"
+                {...register('firstName')}
               />
               <Input
+                id="profile-last-name"
                 label="Last Name"
-                value={form.lastName}
-                onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+                autoComplete="family-name"
+                {...register('lastName')}
               />
             </div>
             <Input
+              id="profile-middle-name"
               label="Middle Name (optional)"
-              value={form.middleName}
-              onChange={(e) => setForm((p) => ({ ...p, middleName: e.target.value }))}
+              autoComplete="additional-name"
+              {...register('middleName')}
             />
             <Input
+              id="profile-contact-number"
               label="Contact Number"
               type="tel"
               placeholder="09171234567"
-              value={form.contactNumber}
-              onChange={(e) => setForm((p) => ({ ...p, contactNumber: e.target.value }))}
+              autoComplete="tel"
+              {...register('contactNumber')}
             />
             <Input
+              id="profile-picture-url"
               label="Profile Picture URL (optional)"
               type="url"
               placeholder="https://example.com/photo.jpg"
-              value={form.profilePictureUrl}
-              onChange={(e) => setForm((p) => ({ ...p, profilePictureUrl: e.target.value }))}
+              autoComplete="url"
+              {...register('profilePictureUrl')}
             />
             <Button variant="primary" type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving...' : 'Save Changes'}

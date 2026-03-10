@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/lib/constants';
-import type { ProductAgeRange, ProductCategory, ProductSeller, ProductsResponse } from './products-client';
+import type { ProductAgeRange, ProductCategory, ProductSeller, ProductsResponse } from '@/types/product';
 import { ProductsClient } from './products-client';
 
 interface SearchParams {

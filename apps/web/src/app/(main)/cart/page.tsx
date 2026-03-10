@@ -181,7 +181,9 @@ export default function CartPage() {
                   </div>
 
                   <div className={styles.itemRight}>
-                    <span className={styles.itemPrice}>₱{Number(item.product.price).toFixed(2)}</span>
+                    <span className={styles.itemPrice}>
+                      ₱{Number(item.product.price).toFixed(2)}
+                    </span>
                     <div className={styles.qtyControls}>
                       <button
                         type="button"

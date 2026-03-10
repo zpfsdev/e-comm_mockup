@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ShopStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface PaginatedUsersResponseDto {
@@ -22,11 +21,17 @@ export interface PaginatedUsersResponseDto {
 
 const DEFAULT_PAGE_SIZE = 50;
 
+type UserStatus = 'Active' | 'Inactive';
+type ShopStatus = 'Active' | 'Inactive' | 'Banned';
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllUsers(page = 1, limit = DEFAULT_PAGE_SIZE): Promise<PaginatedUsersResponseDto> {
+  async findAllUsers(
+    page = 1,
+    limit = DEFAULT_PAGE_SIZE,
+  ): Promise<PaginatedUsersResponseDto> {
     const safeLimit = Math.min(limit, DEFAULT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     const [users, total] = await Promise.all([
@@ -48,18 +53,33 @@ export class AdminService {
       }),
       this.prisma.user.count(),
     ]);
-    return { users, total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+    return {
+      users,
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
-  async setUserStatus(userId: number, status: UserStatus) {
+  setUserStatus(userId: number, status: UserStatus) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { status },
+      data: {
+        status,
+        ...(status === 'Inactive'
+          ? {
+              refreshTokenVersion: {
+                increment: 1,
+              },
+            }
+          : {}),
+      },
       select: { id: true, email: true, username: true, status: true },
     });
   }
 
-  async setShopStatus(sellerId: number, status: ShopStatus) {
+  setShopStatus(sellerId: number, status: ShopStatus) {
     return this.prisma.seller.update({
       where: { id: sellerId },
       data: { shopStatus: status },
@@ -79,8 +99,8 @@ export class AdminService {
         }),
       ]);
 
-    const totalRevenue = (revenueAgg._sum.paymentAmount ?? 0).toString();
-
+    const rawRevenue = revenueAgg._sum.paymentAmount ?? 0;
+    const totalRevenue = Number(rawRevenue);
     return { totalUsers, totalSellers, totalOrders, totalRevenue };
   }
 }

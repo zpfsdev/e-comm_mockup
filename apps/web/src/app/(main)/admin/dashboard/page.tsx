@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
@@ -62,6 +63,7 @@ function getResponseStatus(err: unknown): number | undefined {
 
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
+  const [confirmingUserId, setConfirmingUserId] = useState<number | null>(null);
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<AdminStats>({
     queryKey: ['admin-stats'],
@@ -86,7 +88,10 @@ export default function AdminDashboardPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: 'Active' | 'Inactive' }) =>
       apiClient.patch(`/admin/users/${id}/status`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+    onSuccess: () => {
+      setConfirmingUserId(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
   });
 
   const STATS = [
@@ -165,22 +170,47 @@ export default function AdminDashboardPage() {
                   </td>
                   <td>{user.isActive ? 'Active' : 'Suspended'}</td>
                   <td>
-                    <button
-                      type="button"
-                      className={`${styles.actionBtn} ${user.isActive ? styles.suspendBtn : styles.activateBtn}`}
-                      onClick={() => {
-                        const action = user.isActive ? 'suspend' : 'activate';
-                        if (window.confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
-                          toggleMutation.mutate({
-                            id: user.id,
-                            status: user.isActive ? 'Inactive' : 'Active',
-                          });
-                        }
-                      }}
-                      disabled={toggleMutation.isPending}
-                    >
-                      {user.isActive ? 'Suspend' : 'Activate'}
-                    </button>
+                    {confirmingUserId === user.id ? (
+                      <div className={styles.confirmInline} role="group" aria-label="Confirm action">
+                        <span
+                          className={styles.confirmText}
+                          aria-live="polite"
+                        >
+                          {user.isActive ? 'Suspend this user?' : 'Activate this user?'}
+                        </span>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.confirmBtn}`}
+                          autoFocus
+                          onClick={() => {
+                            toggleMutation.mutate({
+                              id: user.id,
+                              status: user.isActive ? 'Inactive' : 'Active',
+                            });
+                          }}
+                          disabled={toggleMutation.isPending}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.cancelBtn}`}
+                          onClick={() => setConfirmingUserId(null)}
+                          disabled={toggleMutation.isPending}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${user.isActive ? styles.suspendBtn : styles.activateBtn}`}
+                        onClick={() => setConfirmingUserId(user.id)}
+                        disabled={toggleMutation.isPending}
+                      >
+                        {user.isActive ? 'Suspend' : 'Activate'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

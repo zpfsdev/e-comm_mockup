@@ -58,6 +58,10 @@ export function Navbar() {
   }
 
   function handleDropdownKeyDown(event: React.KeyboardEvent) {
+    if (event.key === 'Tab') {
+      setIsMenuOpen(false);
+      return;
+    }
     if (event.key === 'Escape') {
       setIsMenuOpen(false);
       dropdownRef.current?.querySelector<HTMLElement>('button')?.focus();
@@ -143,6 +147,7 @@ export function Navbar() {
                 onClick={() => setIsSearchOpen((prev) => !prev)}
                 aria-label="Toggle search"
                 aria-expanded={isSearchOpen}
+                aria-controls="navbar-search-form"
               >
                 <svg className={styles.icon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle cx="11" cy="11" r="7" />
@@ -150,7 +155,12 @@ export function Navbar() {
                 </svg>
               </button>
               {isSearchOpen && (
-                <form className={styles.searchDropdown} onSubmit={handleSearchSubmit} role="search">
+                <form
+                  id="navbar-search-form"
+                  className={styles.searchDropdown}
+                  onSubmit={handleSearchSubmit}
+                  role="search"
+                >
                   <input
                     type="search"
                     className={styles.searchInput}
@@ -159,6 +169,12 @@ export function Navbar() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     aria-label="Search products"
                     autoFocus
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        event.stopPropagation();
+                        setIsSearchOpen(false);
+                      }
+                    }}
                   />
                 </form>
               )}

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module';
+import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -19,7 +20,13 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       validate(config: Record<string, string | undefined>) {
-        const required = ['DATABASE_URL', 'JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'CSRF_SECRET', 'FRONTEND_URL'] as const;
+        const required = [
+          'DATABASE_URL',
+          'JWT_SECRET',
+          'REFRESH_TOKEN_SECRET',
+          'CSRF_SECRET',
+          'FRONTEND_URL',
+        ] as const;
         const missing = required.filter((key) => !config[key]);
         if (missing.length > 0) {
           throw new Error(
@@ -58,6 +65,7 @@ import { UsersModule } from './users/users.module';
     ReviewsModule,
     AdminModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Apply the global rate limit to every route by default.
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -70,6 +70,19 @@
 .editBtn   { background-color: var(--color-lemon); color: var(--color-lemon-text); }
 .deleteBtn { background-color: #ffe0e0; color: var(--color-error); }
 
+.confirmInline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.confirmText {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.confirmDeleteBtn { background-color: #ffe0e0; color: var(--color-error); }
+.cancelBtn { background-color: var(--color-card-border); color: var(--color-text); }
+
 .addBtn { margin-bottom: var(--space-6); }
 
 .empty { text-align: center; padding: var(--space-8); color: var(--color-text-muted); }

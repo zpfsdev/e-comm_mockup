@@ -23,7 +23,6 @@ const PRODUCT_SELECT = {
   productDetail: true,
 } as const;
 
-const SELLER_PRODUCT_PREVIEW_LIMIT = 50;
 const MAX_PRODUCT_PAGE_SIZE = 50;
 
 /** Manages product listings — browsing, creation, updates, and soft-deletion. */
@@ -37,7 +36,15 @@ export class ProductsService {
    * plus optional filtering by category and age range.
    */
   async findAll(query: ProductQueryDto): Promise<ProductListResponseDto> {
-    const { search, categoryId, ageRangeId, sellerId, sort, page = 1, limit = 20 } = query;
+    const {
+      search,
+      categoryId,
+      ageRangeId,
+      sellerId,
+      sort,
+      page = 1,
+      limit = 20,
+    } = query;
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
     const searchStr = search != null ? ensureString(search) : undefined;

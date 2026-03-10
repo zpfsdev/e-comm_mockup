@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "skills": {
+    "Skills-Security-Check": {
+      "source": "toolsai/skills-security-check",
+      "sourceType": "github",
+      "computedHash": "5d66aeac7909b9406fd3c7b86436f7146e4f61d1b80549d8bc0bc8c8b29e12a5"
+    },
+    "code-security": {
+      "source": "semgrep/skills",
+      "sourceType": "github",
+      "computedHash": "f59e2d76b098849ff451494c471ef79177a55c4dc4824d89d3b1ea6ca3cffbbc"
+    },
+    "codeql": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "af7d769804b2e33b35e7cc6fae398e3e28d1d220a8ecf6c2180df9c18b79664c"
+    },
+    "dependency-updater": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "3fc648ed28dfce104c7749318489af2c388de99dde2d85c145a4e028d994db41"
+    },
+    "fp-check": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "940045d27c196ac5c4c20fb39feb3cdc16f0269a4acd4082aa3ba97b18585eee"
+    },
+    "likec4-architecture": {
+      "source": "timseriakov/likec4-architecture-skill",
+      "sourceType": "github",
+      "computedHash": "e1335c5a12192923e31ac3a9de45d39efb8ed0cc6f345d2b2cd57868f0ce696c"
+    },
+    "nestjs-best-practices": {
+      "source": "kadajett/agent-nestjs-skills",
+      "sourceType": "github",
+      "computedHash": "68658903272e1015f3ec5084c7d0988216a47f42f675ed819a675250fc6a23cd"
+    },
+    "pnpm": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "computedHash": "d473204df25defd08a7d47b55c6d124b41ebde440b774995952b65223d0d8d6f"
+    },
+    "pnpm-dependency-analysis": {
+      "source": "equinor/fusion-framework",
+      "sourceType": "github",
+      "computedHash": "be094970cf2a947abb037ccd5c7e4922ea7c66f84588239769dd52c1e6433c79"
+    },
+    "pnpm-upgrade": {
+      "source": "openai/openai-agents-js",
+      "sourceType": "github",
+      "computedHash": "6f9c06af93c1bd866503c2fc3ea129bf5eb32c4ce0badbf028380a340e21adaa"
+    },
+    "prisma-cli": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "0f613c8d46027714ec40300d2ece024a31f9d17b1a380eb408d40ef7b8c53849"
+    },
+    "prisma-client-api": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "a982b2a15dc9d4223be7844f082e6481e1e24df1f379fbcf66b82d5b58e80bec"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "computedHash": "72e2360923e949261a15ca1dbcfac5662ec5e851f6045ffb13163a55a083bcea"
+    },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "computedHash": "b1cc1defe03f0e8f78652b7d20e4d4e6421babc2b45835d4f361afe684dc47a2"
+    },
+    "supply-chain-risk-auditor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "computedHash": "b35b1c10b20e4b3852eecefa5eff86f017f1c969c29cbdc87d65e8d17c9cbc96"
+    },
+    "tanstack-query": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "computedHash": "bfe2977e92667b84efeb4b12e5c3010807934aab2f7ac2b059241cd3da2a3e6e"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8
+    image: mariadb:11
     container_name: artistryx-mysql
     restart: unless-stopped
     environment:

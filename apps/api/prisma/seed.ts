@@ -1,8 +1,46 @@
 import 'dotenv/config';
 import { PrismaClient, RoleName } from '@prisma/client';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+function createPoolConfigFromDatabaseUrl(
+  databaseUrl: string,
+): Record<string, unknown> {
+  let url: URL;
+  try {
+    url = new URL(databaseUrl);
+  } catch {
+    throw new Error('Invalid DATABASE_URL for Prisma MariaDB adapter in seed.');
+  }
+
+  const host = url.hostname || 'localhost';
+  const port = url.port ? Number(url.port) : 3306;
+  const user = url.username ? decodeURIComponent(url.username) : 'root';
+  const password = url.password ? decodeURIComponent(url.password) : undefined;
+  const database = url.pathname ? url.pathname.replace(/^\//, '') : undefined;
+
+  const config: Record<string, unknown> = {
+    host,
+    port,
+    user,
+  };
+  if (password !== undefined) {
+    config.password = password;
+  }
+  if (database) {
+    config.database = database;
+  }
+  return config;
+}
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is required for seeding.');
+}
+const poolConfig = createPoolConfigFromDatabaseUrl(databaseUrl);
+const prisma = new PrismaClient({
+  adapter: new PrismaMariaDb(poolConfig),
+});
 
 const BCRYPT_ROUNDS = 10;
 

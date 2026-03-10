@@ -1,6 +1,3 @@
-// Artistryx E-Commerce Platform - Prisma Schema
-// Based on 3NF database design from SRS documentation
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,7 +6,286 @@ datasource db {
   provider = "mysql"
 }
 
-// ─── Enums ───────────────────────────────────────────────────────────────────
+model Province {
+  id       Int    @id @default(autoincrement())
+  province String @unique @db.VarChar(100)
+  cities   City[]
+
+  @@map("provinces")
+}
+
+model City {
+  id         Int        @id @default(autoincrement())
+  city       String     @db.VarChar(100)
+  postalCode String     @db.VarChar(10)
+  provinceId Int
+  barangays  Barangay[]
+  province   Province   @relation(fields: [provinceId], references: [id])
+
+  @@unique([city, provinceId])
+  @@index([provinceId], map: "cities_provinceId_fkey")
+  @@map("cities")
+}
+
+model Barangay {
+  id        Int       @id @default(autoincrement())
+  barangay  String    @db.VarChar(100)
+  cityId    Int
+  addresses Address[]
+  city      City      @relation(fields: [cityId], references: [id])
+
+  @@unique([barangay, cityId])
+  @@index([cityId], map: "barangays_cityId_fkey")
+  @@map("barangays")
+}
+
+model Address {
+  id            Int           @id @default(autoincrement())
+  street        String        @db.VarChar(255)
+  barangayId    Int
+  barangay      Barangay      @relation(fields: [barangayId], references: [id])
+  userAddresses UserAddress[]
+
+  @@unique([street, barangayId])
+  @@index([barangayId], map: "addresses_barangayId_fkey")
+  @@map("addresses")
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  roleName  RoleName   @unique
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model User {
+  id                  Int           @id @default(autoincrement())
+  firstName           String        @db.VarChar(100)
+  middleName          String?       @db.VarChar(100)
+  lastName            String        @db.VarChar(100)
+  username            String        @unique @db.VarChar(50)
+  email               String        @unique @db.VarChar(100)
+  password            String        @db.VarChar(255)
+  dateOfBirth         DateTime      @db.Date
+  contactNumber       String        @db.VarChar(13)
+  dateTimeRegistered  DateTime      @default(now())
+  lastLogin           DateTime?
+  status              UserStatus    @default(Active)
+  profilePictureUrl   String?       @db.VarChar(255)
+  refreshTokenVersion Int           @default(0)
+  cart                Cart?
+  orders              Order[]
+  reviews             Review[]
+  seller              Seller?
+  userAddresses       UserAddress[]
+  userRoles           UserRole[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model UserAddress {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  addressId   Int
+  addressType AddressType?
+  isDefault   Boolean      @default(false)
+  orders      Order[]
+  address     Address      @relation(fields: [addressId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, addressId])
+  @@index([addressId], map: "user_addresses_addressId_fkey")
+  @@map("user_addresses")
+}
+
+model Seller {
+  id              Int          @id @default(autoincrement())
+  userId          Int          @unique
+  shopName        String       @unique @db.VarChar(255)
+  shopDescription String?      @db.Text
+  shopLogoUrl     String?      @db.VarChar(255)
+  shopStatus      ShopStatus   @default(Active)
+  registeredAt    DateTime     @default(now())
+  commissions     Commission[]
+  products        Product[]
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@map("sellers")
+}
+
+model AgeRange {
+  id       Int       @id @default(autoincrement())
+  minAge   Int
+  maxAge   Int?
+  label    String?   @db.VarChar(255)
+  products Product[]
+
+  @@map("age_ranges")
+}
+
+model Category {
+  id           Int       @id @default(autoincrement())
+  categoryName String    @unique @db.VarChar(255)
+  description  String?   @db.Text
+  products     Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id            Int            @id @default(autoincrement())
+  sellerId      Int
+  name          String         @db.VarChar(100)
+  description   String         @db.Text
+  imageUrl      String         @db.VarChar(255)
+  price         Decimal        @db.Decimal(10, 2)
+  categoryId    Int
+  stockQuantity Int            @default(1)
+  status        ProductStatus  @default(Available)
+  dateAdded     DateTime       @default(now())
+  lastUpdated   DateTime       @updatedAt
+  ageRangeId    Int
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  productDetail ProductDetail?
+  ageRange      AgeRange       @relation(fields: [ageRangeId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  seller        Seller         @relation(fields: [sellerId], references: [id])
+
+  @@unique([sellerId, name])
+  @@index([status, categoryId])
+  @@index([status, ageRangeId])
+  @@index([status, dateAdded])
+  @@index([ageRangeId], map: "products_ageRangeId_fkey")
+  @@index([categoryId], map: "products_categoryId_fkey")
+  @@map("products")
+}
+
+model ProductDetail {
+  id        Int      @id @default(autoincrement())
+  productId Int      @unique
+  height    Decimal? @db.Decimal(10, 2)
+  weight    Decimal? @db.Decimal(10, 2)
+  width     Decimal? @db.Decimal(10, 2)
+  length    Decimal? @db.Decimal(10, 2)
+  material  String?  @db.VarChar(255)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("product_details")
+}
+
+model Order {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  orderDate     DateTime     @default(now())
+  orderStatus   OrderStatus  @default(Pending)
+  totalAmount   Decimal      @db.Decimal(10, 2)
+  shippingFee   Decimal      @default(58.00) @db.Decimal(10, 2)
+  userAddressId Int?
+  notes         String?      @db.Text
+  orderItems    OrderItem[]
+  userAddress   UserAddress? @relation(fields: [userAddressId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  payment       Payment?
+
+  @@index([userId])
+  @@index([userAddressId], map: "orders_userAddressId_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id              Int             @id @default(autoincrement())
+  orderId         Int
+  productId       Int
+  quantity        Int             @default(1)
+  price           Decimal         @db.Decimal(10, 2)
+  orderItemStatus OrderItemStatus @default(Pending)
+  dateDelivered   DateTime?
+  commission      Commission?
+  order           Order           @relation(fields: [orderId], references: [id])
+  product         Product         @relation(fields: [productId], references: [id])
+  review          Review?
+
+  @@unique([orderId, productId])
+  @@index([productId])
+  @@index([productId, orderItemStatus])
+  @@map("order_items")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int           @unique
+  paymentStatus PaymentStatus @default(Unpaid)
+  paymentAmount Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime?
+  order         Order         @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  cartItems CartItem[]
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  productId Int
+  quantity  Int      @default(1)
+  dateAdded DateTime @default(now())
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@index([productId], map: "cart_items_productId_fkey")
+  @@map("cart_items")
+}
+
+model Review {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  orderItemId Int       @unique
+  rating      Int       @db.TinyInt
+  comment     String?   @db.Text
+  datePosted  DateTime  @default(now())
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Commission {
+  id               Int              @id @default(autoincrement())
+  sellerId         Int
+  orderItemId      Int              @unique
+  commissionAmount Decimal          @db.Decimal(10, 2)
+  status           CommissionStatus @default(Unpaid)
+  datePaid         DateTime?
+  orderItem        OrderItem        @relation(fields: [orderItemId], references: [id])
+  seller           Seller           @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+  @@map("commissions")
+}
 
 enum UserStatus {
   Active
@@ -58,320 +334,4 @@ enum RoleName {
   Admin
   Customer
   Seller
-}
-
-// ─── Location ────────────────────────────────────────────────────────────────
-
-model Province {
-  id       Int    @id @default(autoincrement())
-  province String @unique @db.VarChar(100)
-
-  cities City[]
-
-  @@map("provinces")
-}
-
-model City {
-  id         Int    @id @default(autoincrement())
-  city       String @db.VarChar(100)
-  postalCode String @db.VarChar(10)
-  provinceId Int
-
-  province   Province   @relation(fields: [provinceId], references: [id])
-  barangays  Barangay[]
-
-  @@unique([city, provinceId])
-  @@index([provinceId])
-  @@map("cities")
-}
-
-model Barangay {
-  id       Int    @id @default(autoincrement())
-  barangay String @db.VarChar(100)
-  cityId   Int
-
-  city      City      @relation(fields: [cityId], references: [id])
-  addresses Address[]
-
-  @@unique([barangay, cityId])
-  @@index([cityId])
-  @@map("barangays")
-}
-
-model Address {
-  id         Int    @id @default(autoincrement())
-  street     String @db.VarChar(255)
-  barangayId Int
-
-  barangay      Barangay       @relation(fields: [barangayId], references: [id])
-  userAddresses UserAddress[]
-
-  @@unique([street, barangayId])
-  @@map("addresses")
-}
-
-// ─── Users & Roles ───────────────────────────────────────────────────────────
-
-model Role {
-  id       Int      @id @default(autoincrement())
-  roleName RoleName @unique
-
-  userRoles UserRole[]
-
-  @@map("roles")
-}
-
-model User {
-  id                  Int        @id @default(autoincrement())
-  firstName           String     @db.VarChar(100)
-  middleName          String?    @db.VarChar(100)
-  lastName            String     @db.VarChar(100)
-  username            String     @unique @db.VarChar(50)
-  email               String     @unique @db.VarChar(100)
-  password            String     @db.VarChar(255)
-  dateOfBirth         DateTime   @db.Date
-  contactNumber       String     @db.VarChar(13)
-  dateTimeRegistered  DateTime   @default(now())
-  lastLogin           DateTime?
-  status              UserStatus @default(Active)
-  profilePictureUrl   String?    @db.VarChar(255)
-  refreshTokenVersion Int        @default(0)
-
-  userRoles    UserRole[]
-  seller       Seller?
-  userAddresses UserAddress[]
-  orders       Order[]
-  cart         Cart?
-  reviews      Review[]
-
-  @@map("users")
-}
-
-model UserRole {
-  id     Int @id @default(autoincrement())
-  userId Int
-  roleId Int
-
-  user User @relation(fields: [userId], references: [id])
-  role Role @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
-  @@index([roleId])
-  @@map("user_roles")
-}
-
-model UserAddress {
-  id          Int         @id @default(autoincrement())
-  userId      Int
-  addressId   Int
-  addressType AddressType?
-  isDefault   Boolean     @default(false)
-
-  user    User    @relation(fields: [userId], references: [id])
-  address Address @relation(fields: [addressId], references: [id])
-  orders  Order[]
-
-  @@unique([userId, addressId])
-  @@index([userId])
-  @@map("user_addresses")
-}
-
-// ─── Sellers ─────────────────────────────────────────────────────────────────
-
-model Seller {
-  id              Int        @id @default(autoincrement())
-  userId          Int        @unique
-  shopName        String     @unique @db.VarChar(255)
-  shopDescription String?    @db.Text
-  shopLogoUrl     String?    @db.VarChar(255)
-  shopStatus      ShopStatus @default(Active)
-  registeredAt    DateTime   @default(now())
-
-  user        User         @relation(fields: [userId], references: [id])
-  products    Product[]
-  commissions Commission[]
-
-  @@map("sellers")
-}
-
-// ─── Products ─────────────────────────────────────────────────────────────────
-
-model AgeRange {
-  id     Int     @id @default(autoincrement())
-  minAge Int
-  maxAge Int?
-  label  String? @db.VarChar(255)
-
-  products Product[]
-
-  @@unique([minAge, maxAge])
-  @@map("age_ranges")
-}
-
-model Category {
-  id           Int     @id @default(autoincrement())
-  categoryName String  @unique @db.VarChar(255)
-  description  String? @db.Text
-
-  products Product[]
-
-  @@map("categories")
-}
-
-model Product {
-  id            Int           @id @default(autoincrement())
-  sellerId      Int
-  name          String        @db.VarChar(100)
-  description   String        @db.Text
-  imageUrl      String        @db.VarChar(255)
-  price         Decimal       @db.Decimal(10, 2)
-  categoryId    Int
-  stockQuantity Int           @default(1)
-  status        ProductStatus @default(Available)
-  dateAdded     DateTime      @default(now())
-  lastUpdated   DateTime      @updatedAt
-  ageRangeId    Int
-
-  seller        Seller         @relation(fields: [sellerId], references: [id])
-  category      Category       @relation(fields: [categoryId], references: [id])
-  ageRange      AgeRange       @relation(fields: [ageRangeId], references: [id])
-  productDetail ProductDetail?
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
-
-  @@unique([sellerId, name])
-  @@index([status, categoryId])
-  @@index([status, ageRangeId])
-  @@index([status, dateAdded])
-  @@map("products")
-}
-
-model ProductDetail {
-  id        Int      @id @default(autoincrement())
-  productId Int      @unique
-  height    Decimal? @db.Decimal(10, 2)
-  weight    Decimal? @db.Decimal(10, 2)
-  width     Decimal? @db.Decimal(10, 2)
-  length    Decimal? @db.Decimal(10, 2)
-  material  String?  @db.VarChar(255)
-
-  product Product @relation(fields: [productId], references: [id])
-
-  @@map("product_details")
-}
-
-// ─── Orders ───────────────────────────────────────────────────────────────────
-
-model Order {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  orderDate     DateTime    @default(now())
-  orderStatus   OrderStatus @default(Pending)
-  totalAmount   Decimal     @db.Decimal(10, 2)
-  shippingFee   Decimal     @default(58) @db.Decimal(10, 2)
-  userAddressId Int?
-  notes         String?     @db.Text
-
-  user        User         @relation(fields: [userId], references: [id])
-  userAddress UserAddress? @relation(fields: [userAddressId], references: [id])
-  orderItems  OrderItem[]
-  payment     Payment?
-
-  @@index([userId])
-  @@map("orders")
-}
-
-model OrderItem {
-  id              Int             @id @default(autoincrement())
-  orderId         Int
-  productId       Int
-  quantity        Int             @default(1)
-  price           Decimal         @db.Decimal(10, 2)
-  orderItemStatus OrderItemStatus @default(Pending)
-  dateDelivered   DateTime?
-
-  order      Order       @relation(fields: [orderId], references: [id])
-  product    Product     @relation(fields: [productId], references: [id])
-  review     Review?
-  commission Commission?
-
-  @@unique([orderId, productId])
-  @@index([productId])
-  @@index([productId, orderItemStatus])
-  @@map("order_items")
-}
-
-// ─── Payment ──────────────────────────────────────────────────────────────────
-
-model Payment {
-  id            Int           @id @default(autoincrement())
-  orderId       Int           @unique
-  paymentStatus PaymentStatus @default(Unpaid)
-  paymentAmount Decimal       @db.Decimal(10, 2)
-  paymentDate   DateTime?
-
-  order Order @relation(fields: [orderId], references: [id])
-
-  @@map("payments")
-}
-
-// ─── Cart ─────────────────────────────────────────────────────────────────────
-
-model Cart {
-  id     Int @id @default(autoincrement())
-  userId Int @unique
-
-  user      User       @relation(fields: [userId], references: [id])
-  cartItems CartItem[]
-
-  @@map("carts")
-}
-
-model CartItem {
-  id        Int      @id @default(autoincrement())
-  cartId    Int
-  productId Int
-  quantity  Int      @default(1)
-  dateAdded DateTime @default(now())
-
-  cart    Cart    @relation(fields: [cartId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
-
-  @@unique([cartId, productId])
-  @@index([cartId])
-  @@map("cart_items")
-}
-
-// ─── Reviews ──────────────────────────────────────────────────────────────────
-
-model Review {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  orderItemId Int      @unique
-  rating      Int      @db.TinyInt
-  comment     String?  @db.Text
-  datePosted  DateTime @default(now())
-
-  user      User      @relation(fields: [userId], references: [id])
-  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
-
-  @@index([userId])
-  @@map("reviews")
-}
-
-// ─── Commissions ──────────────────────────────────────────────────────────────
-
-model Commission {
-  id               Int              @id @default(autoincrement())
-  sellerId         Int
-  orderItemId      Int              @unique
-  commissionAmount Decimal          @db.Decimal(10, 2)
-  status           CommissionStatus @default(Unpaid)
-  datePaid         DateTime?
-
-  seller    Seller    @relation(fields: [sellerId], references: [id])
-  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
-
-  @@index([sellerId])
-  @@map("commissions")
 }

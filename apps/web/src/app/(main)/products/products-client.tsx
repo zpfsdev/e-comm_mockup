@@ -34,7 +34,9 @@ function ProductCard({ product }: { readonly product: ProductListItem }) {
       </Link>
       <div className={styles.productBody}>
         <span className={styles.productName}>{product.name}</span>
-        <span className={styles.productPrice}>₱{product.price.toFixed(2)}</span>
+        <span className={styles.productPrice}>
+          ₱{Number(product.price).toFixed(2)}
+        </span>
         <AddToCartInline
           productId={product.id}
           productName={product.name}

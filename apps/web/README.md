@@ -9,7 +9,7 @@ React and Next.js frontend for the Artistryx marketplace. Implements the custome
 - Framework: Next.js App Router with React  
 - Language: TypeScript  
 - Styling: CSS Modules with design tokens (`tokens.css`)  
-- Data fetching: TanStack Query with a shared `apiClient` wrapper  
+- Data fetching: TanStack Query with a shared Axios‑based `apiClient`  
 - State: React context for auth, React Query for server state  
 
 ---
@@ -19,7 +19,7 @@ React and Next.js frontend for the Artistryx marketplace. Implements the custome
 - `src/app/`
   - `(main)/` – primary pages using the shared layout (home, products, cart, checkout, orders, profile, dashboards)  
   - `auth/` – sign-in and sign-up flows without the main navbar/footer  
-  - `proxy.ts` – route protection and redirects at the edge  
+  - Route‑group layouts for `/admin/*` and `/seller/*` that call a server‑side `requireAuth()` guard  
 - `src/components/`
   - `layout/` – navbar, footer, layout wrappers  
   - `ui/` – base components (button, input, card, badge, skeleton, avatar)  
@@ -53,6 +53,7 @@ The development server listens on port 3000.
 Frontend configuration is read from `.env.local` in `apps/web`:
 
 - `NEXT_PUBLIC_API_URL` – base URL for backend API calls (for example, the `/api/v1` prefix of the Artistryx API)
+- `NEXT_PUBLIC_IMAGE_HOSTNAMES` – comma‑separated list of allowed remote image hosts for `next/image`
 
 This value is used by `src/lib/api-client.ts` to construct request URLs.
 
@@ -60,8 +61,12 @@ This value is used by `src/lib/api-client.ts` to construct request URLs.
 
 ### Auth and data fetching
 
-- Auth state is managed by `AuthProvider` using a short‑lived access token and a session cookie.  
-- API calls are made through `apiClient`, which attaches the access token and handles automatic refresh on 401 responses.  
+- Auth state is managed by `AuthProvider` using a short‑lived access token and a CSRF‑protected refresh cookie.  
+- On initial load, the provider attempts a silent refresh using the CSRF token, restoring the in‑memory access token.  
+- API calls are made through `apiClient`, which:
+  - Attaches the access token
+  - Automatically attempts refresh on 401 responses
+  - Redirects to sign‑in with a **session‑expired banner** if refresh fails
 - React Query is used throughout for data fetching, caching, and error/loading states with query keys such as `['products', params]`, `['cart']`, `['orders']`, and `['profile']`.
 
 ---
@@ -75,7 +80,8 @@ This value is used by `src/lib/api-client.ts` to construct request URLs.
 - `/checkout` – checkout form using cart contents and shipping details  
 - `/orders` and `/orders/[id]` – order list and detail views  
 - `/profile` – profile view and editing  
-- Seller and admin dashboards – routes under the main route group for role-specific management views  
+- `/seller/dashboard` and `/seller/products` – seller dashboards and product management  
+- `/admin/dashboard` – admin dashboard (stats + user management)  
 - `/auth/sign-in` and `/auth/sign-up` – authentication flows
 
 Protected routes rely on both client-side auth state and backend authorization; unauthenticated users are redirected to the sign-in flow with a preserved return path.

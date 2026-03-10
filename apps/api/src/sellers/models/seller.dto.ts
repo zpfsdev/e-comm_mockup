@@ -2,6 +2,7 @@ export interface SellerProductPreviewDto {
   readonly id: number;
   readonly name: string;
   readonly imageUrl: string | null;
+  /** Product price serialized as a decimal string. */
   readonly price: string;
   readonly category: string | null;
 }
@@ -50,6 +51,7 @@ export interface SellerStatsDto {
   readonly totalProducts: number;
   readonly totalOrders: number;
   readonly pendingOrders: number;
+  /** Aggregate seller revenue serialized as a decimal string. */
   readonly totalRevenue: string;
 }
 

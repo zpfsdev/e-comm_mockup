@@ -3,21 +3,37 @@
 Artistryx is a web-based marketplace for early childhood learning products.  
 Sellers list educational materials (charts, coloring books, board games, flash cards, story books), and buyers browse, filter, manage a cart, and place orders.
 
-This repository is a monorepo containing:
+This repository is a **full-stack monorepo** containing:
 
-- `apps/api` – NestJS + Prisma backend (MySQL)
-- `apps/web` – Next.js App Router frontend (React)
+- `apps/api` – NestJS + Prisma 7 backend (MySQL‑compatible MariaDB via driver adapter)
+- `apps/web` – Next.js App Router frontend (React 19)
+
+The goal of this documentation is to give you everything you need to:
+
+1. **Run the stack locally** (including the database and seeds)  
+2. **Understand the architecture** (auth, roles, data flow)  
+3. **Run tests and CI‑equivalent checks** confidently  
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: Next.js App Router, React, TypeScript, CSS Modules, design tokens  
-- **Backend**: NestJS, TypeScript, Prisma, MySQL  
-- **Data**: Prisma migrations + seed scripts  
-- **HTTP Client**: Axios + TanStack React Query  
-- **Validation**: `class-validator` for API DTOs, Zod for client-side schemas  
-- **Tooling**: pnpm workspaces, Jest, Playwright  
+- **Frontend**
+  - Next.js App Router (RSC + client components)
+  - React 19, TypeScript
+  - CSS Modules + design tokens
+  - TanStack Query, Axios api-client wrapper
+- **Backend**
+  - NestJS (modular architecture)
+  - TypeScript
+  - Prisma ORM **v7** using `@prisma/adapter-mariadb`
+  - **MariaDB 11** in Docker (MySQL‑compatible)
+  - `class-validator` DTOs, global validation pipe
+- **Cross-cutting**
+  - Auth: JWT access tokens + HttpOnly refresh cookies; CSRF token for refresh
+  - Roles: `Admin`, `Seller`, `Customer` via role guard
+  - Testing: Jest (unit + e2e), Playwright (web e2e)
+  - Tooling: pnpm workspaces, GitHub Actions CI, Lighthouse CI, CodeQL
 
 ---
 
@@ -46,7 +62,7 @@ artistryx/
 │           ├── components/   # Layout + UI components
 │           ├── lib/          # api-client, constants, utils
 │           └── providers/    # AuthProvider, QueryProvider
-├── docker-compose.yml        # MySQL service
+├── docker-compose.yml        # MariaDB service for local dev/tests
 ├── package.json              # Root scripts
 └── pnpm-workspace.yaml       # Workspace configuration
 ```
@@ -55,15 +71,20 @@ artistryx/
 
 ## Prerequisites
 
-- Node.js 20.x  
-- pnpm (workspace-aware package manager)  
-- Docker (for MySQL)  
+- **Node.js** 20.x  
+- **pnpm** (workspace-aware package manager)  
+- **Docker** (for MariaDB 11)
+
+Optional but recommended:
+
+- A modern terminal (PowerShell or bash)
+- VS Code / Cursor with TypeScript + ESLint integration
 
 ---
 
 ## Getting Started
 
-### 1. Install dependencies
+### 1. Install dependencies (monorepo root)
 
 From the repo root:
 
@@ -77,7 +98,23 @@ pnpm install
 docker compose up -d
 ```
 
-MySQL is exposed on `localhost:3307` with a database named `artistryx`.
+This starts **MariaDB 11** with:
+
+- Host: `localhost`
+- Port: `3307` (mapped to container 3306)
+- Database: `artistryx`
+- Root password: taken from `.env` in the repo root:
+
+```env
+MYSQL_ROOT_PASSWORD=password
+```
+
+You can inspect the container with:
+
+```bash
+docker ps --filter "name=artistryx-mysql"
+docker logs artistryx-mysql
+```
 
 ### 3. Configure API environment
 
@@ -86,9 +123,15 @@ In `apps/api/.env`:
 ```env
 DATABASE_URL="mysql://root:password@localhost:3307/artistryx"
 JWT_SECRET="change-this-in-production"
+REFRESH_TOKEN_SECRET="change-this-too"
 PORT=3001
 FRONTEND_URL="http://localhost:3000"
 ```
+
+Notes:
+
+- `DATABASE_URL` uses a **MySQL‑style DSN**, but Prisma 7 talks to MariaDB via `@prisma/adapter-mariadb` under the hood.
+- `REFRESH_TOKEN_SECRET` is separate from `JWT_SECRET` (refresh and access tokens do **not** share a secret).
 
 ### 4. Configure Web environment
 
@@ -96,18 +139,33 @@ In `apps/web/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_IMAGE_HOSTNAMES=localhost:3000
 ```
 
 ### 5. Apply schema and seed data
 
-From `apps/api`:
+From `apps/api` (database must be running):
 
 ```bash
 cd apps/api
 
-pnpm db:push    # apply Prisma schema
-pnpm db:seed    # seed roles, categories, age ranges, locations, test users
+# Apply schema (Prisma 7 + prisma.config.ts)
+pnpm db:push
+
+# Seed roles, age ranges, categories, locations, users, products, one test order
+pnpm db:seed
 ```
+
+The seed script creates:
+
+- Roles: `Admin`, `Customer`, `Seller`
+- Test accounts:
+  - `admin@artistryx.test` / `TestPass1!`
+  - `testcustomer@artistryx.test` / `TestPass1!`
+  - `testcustomer2@artistryx.test` / `TestPass1!`
+  - `testseller@artistryx.test` / `TestPass1!`
+  - `testseller2@artistryx.test` / `TestPass1!`
+- Two shops with products and one completed order for `testcustomer@artistryx.test`
 
 ### 6. Run the apps
 
@@ -151,11 +209,20 @@ Services:
 
 ### Key Concepts
 
-- **Auth**: Short-lived access tokens; refresh tokens stored in HttpOnly cookies.  
-- **Roles**: Customer, Seller, Admin; enforced by guards and role metadata.  
-- **Persistence**: Prisma models for users, sellers, products, carts, orders, payments, commissions, reviews, and addresses.  
+- **Auth**
+  - Short-lived access tokens (15m by default)
+  - Refresh tokens stored in HttpOnly cookies with CSRF protection (`X-CSRF-Token`)
+  - Admin‑driven revocation via `refreshTokenVersion` bump on user deactivation
+- **Roles**
+  - `Admin`, `Seller`, `Customer` via `RoleName` enum
+  - Enforced by `JwtAuthGuard` + `Roles` decorator
+- **Persistence**
+  - Prisma v7 models for users, sellers, products, carts, orders, payments, commissions, reviews, and addresses
+  - Backed by **MariaDB 11** via `@prisma/adapter-mariadb`
 - **Validation**: DTOs with `class-validator`, global validation pipe with whitelisting.  
 - **Security**: Helmet headers, rate limiting, CORS configured per frontend origin.  
+
+For more detail see `apps/api/README.md`.
 
 ---
 
@@ -180,6 +247,8 @@ Services:
 - **Styling**: CSS Modules powered by design tokens (`tokens.css`) for colors, typography, spacing, and radii.  
 - **Images**: `next/image` used for hero images, products, and avatars.  
 
+For more detail see `apps/web/README.md`.
+
 ---
 
 ## Testing
@@ -193,7 +262,12 @@ pnpm test       # unit tests
 pnpm test:e2e   # e2e and contract tests
 ```
 
-Coverage includes services (auth, cart, orders, products, sellers, admin) and high-level auth and contract flows.
+Coverage includes:
+
+- Services: auth, cart, orders, products, sellers, reviews, admin
+- Auth behaviors: refresh, password change, logout-all, inactivity
+- Contract tests: `/products` shape, pagination
+- E2E: auth flow, admin stats and user status toggles
 
 ### Frontend
 
@@ -204,13 +278,26 @@ pnpm test       # Jest + React Testing Library
 pnpm test:e2e   # Playwright end-to-end tests
 ```
 
-Coverage includes navbar, add-to-cart interactions, cart behavior, and end-to-end customer journeys.
+Coverage includes:
+
+- Navbar behavior, search, accessibility affordances
+- Auth screens (sign-in / sign-up)
+- Cart and checkout interactions
+- Orders list / detail views
+- Seller & admin dashboards (Playwright)
 
 ---
 
 ## Deployment Notes
 
-- API and web are independent services and can be deployed separately.  
-- Configuration is driven by environment variables for API base URLs, ports, and database connection.  
-- The database schema is fully described by `apps/api/prisma/schema.prisma` and migrations under `apps/api/prisma/migrations`.  
+- API and web are independent services and can be deployed separately (e.g. API on a Node host, web on Vercel)  
+- Configuration is driven by environment variables for:
+  - API base URLs (`NEXT_PUBLIC_API_URL`, `FRONTEND_URL`)
+  - Ports (`PORT`, Next.js port)
+  - Database connection (`DATABASE_URL`)
+- Database:
+  - Schema is fully described by `apps/api/prisma/schema.prisma`
+  - Migrations live in `apps/api/prisma/migrations`
+  - Prisma is configured via `apps/api/prisma.config.ts`
 
+For CI and security details (Dependabot, CodeQL, Lighthouse, Playwright in CI), refer to `.github/workflows/` and comments inside `ci.yml` / `security.yml`. 

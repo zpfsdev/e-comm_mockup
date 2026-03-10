@@ -51,7 +51,8 @@ describe('API contracts', () => {
           expect.objectContaining({
             id: expect.any(Number),
             name: expect.any(String),
-            price: expect.anything(),
+            // Prices are serialized as decimal strings in the API.
+            price: expect.any(String),
           }),
         );
       }

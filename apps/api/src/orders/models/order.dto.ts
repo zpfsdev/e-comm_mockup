@@ -15,6 +15,7 @@ export interface OrderItemDto {
   readonly id: number;
   readonly product: OrderItemProductSummaryDto;
   readonly quantity: number;
+  /** Unit price at time of sale, serialized as a decimal string. */
   readonly price: string;
   readonly orderItemStatus: string;
   readonly dateDelivered: Date | null;
@@ -22,6 +23,7 @@ export interface OrderItemDto {
 
 export interface OrderPaymentDto {
   readonly id: number;
+  /** Total payment amount for the order, serialized as a decimal string. */
   readonly paymentAmount: string;
   readonly paymentStatus: string;
   readonly paymentDate: Date | null;
@@ -42,7 +44,9 @@ export interface OrderAddressDto {
 export interface OrderSummaryDto {
   readonly id: number;
   readonly orderDate: Date;
+  /** Total order amount including shipping, serialized as a decimal string. */
   readonly totalAmount: string;
+  /** Flat shipping fee applied to the order, serialized as a decimal string. */
   readonly shippingFee: string;
   readonly notes: string | null;
   readonly orderItems: OrderItemDto[];

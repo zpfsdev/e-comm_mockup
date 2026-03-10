@@ -19,7 +19,7 @@ export interface ProductSeller {
 export interface ProductListItem {
   readonly id: number;
   readonly name: string;
-  readonly price: number;
+  readonly price: string;
   readonly imageUrl: string;
   readonly category: ProductCategory;
   readonly ageRange: ProductAgeRange;

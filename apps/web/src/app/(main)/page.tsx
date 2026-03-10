@@ -12,7 +12,7 @@ import styles from './home.module.css';
 interface Product {
   readonly id: number;
   readonly name: string;
-  readonly price: number;
+  readonly price: string;
   readonly imageUrl: string;
   readonly ageRange: { readonly label: string | null; readonly minAge: number; readonly maxAge: number | null };
 }
@@ -117,7 +117,9 @@ function ProductCard({ product }: { readonly product: Product }) {
         </div>
         <div className={styles.productInfo}>
           <span className={styles.productName}>{product.name}</span>
-          <span className={styles.productPrice}>₱{product.price.toFixed(2)}</span>
+          <span className={styles.productPrice}>
+            ₱{Number(product.price).toFixed(2)}
+          </span>
         </div>
       </Link>
       <AddToCartInline productId={product.id} productName={product.name} className={styles.addToCart} />

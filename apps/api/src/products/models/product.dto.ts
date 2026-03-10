@@ -29,6 +29,7 @@ export interface ProductDto {
   readonly name: string;
   readonly description: string;
   readonly imageUrl: string;
+  /** Decimal monetary amount serialized as a string (for precision). */
   readonly price: string;
   readonly stockQuantity: number;
   readonly status: string;

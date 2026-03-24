@@ -1,0 +1,251 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: API – lint, type-check, build, test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm build
+      - run: pnpm test --passWithNoTests
+
+  frontend:
+    name: Web – lint, type-check, build, test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Create .env for build
+        # NEXT_PUBLIC_API_URL must include the /api/v1 prefix to hit the NestJS API gateway.
+        # FRONTEND_URL is only required by the API jobs where redirects or CSRF origin checks are enforced.
+        run: |
+          echo "NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1" >> .env
+          echo "NEXT_TELEMETRY_DISABLED=1" >> .env
+
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: pnpm test --passWithNoTests
+
+  e2e:
+    name: Web – Playwright E2E
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: artistryx
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Prepare API database
+        # DATABASE_URL points at the MySQL service started above (port 3306) and is shared with lhci job.
+        working-directory: apps/api
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/artistryx
+        run: |
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Start API
+        # API listens on PORT=3001; FRONTEND_URL must match the Next.js dev server base URL (http://localhost:3000).
+        working-directory: apps/api
+        env:
+          PORT: 3001
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/artistryx
+          JWT_SECRET: test_jwt_secret
+          REFRESH_TOKEN_SECRET: test_refresh_secret
+          CSRF_SECRET: test_csrf_secret
+          FRONTEND_URL: http://localhost:3000
+          NODE_ENV: test
+        run: |
+          nohup pnpm start:dev > ../../api-e2e.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:3001/health" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not start in time"
+          exit 1
+
+      - name: Start Web
+        # NEXT_PUBLIC_API_URL again includes /api/v1 so the web app talks to the same API base as production.
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_ENV: test
+        run: |
+          pnpm build
+          nohup pnpm start -- --port 3000 > ../../web-e2e.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:3000" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Web did not start in time"
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run Playwright E2E
+        working-directory: apps/web
+        env:
+          TEST_BASE_URL: http://localhost:3000
+          TEST_CUSTOMER_EMAIL: ${{ secrets.TEST_CUSTOMER_EMAIL }}
+          TEST_CUSTOMER_PASSWORD: ${{ secrets.TEST_CUSTOMER_PASSWORD }}
+          TEST_SELLER_EMAIL: ${{ secrets.TEST_SELLER_EMAIL }}
+          TEST_SELLER_PASSWORD: ${{ secrets.TEST_SELLER_PASSWORD }}
+        run: pnpm test:e2e
+
+  lighthouse:
+    name: Web – Lighthouse CI
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: artistryx
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Prepare API database
+        # Reuses the same DATABASE_URL contract as e2e: mysql://root:root@127.0.0.1:3306/artistryx.
+        working-directory: apps/api
+        env:
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/artistryx
+        run: |
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Start API
+        # FRONTEND_URL is the origin Lighthouse will hit (Next.js started by lhci via .lighthouserc.js on port 3000).
+        working-directory: apps/api
+        env:
+          PORT: 3001
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/artistryx
+          JWT_SECRET: test_jwt_secret
+          REFRESH_TOKEN_SECRET: test_refresh_secret
+          CSRF_SECRET: test_csrf_secret
+          FRONTEND_URL: http://localhost:3000
+          NODE_ENV: test
+        run: |
+          nohup pnpm start:dev > ../../api-lhci.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:3001/health" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not start in time"
+          exit 1
+
+      - name: Build Web
+        # NEXT_PUBLIC_API_URL must target the API job above (http://localhost:3001/api/v1).
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+          NEXT_TELEMETRY_DISABLED: 1
+        run: pnpm build
+
+      - name: Run Lighthouse CI
+        working-directory: apps/web
+        env:
+          CI: true
+        run: pnpm dlx @lhci/cli autorun

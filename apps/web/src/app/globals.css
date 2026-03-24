@@ -1,0 +1,166 @@
+/* ─── Design tokens ───────────────────────────────────────────────────────── */
+@import '../styles/tokens.css';
+
+/* ─── Brand font: @font-face never blocks rendering unlike @import ────────── */
+@font-face {
+  font-family: 'Softers';
+  src: url('https://db.onlinewebfonts.com/c/4cea98eafccf9e828f89ace38e306fa3?family=Softers') format('woff2');
+  font-display: optional;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* ─── Box model reset ─────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  /* Hide scrollbar but keep scroll on html so position:fixed works correctly */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Typography ──────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-regular); /* Paytone One is display weight */
+}
+
+h1 { font-size: var(--text-5xl); }
+h2 { font-size: var(--text-4xl); }
+h3 { font-size: var(--text-3xl); }
+h4 { font-size: var(--text-2xl); }
+h5 { font-size: var(--text-xl); }
+h6 { font-size: var(--text-lg); }
+
+p {
+  line-height: var(--leading-relaxed);
+  max-width: 70ch;
+}
+
+/* ─── Links ───────────────────────────────────────────────────────────────── */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ─── Images ──────────────────────────────────────────────────────────────── */
+img,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
+button {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  min-height: var(--tap-target);
+  min-width: var(--tap-target);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Form elements ───────────────────────────────────────────────────────── */
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 117, 31, 0.15);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+/* ─── Lists ───────────────────────────────────────────────────────────────── */
+ul, ol {
+  list-style: none;
+}
+
+/* ─── Tables ──────────────────────────────────────────────────────────────── */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* ─── Utility: container ──────────────────────────────────────────────────── */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+
+/* ─── Utility: visually hidden (accessibility) ────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

@@ -1,0 +1,246 @@
+'use client';
+
+import { Suspense } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { AddToCartInline } from '@/components/add-to-cart-inline';
+import { CatalogNavSidebar } from '@/components/catalog/catalog-nav-sidebar';
+import type {
+  ProductAgeRange,
+  ProductCategory,
+  ProductListItem,
+  ProductSeller,
+  ProductsResponse,
+} from '@/types/product';
+import { ProductCard } from '@/components/catalog/product-card';
+import styles from './products.module.css';
+
+const PAGE_SIZE = 12;
+
+function formatAgeLabel(ar: ProductAgeRange): string {
+  if (ar.label) return ar.label;
+  if (ar.maxAge === null) return `${ar.minAge}+`;
+  return `${ar.minAge}–${ar.maxAge} yrs`;
+}
+
+interface ShopContentProps {
+  readonly initialProducts: ProductsResponse;
+  readonly initialCategories: ProductCategory[];
+  readonly initialAgeRanges: ProductAgeRange[];
+  readonly initialSellers: ProductSeller[];
+}
+
+function ShopContent({
+  initialProducts,
+  initialCategories,
+  initialAgeRanges,
+  initialSellers,
+}: ShopContentProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const categoryId = searchParams.get('categoryId') ?? undefined;
+  const ageRangeId = searchParams.get('ageRangeId') ?? undefined;
+  const sellerId = searchParams.get('sellerId') ?? undefined;
+  const search = searchParams.get('search') ?? undefined;
+  const sort = searchParams.get('sort') ?? undefined;
+  const page = Number(searchParams.get('page') ?? '1');
+
+  function setPage(newPage: number) {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', String(newPage));
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  const { data: categories } = useQuery<ProductCategory[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ProductCategory[]>('/categories');
+      return data;
+    },
+    initialData: initialCategories,
+    staleTime: 3_600_000,
+  });
+
+  const { data: ageRanges } = useQuery<ProductAgeRange[]>({
+    queryKey: ['age-ranges'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ProductAgeRange[]>('/categories/age-ranges');
+      return data;
+    },
+    initialData: initialAgeRanges,
+    staleTime: 3_600_000,
+  });
+
+  const { data: sellers } = useQuery<ProductSeller[]>({
+    queryKey: ['sellers-nav'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ sellers: ProductSeller[] }>('/sellers?limit=50');
+      return data.sellers;
+    },
+    initialData: initialSellers,
+    staleTime: 3_600_000,
+  });
+
+  const queryString = new URLSearchParams();
+  if (search) queryString.set('search', search);
+  if (categoryId) queryString.set('categoryId', categoryId);
+  if (ageRangeId) queryString.set('ageRangeId', ageRangeId);
+  if (sellerId) queryString.set('sellerId', sellerId);
+  if (sort) queryString.set('sort', sort);
+  queryString.set('page', String(page));
+  queryString.set('limit', String(PAGE_SIZE));
+
+  const { data, isLoading, isError } = useQuery<ProductsResponse>({
+    queryKey: ['products', search, categoryId, ageRangeId, sellerId, sort, page],
+    queryFn: async () => {
+      const { data: res } = await apiClient.get<ProductsResponse>(`/products?${queryString.toString()}`);
+      return res;
+    },
+    // Show server-fetched data on first load; keep previous data while navigating pages/filters.
+    placeholderData: (prev: ProductsResponse | undefined) => prev ?? initialProducts,
+  });
+
+  const totalPages = data?.totalPages ?? 1;
+  const activeCategory = categories?.find((c) => String(c.id) === categoryId);
+  const activeAge = ageRanges?.find((a) => String(a.id) === ageRangeId);
+  const activeSeller = sellers?.find((s) => String(s.id) === sellerId);
+
+  const pageTitle =
+    search
+      ? `Results for "${search}"`
+      : activeSeller?.shopName
+      ?? activeCategory?.categoryName
+      ?? (activeAge ? formatAgeLabel(activeAge) : undefined)
+      ?? 'All Products';
+
+  return (
+    <div className={styles.shopPage}>
+      <div className="container">
+        <div className={styles.shopLayout}>
+          <CatalogNavSidebar
+            categories={categories ?? initialCategories}
+            ageRanges={ageRanges ?? initialAgeRanges}
+            sellers={sellers ?? initialSellers}
+          />
+
+          <div>
+            <h1 className={styles.mainTitle}>{pageTitle}</h1>
+
+            {isError ? (
+              <p className={styles.emptyState} style={{ color: 'var(--color-error, #ef4444)' }}>
+                Failed to load products. Please try again.
+              </p>
+            ) : isLoading ? (
+              <ul className={styles.productGrid}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <li key={i} className={styles.skeletonCard}>
+                    <Skeleton height="20rem" style={{ borderRadius: '10px' }} />
+                    <Skeleton height="1.25rem" width="70%" />
+                    <Skeleton height="1rem" width="40%" />
+                  </li>
+                ))}
+              </ul>
+            ) : data?.products.length === 0 ? (
+              <p className={styles.emptyState}>
+                No products match your filters.{' '}
+                <Link href="/products">View all products</Link>.
+              </p>
+            ) : (
+              <>
+                <ul className={styles.productGrid}>
+                  {data?.products.map((product: ProductListItem) => (
+                    <li key={product.id}>
+                      <ProductCard product={product} />
+                    </li>
+                  ))}
+                </ul>
+                {totalPages > 1 && (
+                  <div className={styles.pagination}>
+                    <button
+                      type="button"
+                      className={styles.pageBtn}
+                      onClick={() => void setPage(page - 1)}
+                      disabled={page === 1}
+                      aria-label="Previous page"
+                    >
+                      ←
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ''}`}
+                        onClick={() => setPage(p)}
+                        aria-current={p === page ? 'page' : undefined}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={styles.pageBtn}
+                      onClick={() => void setPage(page + 1)}
+                      disabled={page === totalPages}
+                      aria-label="Next page"
+                    >
+                      →
+                    </button>
+                    <span className={styles.pageInfo}>
+                      {data?.total ?? 0} products
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ProductsClient({
+  initialProducts,
+  initialCategories,
+  initialAgeRanges,
+  initialSellers,
+}: ShopContentProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className={styles.shopPage}>
+          <div className="container">
+            <div className={styles.shopLayout}>
+              <aside className={styles.sidebar}>
+                <Skeleton height="20rem" style={{ borderRadius: '15px' }} />
+              </aside>
+              <div>
+                <Skeleton height="3rem" width="14rem" style={{ marginBottom: '2rem' }} />
+                <ul className={styles.productGrid}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <li key={i} className={styles.skeletonCard}>
+                      <Skeleton height="20rem" style={{ borderRadius: '10px' }} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <ShopContent
+        initialProducts={initialProducts}
+        initialCategories={initialCategories}
+        initialAgeRanges={initialAgeRanges}
+        initialSellers={initialSellers}
+      />
+    </Suspense>
+  );
+}

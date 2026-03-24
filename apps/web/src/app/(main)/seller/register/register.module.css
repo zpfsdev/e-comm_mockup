@@ -1,0 +1,279 @@
+.page {
+  display: flex;
+  min-height: calc(100vh - 80px); /* Adjust based on navbar height */
+  background-color: #faf9f6; /* light beige background maybe? */
+}
+
+/* We can use a center container that has flex row */
+.container {
+  max-width: var(--container-max);
+  margin: auto;
+  padding: var(--space-12) var(--container-pad);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.splitCard {
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 550px;
+  background: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05); /* Soft shadow */
+}
+
+/* Left side content */
+.leftPanel {
+  flex: 1;
+  padding: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #ffffff; /* Or transparent depending on the splitCard bg */
+}
+
+.marketplaceLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1.1;
+  font-weight: var(--weight-bold);
+  color: var(--color-primary); /* #ff751f */
+  margin-bottom: var(--space-8);
+}
+
+.benefitsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefitItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.benefitIcon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--color-primary);
+  margin-top: 2px;
+}
+
+/* Right side form */
+.rightPanel {
+  width: 500px; /* fixed width for form side */
+  background-color: var(--color-tertiary); /* #7b715a in Figma */
+  padding: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .splitCard {
+    flex-direction: column;
+  }
+  .rightPanel {
+    width: 100%;
+  }
+  .title {
+    font-size: 2.25rem;
+  }
+}
+
+.formTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  color: #ffffff;
+  margin-bottom: var(--space-8);
+  text-align: center;
+}
+
+.formBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.formLabel {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: var(--space-2);
+}
+
+.formInput {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  transition: all 0.2s;
+}
+
+.formInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.formTextarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  min-height: 120px;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.formTextarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.submitBtn {
+  margin-top: var(--space-2);
+  background-color: #ffffff;
+  color: var(--color-tertiary);
+  font-family: var(--font-body);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-base);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+
+.submitBtn:hover {
+  opacity: 0.9;
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancelLink {
+  margin-top: var(--space-4);
+  display: block;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.cancelLink:hover {
+  color: #ffffff;
+}
+
+/* ─── File Upload ─────────────────────────────────────────────────── */
+.fileUploadRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fileUploadLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fileUploadLabel:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.fileUploadLabel svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fileUploadHidden {
+  display: none;
+}
+
+.fileUploadName {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileUploadStatus {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  flex-shrink: 0;
+}
+
+.fileUploadPreview {
+  margin-top: var(--space-2);
+}
+
+.fileUploadPreview img {
+  height: 60px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+

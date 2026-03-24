@@ -1,0 +1,21 @@
+.footer {
+  background-color: var(--color-accent-soft);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: 2.375rem var(--container-pad);
+}
+
+.copy {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #ffffff;
+  text-align: center;
+  margin: 0;
+}

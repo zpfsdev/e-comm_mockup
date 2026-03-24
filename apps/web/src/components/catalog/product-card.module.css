@@ -1,0 +1,148 @@
+.productCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  border: 1px solid #f8ece5;
+  border-radius: 25px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  height: 100%;
+}
+
+.productCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.productImageArea {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 265 / 371;
+  flex-shrink: 0;
+  background-color: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.productImageWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+}
+
+.productImage {
+  object-fit: contain;
+  width: auto;
+  height: auto;
+  max-width: 90%;
+  max-height: 80%;
+}
+
+.topBadgeRow {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+
+.ageBadge {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.shopIconLink {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.shopIconLink:hover {
+  transform: scale(1.1);
+}
+
+.shopLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shopIconPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-accent);
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.productBody {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.productName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.productPrice {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.addToCartBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-outfit), var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-background);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.addToCartBtn:hover {
+  background-color: var(--color-accent-hover);
+}

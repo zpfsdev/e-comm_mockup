@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.turbo/
+
+# Build outputs
+.next/
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Prisma generated
+apps/api/src/generated/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Test coverage
+coverage/
+
+# Playwright
+test-results/
+playwright-report/
+apps/web/e2e/.auth/*.json
+.lighthouseci/
+
+# Project Reorganization (Untracked)
+docs/
+scripts/
+*.zip
+tmp/
+deliverable/
+output/

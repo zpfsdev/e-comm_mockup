@@ -45,8 +45,7 @@ services:
     buildCommand: pnpm install && npx prisma generate
     startCommand: node scripts/secure-studio.js
     envVars:
-      - key: DATABASE_URL
-        fromGroup: artistryx-shared-secrets
+      - fromGroup: artistryx-shared-secrets
       - key: NODE_VERSION
         value: "20.x"
       - key: STUDIO_USER

@@ -64,8 +64,11 @@ async function bootstrap(): Promise<void> {
   );
 
   // ── CORS ────────────────────────────────────────────────────────────────────
+  const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+  const sanitizedFrontendUrl = frontendUrl.replace(/\/$/, ''); // Remove trailing slash if present
+
   app.enableCors({
-    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:3000'),
+    origin: sanitizedFrontendUrl,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'X-CSRF-Token'],

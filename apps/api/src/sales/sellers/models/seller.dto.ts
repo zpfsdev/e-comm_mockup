@@ -53,6 +53,14 @@ export interface SellerDashboardDto {
     readonly totalCommission: string | null;
   };
   readonly recentOrders: SellerRecentOrderDto[];
+  readonly recentCommissions: {
+    readonly id: number;
+    readonly amount: string;
+    readonly status: string;
+    readonly datePaid: Date | null;
+    readonly orderId: number;
+    readonly productName: string;
+  }[];
 }
 
 export interface SellerStatsDto {

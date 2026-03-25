@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
@@ -56,6 +57,29 @@ function getResponseStatus(err: unknown): number | undefined {
 
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+
+  const updateShopStatus = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      apiClient.patch(`/admin/shops/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-shops'] });
+    },
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: (id: number) => apiClient.post(`/admin/users/${id}/reset-password`),
+    onSuccess: () => alert('Password reset to welcome123'),
+  });
+
+  const elevateRole = useMutation({
+    mutationFn: ({ id, role }: { id: number; role: string }) =>
+      apiClient.patch(`/admin/users/${id}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setSelectedUser(null);
+    },
+  });
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<AdminStats>({
     queryKey: ['admin-stats'],
@@ -204,25 +228,28 @@ export default function AdminDashboardPage() {
                 const roleName = user.userRoles[0]?.role?.roleName ?? 'Customer';
                 return (
                   <tr key={user.id}>
-                    <td>U-{user.id.toString().padStart(4, '0')}</td>
-                    <td>{user.username}</td>
-                    <td className={styles.leftAlign}>{user.firstName} {user.lastName}</td>
-                    <td className={styles.leftAlign}>{user.email}</td>
-                    <td>{user.contactNumber ?? '—'}</td>
-                    <td style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(user.dateTimeRegistered)}</td>
-                    <td>{formatLastLogin(user.lastLogin)}</td>
-                    <td>
+                    <td data-label="User ID">U-{user.id.toString().padStart(4, '0')}</td>
+                    <td data-label="Username">{user.username}</td>
+                    <td data-label="Name" className={styles.leftAlign}>{user.firstName} {user.lastName}</td>
+                    <td data-label="Email" className={styles.leftAlign}>{user.email}</td>
+                    <td data-label="Contact No.">{user.contactNumber ?? '—'}</td>
+                    <td data-label="Reg. Date" style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(user.dateTimeRegistered)}</td>
+                    <td data-label="Last Login">{formatLastLogin(user.lastLogin)}</td>
+                    <td data-label="Role">
                       <span className={styles.roleBadge}>
                         {roleName}
                       </span>
                     </td>
-                    <td className={user.status === 'Active' ? styles.statusActive : styles.statusInactive}>
+                    <td data-label="Status" className={user.status === 'Active' ? styles.statusActive : styles.statusInactive}>
                       {user.status === 'Active' ? 'Active' : 'Suspended'}
                     </td>
-                    <td>
+                    <td data-label="Action">
                       <div className={styles.actionGroup}>
-                        <button className={`${styles.actionBtn} ${styles.btnArchive}`}>
-                          Archive
+                        <button 
+                          className={`${styles.actionBtn} ${styles.btnUpdate}`}
+                          onClick={() => setSelectedUser(user)}
+                        >
+                          Manage
                         </button>
                       </div>
                     </td>
@@ -260,34 +287,131 @@ export default function AdminDashboardPage() {
             <tbody>
               {shops.map((shop) => (
                 <tr key={shop.id}>
-                  <td>S-{shop.id.toString().padStart(4, '0')}</td>
-                  <td>
+                  <td data-label="Shop ID">S-{shop.id.toString().padStart(4, '0')}</td>
+                  <td data-label="Shop Logo">
                     {shop.shopLogoUrl ? (
                       <img src={shop.shopLogoUrl?.startsWith('/') ? shop.shopLogoUrl : `/${shop.shopLogoUrl}`} alt={shop.shopName} width={60} height={60} className={styles.shopImg} />
                     ) : (
                       <div className={styles.shopImg} style={{ background: '#eee' }} />
                     )}
                   </td>
-                  <td>{shop.shopName}</td>
-                  <td className={`${styles.leftAlign} ${styles.descriptionCell}`}>
+                  <td data-label="Shop Name">{shop.shopName}</td>
+                  <td data-label="Shop Description" className={`${styles.leftAlign} ${styles.descriptionCell}`}>
                     {shop.shopDescription ? (shop.shopDescription.length > 80 ? shop.shopDescription.substring(0, 80) + '...' : shop.shopDescription) : '—'}
                   </td>
-                  <td style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(shop.registeredAt)}</td>
-                  <td>{shop.user.firstName} {shop.user.lastName}</td>
-                  <td className={shop.shopStatus === 'Active' ? styles.statusActive : styles.statusInactive}>
-                    {shop.shopStatus === 'Active' ? 'Active' : shop.shopStatus}
+                  <td data-label="Reg. Date" style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(shop.registeredAt)}</td>
+                  <td data-label="Seller Name">{shop.user.firstName} {shop.user.lastName}</td>
+                  <td data-label="Status" className={
+                    shop.shopStatus === 'Active' ? styles.statusActive :
+                    shop.shopStatus === 'Pending' ? styles.statusPending : styles.statusInactive
+                  }>
+                    {shop.shopStatus}
                   </td>
-                  <td>
+                  <td data-label="Action">
                     <div className={styles.actionGroup}>
-                      <button className={`${styles.actionBtn} ${styles.btnArchive}`}>
-                        Archive
-                      </button>
+                      {shop.shopStatus === 'Pending' ? (
+                        <>
+                          <button 
+                            className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                            title="Approve Shop"
+                            onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Active' })}
+                            disabled={updateShopStatus.isPending}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            className={`${styles.actionBtn} ${styles.btnDelete}`}
+                            title="Reject/Ban Shop"
+                            onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Banned' })}
+                            disabled={updateShopStatus.isPending}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : shop.shopStatus === 'Active' ? (
+                        <button 
+                          className={`${styles.actionBtn} ${styles.btnArchive}`}
+                          title="Suspend Shop"
+                          onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Inactive' })}
+                          disabled={updateShopStatus.isPending}
+                        >
+                          Suspend
+                        </button>
+                      ) : (
+                         <button 
+                          className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                          title="Reactivate Shop"
+                          onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Active' })}
+                          disabled={updateShopStatus.isPending}
+                        >
+                          Activate
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {selectedUser && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '450px' }}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Manage User <strong>U-{(selectedUser.id).toString().padStart(4, '0')}</strong></h3>
+              <button className={styles.modalCloseBtn} onClick={() => setSelectedUser(null)}>&times;</button>
+            </div>
+            <div className={styles.modalBody}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                <div>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Name</p>
+                  <p style={{ fontWeight: 500 }}>{selectedUser.firstName} {selectedUser.lastName}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Email/Username</p>
+                  <p style={{ fontWeight: 500 }}>{selectedUser.email} / {selectedUser.username}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>Role Management</p>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button 
+                      className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Admin' })}
+                      disabled={elevateRole.isPending}
+                    >
+                      Make Admin
+                    </button>
+                    <button 
+                      className={`${styles.actionBtn} ${styles.btnUpdate}`}
+                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Seller' })}
+                      disabled={elevateRole.isPending}
+                    >
+                      Make Seller
+                    </button>
+                    <button 
+                      className={`${styles.actionBtn} ${styles.btnDelete}`}
+                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Customer' })}
+                      disabled={elevateRole.isPending}
+                    >
+                      Make Customer
+                    </button>
+                  </div>
+                </div>
+                <div style={{ marginTop: 'var(--space-2)' }}>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>Security</p>
+                  <button 
+                    className={`${styles.actionBtn} ${styles.btnArchive}`}
+                    onClick={() => resetPassword.mutate(selectedUser.id)}
+                    disabled={resetPassword.isPending}
+                  >
+                    Force Password Reset (to 'welcome123')
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

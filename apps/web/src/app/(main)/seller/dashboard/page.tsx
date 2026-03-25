@@ -21,6 +21,8 @@ interface Product {
   status?: string;
   imageUrl?: string;
   description?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 interface SellerStats {
@@ -38,6 +40,14 @@ interface SellerDashboardDto {
     totalCommission: string | null;
   };
   recentOrders: SellerRecentOrderDto[];
+  recentCommissions: {
+    id: number;
+    amount: string;
+    status: string;
+    datePaid: Date | null;
+    orderId: number;
+    productName: string;
+  }[];
 }
 
 function getStatus(err: unknown): number | undefined {
@@ -177,6 +187,7 @@ export default function SellerDashboardPage() {
                 <th>Qty</th>
                 <th>Category</th>
                 <th>Age Range</th>
+                <th>Rating</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -186,26 +197,38 @@ export default function SellerDashboardPage() {
                 const categoryName = typeof p.category === 'object' && p.category ? p.category.categoryName : String(p.category || '—');
                 return (
                   <tr key={p.id}>
-                    <td>P-{p.id.toString().padStart(4, '0')}</td>
-                    <td>
+                    <td data-label="Product ID">P-{p.id.toString().padStart(4, '0')}</td>
+                    <td data-label="Product Image">
                       {p.imageUrl ? (
                         <img src={p.imageUrl.startsWith('/') ? p.imageUrl : `/${p.imageUrl}`} alt={p.name} width={60} height={60} className={styles.productImg} />
                       ) : (
                         <div className={styles.productImg} style={{ background: '#eee' }} />
                       )}
                     </td>
-                    <td className={`${styles.leftAlign} ${styles.productNameCell}`}>{p.name}</td>
-                    <td className={`${styles.leftAlign} ${styles.descriptionCell}`}>
+                    <td data-label="Product Name" className={`${styles.leftAlign} ${styles.productNameCell}`}>{p.name}</td>
+                    <td data-label="Description" className={`${styles.leftAlign} ${styles.descriptionCell}`}>
                       {p.description ? (p.description.length > 60 ? p.description.substring(0, 60) + '...' : p.description) : '—'}
                     </td>
-                    <td>₱ {Number(p.price).toFixed(2)}</td>
-                    <td>{p.stockQuantity ?? 0}</td>
-                    <td>{categoryName}</td>
-                    <td>{p.ageRange?.label ?? '—'}</td>
-                    <td className={p.status === 'Available' ? styles.statusActive : styles.statusInactive}>
+                    <td data-label="Price">₱ {Number(p.price).toFixed(2)}</td>
+                    <td data-label="Qty">{p.stockQuantity ?? 0}</td>
+                    <td data-label="Category">{categoryName}</td>
+                    <td data-label="Age Range">{p.ageRange?.label ?? '—'}</td>
+                    <td data-label="Rating">
+                      {p.averageRating ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.averageRating}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>—</span>
+                      )}
+                    </td>
+                    <td data-label="Status" className={p.status === 'Available' ? styles.statusActive : styles.statusInactive}>
                       {p.status === 'Available' ? 'Active' : 'Inactive'}
                     </td>
-                    <td>
+                    <td data-label="Action">
                       <div className={styles.actionGroup}>
                         {p.status === 'Available' && (
                           <button
@@ -219,7 +242,7 @@ export default function SellerDashboardPage() {
                           className={`${styles.actionBtn} ${styles.btnDelete}`}
                           onClick={() => setConfirmingDeleteProductId(p.id)}
                         >
-                          Delete Listing
+                          Archive Listing
                         </button>
                       </div>
                     </td>
@@ -260,22 +283,22 @@ export default function SellerDashboardPage() {
             <tbody>
               {dashboard.recentOrders.map((o) => (
                 <tr key={o.id}>
-                  <td>{o.customerName}</td>
-                  <td>
+                  <td data-label="Customer">{o.customerName}</td>
+                  <td data-label="Product Image">
                     {o.productImageUrl ? (
                       <img src={o.productImageUrl?.startsWith('/') ? o.productImageUrl : `/${o.productImageUrl}`} alt={o.productName} width={60} height={60} className={styles.productImg} />
                     ) : (
                       <div className={styles.productImg} style={{ background: '#eee' }} />
                     )}
                   </td>
-                  <td className={`${styles.leftAlign} ${styles.productNameCell}`}>{o.productName}</td>
-                  <td>{o.quantity}</td>
-                  <td className={`${styles.leftAlign} ${styles.descriptionCell}`}>{o.shippingAddress}</td>
-                  <td>{new Date(o.orderDate).toLocaleDateString()}</td>
-                  <td>₱ {(Number(o.price) * o.quantity).toFixed(2)}</td>
-                  <td>{o.dateDelivered ? new Date(o.dateDelivered).toLocaleDateString() : '—'}</td>
-                  <td>{o.orderItemStatus}</td>
-                  <td>
+                  <td data-label="Product" className={`${styles.leftAlign} ${styles.productNameCell}`}>{o.productName}</td>
+                  <td data-label="Qty">{o.quantity}</td>
+                  <td data-label="Shipping Address" className={`${styles.leftAlign} ${styles.descriptionCell}`}>{o.shippingAddress}</td>
+                  <td data-label="Order Date">{new Date(o.orderDate).toLocaleDateString()}</td>
+                  <td data-label="Total">₱ {(Number(o.price) * o.quantity).toFixed(2)}</td>
+                  <td data-label="Date Delivered">{o.dateDelivered ? new Date(o.dateDelivered).toLocaleDateString() : '—'}</td>
+                  <td data-label="Status">{o.orderItemStatus}</td>
+                  <td data-label="Action">
                     {o.orderItemStatus === 'Pending' ? (
                        <div className={styles.actionGroup}>
                          <button 
@@ -316,6 +339,46 @@ export default function SellerDashboardPage() {
                        </div>
                     )}
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Commission Ledger Table */}
+      <div className={styles.sectionHeader} style={{ marginTop: 'var(--space-12)' }}>
+        <h2 className={styles.sectionTitle}>Recent Commissions (Ledger)</h2>
+      </div>
+
+      {loadingDashboard ? (
+        <Skeleton height="16rem" />
+      ) : !dashboard?.recentCommissions?.length ? (
+        <p className={styles.empty}>No commissions recorded yet.</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Commission ID</th>
+                <th>Order Ref</th>
+                <th className={styles.leftAlign}>Product Segment</th>
+                <th>Commission Amount</th>
+                <th>Ledger Status</th>
+                <th>Date Paid</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboard.recentCommissions.map((c) => (
+                <tr key={c.id}>
+                  <td data-label="Commission ID">C-{(c.id).toString().padStart(4, '0')}</td>
+                  <td data-label="Order Ref">O-{(c.orderId).toString().padStart(4, '0')}</td>
+                  <td data-label="Product Segment" className={`${styles.leftAlign} ${styles.productNameCell}`}>{c.productName}</td>
+                  <td data-label="Commission Amount">₱ {Number(c.amount).toFixed(2)}</td>
+                  <td data-label="Ledger Status" className={c.status === 'Paid' ? styles.statusActive : styles.statusPending}>
+                    {c.status}
+                  </td>
+                  <td data-label="Date Paid">{c.datePaid ? new Date(c.datePaid).toLocaleDateString() : '—'}</td>
                 </tr>
               ))}
             </tbody>

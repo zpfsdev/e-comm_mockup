@@ -52,6 +52,8 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [addressLoaded, setAddressLoaded] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [selectedAddressIdOverride, setSelectedAddressIdOverride] = useState<number | null>(null);
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedItemIds = useMemo(() => {
@@ -77,12 +79,15 @@ export default function CheckoutPage() {
   });
 
   const selectedAddress = useMemo(() => {
+    if (selectedAddressIdOverride && addresses) {
+      return addresses.find(a => a.id === selectedAddressIdOverride);
+    }
     const addrId = searchParams.get('addressId');
     if (addrId && addresses) {
       return addresses.find(a => a.id === Number(addrId));
     }
     return addresses?.find(a => a.isDefault) || addresses?.[0];
-  }, [addresses, searchParams]);
+  }, [addresses, searchParams, selectedAddressIdOverride]);
 
   // Auto-fill address from profile if user hasn't modified it yet
   useEffect(() => {
@@ -299,10 +304,19 @@ export default function CheckoutPage() {
 
           {/* Delivery address */}
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
+            <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 className={styles.cardTitle}>
                 Delivery Address {selectedAddress?.isDefault && <span style={{ fontSize: 'var(--text-xs)', verticalAlign: 'middle', marginLeft: 'var(--space-2)', padding: '2px 8px', backgroundColor: 'rgba(123, 113, 90, 0.1)', color: '#7b715a', borderRadius: '4px', border: '1px solid #7b715a' }}>Default</span>}
               </h2>
+              {addresses && addresses.length > 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddressModalOpen(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontWeight: 600, fontSize: 'var(--text-sm)', cursor: 'pointer', padding: 0 }}
+                >
+                  Change
+                </button>
+              )}
             </div>
             <div className={styles.cardBody}>
               {selectedAddress ? (
@@ -366,6 +380,47 @@ export default function CheckoutPage() {
           </Link>
         </aside>
       </div>
+
+      {/* Address Selection Modal */}
+      {isAddressModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 'var(--space-4)' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: 'var(--space-8)', width: '100%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ marginBottom: 'var(--space-6)', color: '#7b715a' }}>Select Delivery Address</h2>
+            <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+              {addresses?.map(addr => (
+                <div 
+                  key={addr.id} 
+                  onClick={() => {
+                    setSelectedAddressIdOverride(addr.id);
+                    setIsAddressModalOpen(false);
+                  }}
+                  style={{ 
+                    padding: 'var(--space-4)', 
+                    border: selectedAddress?.id === addr.id ? '2px solid #7b715a' : '1px solid var(--color-card-border)', 
+                    borderRadius: 'var(--radius-md)', 
+                    cursor: 'pointer',
+                    backgroundColor: selectedAddress?.id === addr.id ? 'rgba(123, 113, 90, 0.05)' : 'white'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
+                    <span style={{ fontWeight: 600 }}>{addr.fullName}</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: '#7b715a', fontWeight: 500, backgroundColor: 'rgba(123, 113, 90, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      {addr.addressType}
+                    </span>
+                  </div>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)' }}>{addr.phoneNumber}</p>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.5 }}>
+                    {addr.detailedAddress}, {addr.barangay}, {addr.city}, {addr.province}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
+              <Button type="button" variant="outline" onClick={() => setIsAddressModalOpen(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

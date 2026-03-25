@@ -184,3 +184,5 @@
   font-size: var(--text-sm);
 }
 .accessDeniedLink:hover { opacity: 0.85; }
+
+@import './mobile-tables.css';

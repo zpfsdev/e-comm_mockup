@@ -13,6 +13,8 @@ import { Roles } from '../../core/decorators/roles.decorator';
 import { AdminService } from './admin.service';
 import { SetUserStatusDto } from './dto/set-user-status.dto';
 import { SetShopStatusDto } from './dto/set-shop-status.dto';
+import { SetUserRoleDto } from './dto/set-user-role.dto';
+import { Post } from '@nestjs/common';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -52,6 +54,21 @@ export class AdminController {
     @Body() dto: SetUserStatusDto,
   ) {
     return this.adminService.setUserStatus(id, dto.status);
+  }
+
+  @Patch('users/:id/role')
+  @ApiOperation({ summary: 'Elevate or demote user roles securely' })
+  setUserRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetUserRoleDto,
+  ) {
+    return this.adminService.setUserRole(id, dto.role);
+  }
+
+  @Post('users/:id/reset-password')
+  @ApiOperation({ summary: 'Forcibly reset a user password to welcome123' })
+  resetUserPassword(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.resetUserPassword(id);
   }
 
   @Patch('shops/:id/status')

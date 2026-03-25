@@ -21,6 +21,13 @@ const PRODUCT_SELECT = {
   category: { select: { id: true, categoryName: true } },
   ageRange: { select: { id: true, label: true, minAge: true, maxAge: true } },
   productDetail: true,
+  orderItems: {
+    select: {
+      review: {
+        select: { rating: true }
+      }
+    }
+  }
 } as const;
 
 const MAX_PRODUCT_PAGE_SIZE = 50;
@@ -52,6 +59,7 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = {
       status: 'Available',
       deletedAt: null,
+      seller: { shopStatus: 'Active' },
       ...(searchStr && {
         OR: [
           { name: { contains: searchStr } },
@@ -94,7 +102,7 @@ export class ProductsService {
    */
   async findById(id: number): Promise<ProductDto> {
     const product = await this.prisma.product.findFirst({
-      where: { id, status: 'Available', deletedAt: null },
+      where: { id, status: 'Available', deletedAt: null, seller: { shopStatus: 'Active' } },
       select: PRODUCT_SELECT,
     });
     if (!product) throw new NotFoundException('Product not found.');
@@ -109,7 +117,7 @@ export class ProductsService {
   ): Promise<ProductListResponseDto> {
     const safeLimit = Math.min(limit, MAX_PRODUCT_PAGE_SIZE);
     const skip = (page - 1) * safeLimit;
-    const where = { sellerId };
+    const where: Prisma.ProductWhereInput = { sellerId, status: 'Available', deletedAt: null, seller: { shopStatus: 'Active' } };
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -121,7 +129,7 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     return {
-      products: products.map((product) => this.mapToProductDto(product)),
+      products: products.map((product) => this.mapToProductDto(product as any)),
       total,
       page,
       limit: safeLimit,
@@ -318,7 +326,22 @@ export class ProductsService {
       maxAge: number | null;
     };
     productDetail: ProductDetail | null;
+    orderItems?: { review: { rating: number } | null }[];
   }): ProductDto {
+    let reviewCount = 0;
+    let reviewSum = 0;
+
+    if (product.orderItems) {
+      for (const item of product.orderItems) {
+        if (item.review) {
+          reviewCount++;
+          reviewSum += item.review.rating;
+        }
+      }
+    }
+
+    const averageRating = reviewCount > 0 ? Number((reviewSum / reviewCount).toFixed(1)) : 0;
+
     return {
       id: product.id,
       name: product.name,
@@ -365,6 +388,8 @@ export class ProductsService {
             material: product.productDetail.material,
           }
         : null,
+      averageRating,
+      reviewCount,
     };
   }
 }

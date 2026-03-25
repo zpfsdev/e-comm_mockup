@@ -41,6 +41,7 @@ const mockPrisma = {
   cart: {
     findUnique: jest.fn(),
     findUniqueOrThrow: jest.fn(),
+    upsert: jest.fn(),
   },
   cartItem: {
     findUnique: jest.fn(),
@@ -79,18 +80,12 @@ describe('CartService', () => {
 
   describe('getCart', () => {
     it('returns cart with items when cart exists', async () => {
-      mockPrisma.cart.findUnique.mockResolvedValue(mockCart);
+      mockPrisma.cart.upsert.mockResolvedValue(mockCart);
 
       const actualResult = await service.getCart(42);
 
       expect(actualResult.items).toHaveLength(1);
       expect(actualResult.items[0].product.name).toBe('Story Book');
-    });
-
-    it('throws NotFoundException when no cart is found', async () => {
-      mockPrisma.cart.findUnique.mockResolvedValue(null);
-
-      await expect(service.getCart(99)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -98,7 +93,7 @@ describe('CartService', () => {
 
   describe('addItem', () => {
     it('upserts cart item for available product with sufficient stock', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.product.findUnique.mockResolvedValue(mockAvailableProduct);
       mockPrisma.cartItem.findUnique.mockResolvedValue(null);
       mockPrisma.cartItem.upsert.mockResolvedValue({ id: 10, quantity: 2 });
@@ -113,7 +108,7 @@ describe('CartService', () => {
     });
 
     it('throws BadRequestException for unavailable product', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.product.findUnique.mockResolvedValue({
         ...mockAvailableProduct,
         status: 'Unavailable',
@@ -126,7 +121,7 @@ describe('CartService', () => {
     });
 
     it('throws BadRequestException when requested quantity exceeds stock', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.product.findUnique.mockResolvedValue({
         ...mockAvailableProduct,
         stockQuantity: 1,
@@ -139,7 +134,7 @@ describe('CartService', () => {
     });
 
     it('throws BadRequestException when product does not exist', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.product.findUnique.mockResolvedValue(null);
       mockPrisma.cartItem.findUnique.mockResolvedValue(null);
 
@@ -153,7 +148,7 @@ describe('CartService', () => {
 
   describe('updateItem', () => {
     it('updates quantity for non-zero value', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.product.findUnique.mockResolvedValue(mockAvailableProduct);
       mockPrisma.cartItem.findUnique.mockResolvedValue({ id: 10 });
       mockPrisma.cartItem.update.mockResolvedValue({ id: 10, quantity: 3 });
@@ -167,7 +162,7 @@ describe('CartService', () => {
     });
 
     it('calls removeItem when quantity is 0', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.cartItem.findUnique.mockResolvedValue({ id: 10 });
       mockPrisma.cartItem.delete.mockResolvedValue(undefined);
 
@@ -182,7 +177,7 @@ describe('CartService', () => {
 
   describe('clearCart', () => {
     it('deletes all items from the cart', async () => {
-      mockPrisma.cart.findUniqueOrThrow.mockResolvedValue({ id: 1 });
+      mockPrisma.cart.upsert.mockResolvedValue({ id: 1 });
       mockPrisma.cartItem.deleteMany.mockResolvedValue({ count: 3 });
 
       await service.clearCart(42);

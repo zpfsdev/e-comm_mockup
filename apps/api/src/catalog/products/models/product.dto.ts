@@ -39,6 +39,8 @@ export interface ProductDto {
   readonly category: ProductCategoryDto;
   readonly ageRange: ProductAgeRangeDto;
   readonly productDetail: ProductDetailDto | null;
+  readonly averageRating: number;
+  readonly reviewCount: number;
 }
 
 export interface ProductListResponseDto {

@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { RoleName } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface PaginatedUsersResponseDto {
@@ -23,7 +25,7 @@ export interface PaginatedUsersResponseDto {
 const DEFAULT_PAGE_SIZE = 50;
 
 type UserStatus = 'Active' | 'Inactive';
-type ShopStatus = 'Active' | 'Inactive' | 'Banned';
+type ShopStatus = 'Pending' | 'Active' | 'Inactive' | 'Banned';
 
 @Injectable()
 export class AdminService {
@@ -134,5 +136,43 @@ export class AdminService {
       ]);
 
     return { totalUsers, totalSellers, totalOrders, totalProducts };
+  }
+
+  async resetUserPassword(userId: number) {
+    const newPassword = 'welcome123';
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        refreshTokenVersion: { increment: 1 } 
+      },
+    });
+    return { success: true, message: 'Password reset to default.' };
+  }
+
+  async setUserRole(userId: number, roleName: RoleName) {
+    // Check user exists
+    await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    
+    // Get role ID
+    const role = await this.prisma.role.findUnique({ where: { roleName } });
+    if (!role) throw new NotFoundException('Role not found');
+
+    // Wipe previous roles and insert new one
+    await this.prisma.$transaction([
+      this.prisma.userRole.deleteMany({ where: { userId } }),
+      this.prisma.userRole.create({
+        data: { userId, roleId: role.id },
+      }),
+    ]);
+
+    // Force sign-out on affected user
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshTokenVersion: { increment: 1 } },
+    });
+
+    return { success: true, newRole: roleName };
   }
 }

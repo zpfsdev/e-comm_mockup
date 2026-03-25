@@ -28,6 +28,8 @@ export interface ProductListItem {
   seller?: ProductSeller;
   category?: ProductCategory;
   ageRange?: ProductAgeRange;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface ProductsResponse {
@@ -58,4 +60,6 @@ export interface ProductDetail {
   category: ProductCategory;
   ageRange: ProductAgeRange;
   specifications?: ProductSpecifications;
+  averageRating?: number;
+  reviewCount?: number;
 }

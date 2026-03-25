@@ -17,6 +17,7 @@ const mockPrisma = {
   },
   commission: {
     aggregate: jest.fn(),
+    findMany: jest.fn(),
   },
 } as unknown as PrismaService;
 
@@ -87,10 +88,12 @@ describe('SellersService', () => {
           orderItemStatus: 'Completed',
           quantity: 2,
           price: { toString: () => '199.00' },
-          product: { name: 'Blocks' },
+          product: { name: 'Blocks', imageUrl: null },
+          dateDelivered: new Date('2026-01-01T10:00:00Z'),
           order: {
             orderDate: new Date('2026-01-01T10:00:00Z'),
-            user: { firstName: 'Alice', lastName: 'Smith' },
+            user: { firstName: 'Alice', lastName: 'Smith', contactNumber: null },
+            userAddress: null,
           },
         },
       ];
@@ -105,6 +108,7 @@ describe('SellersService', () => {
       (mockPrisma.commission.aggregate as jest.Mock).mockResolvedValue({
         _sum: { commissionAmount: { toString: () => '1234.56' } },
       });
+      (mockPrisma.commission.findMany as jest.Mock).mockResolvedValue([]);
 
       const first = await service.getSellerDashboard(inputUserId);
       const second = await service.getSellerDashboard(inputUserId);
@@ -116,6 +120,7 @@ describe('SellersService', () => {
           products: 5,
           totalCommission: '1234.56',
         },
+        recentCommissions: [],
         recentOrders: [
           {
             id: 1,
@@ -123,8 +128,11 @@ describe('SellersService', () => {
             quantity: 2,
             price: '199.00',
             productName: 'Blocks',
+            productImageUrl: null,
             customerName: 'Alice Smith',
             orderDate: new Date('2026-01-01T10:00:00Z'),
+            dateDelivered: new Date('2026-01-01T10:00:00Z'),
+            shippingAddress: '—',
           },
         ],
       });
@@ -133,6 +141,7 @@ describe('SellersService', () => {
       expect(mockPrisma.product.count).toHaveBeenCalledTimes(1);
       expect(mockPrisma.orderItem.findMany).toHaveBeenCalledTimes(1);
       expect(mockPrisma.commission.aggregate).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.commission.findMany).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -8,11 +8,11 @@
 */
 @font-face {
   font-family: 'Softers';
-  src: url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.eot');
-  src: url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.eot?#iefix') format('embedded-opentype'),
-       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.woff2') format('woff2'),
-       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.woff') format('woff'),
-       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.ttf') format('truetype');
+  src: url('/fonts/softers.eot');
+  src: url('/fonts/softers.eot?#iefix') format('embedded-opentype'),
+       url('/fonts/softers.woff2') format('woff2'),
+       url('/fonts/softers.woff') format('woff'),
+       url('/fonts/softers.ttf') format('truetype');
   font-display: swap;
   font-weight: 400;
   font-style: normal;

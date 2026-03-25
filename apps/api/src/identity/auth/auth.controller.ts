@@ -203,7 +203,7 @@ export class AuthController {
       this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('at', accessToken, {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 2 * 60 * 60 * 1000, // 2 hours
       secure: isProduction,
       path: '/',
@@ -220,7 +220,7 @@ export class AuthController {
       maxAge: 0,
       secure: isProduction,
     };
-    res.cookie('at', '', { ...shared, sameSite: 'strict', path: '/' });
+    res.cookie('at', '', { ...shared, sameSite: 'lax', path: '/' });
     res.cookie('refreshToken', '', { ...shared, sameSite: 'lax', path: '/api/v1/auth/refresh' });
   }
 

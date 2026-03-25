@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { serverFetch } from '@/lib/server-api';
+import { ReviewButton } from './review-button';
 import styles from '../orders.module.css';
 
 interface Seller {
@@ -251,6 +252,13 @@ export default async function OrderDetailPage({ params }: Props) {
                           {item.orderItemStatus}
                         </span>
                       </p>
+                      {item.orderItemStatus === 'Completed' && (
+                        <ReviewButton
+                          orderItemId={item.id}
+                          productName={item.product.name}
+                          existingReview={item.review}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}

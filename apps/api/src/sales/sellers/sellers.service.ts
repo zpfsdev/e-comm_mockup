@@ -168,7 +168,7 @@ export class SellersService {
       select: { id: true, shopName: true, shopLogoUrl: true },
     });
 
-    const [products, recentOrders, commissions] = await Promise.all([
+    const [products, recentOrders, commissionsSum, recentCommissions] = await Promise.all([
       this.prisma.product.count({ where: { sellerId: seller.id } }),
       this.prisma.orderItem.findMany({
         where: { product: { sellerId: seller.id } },
@@ -217,6 +217,23 @@ export class SellersService {
         where: { sellerId: seller.id },
         _sum: { commissionAmount: true },
       }),
+      this.prisma.commission.findMany({
+        where: { sellerId: seller.id },
+        select: {
+          id: true,
+          commissionAmount: true,
+          status: true,
+          datePaid: true,
+          orderItem: {
+            select: {
+              orderId: true,
+              product: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { id: 'desc' },
+        take: 10,
+      }),
     ]);
 
     const result: SellerDashboardDto = {
@@ -224,7 +241,7 @@ export class SellersService {
       shopLogoUrl: seller.shopLogoUrl,
       stats: {
         products,
-        totalCommission: commissions._sum.commissionAmount?.toString() ?? null,
+        totalCommission: commissionsSum._sum.commissionAmount?.toString() ?? null,
       },
       recentOrders: recentOrders.map((item) => ({
         id: item.id,
@@ -239,6 +256,14 @@ export class SellersService {
         shippingAddress: item.order.userAddress
           ? `${item.order.user.contactNumber} ${item.order.userAddress.address.street} ${item.order.userAddress.address.barangay.barangay}, ${item.order.userAddress.address.barangay.city.city}, ${item.order.userAddress.address.barangay.city.province.province}, ${item.order.userAddress.address.barangay.city.postalCode}`
           : '—',
+      })),
+      recentCommissions: recentCommissions.map(c => ({
+        id: c.id,
+        amount: c.commissionAmount.toString(),
+        status: c.status,
+        datePaid: c.datePaid,
+        orderId: c.orderItem.orderId,
+        productName: c.orderItem.product.name,
       })),
     };
     this.dashboardCache.set(userId, {

@@ -125,7 +125,7 @@ describe('ProductsService', () => {
       expect(mockPrisma.product.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 1, sellerId: 10 },
-          data: { status: 'Unavailable' },
+          data: { status: 'Unavailable', deletedAt: expect.any(Date) },
         }),
       );
     });

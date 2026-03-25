@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: 'Artistryx — Early Childhood Learning Products',
   description:
     'Premium early childhood learning treasures designed to inspire creativity and independence.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

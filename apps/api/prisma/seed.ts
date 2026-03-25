@@ -61,11 +61,15 @@ async function main() {
   const catFlashCards = await prisma.category.create({ data: { categoryName: 'Flash Cards', description: 'Educational flashcards for all ages', imageUrl: '/Flash Cards.png' } });
   const catSensoryToys = await prisma.category.create({ data: { categoryName: 'Sensory Toys', description: 'Hands-on sensory toys for tactile learning', imageUrl: '/Sensory Toys.png' } });
 
-  // 3. Seller Accounts with Logos
-  const defaultPassword = 'password123';
-  const adminPassword = process.env.ADMIN_PASSWORD || defaultPassword;
+  // 3. Mock Account Passwords
+  const seedPassword = process.env.SEED_PASSWORD || 'change-this-random-string';
+  const adminPassword = process.env.ADMIN_PASSWORD || seedPassword;
   
-  const hashedDefaultPassword = await bcrypt.hash(defaultPassword, 10);
+  if (!process.env.SEED_PASSWORD) {
+    console.warn('⚠️  WARNING: SEED_PASSWORD is not set. Using a temporary insecure password for mock accounts.');
+  }
+
+  const hashedDefaultPassword = await bcrypt.hash(seedPassword, 10);
   const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
 
   const stores = [

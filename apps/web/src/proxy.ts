@@ -10,8 +10,8 @@ const AUTH_ROUTES = ['/auth/sign-in', '/auth/sign-up'] as const;
 function buildCsp(nonce: string): string {
   const isProd = process.env.NODE_ENV === 'production';
   const scriptSrc = isProd
-    ? `script-src 'self' 'nonce-${nonce}'`
-    : `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`;
+    ? `script-src 'self' 'unsafe-inline'`
+    : `script-src 'self' 'unsafe-inline' 'unsafe-eval'`;
   return [
     "default-src 'self'",
     scriptSrc,

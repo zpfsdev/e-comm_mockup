@@ -2,10 +2,18 @@
 @import '../styles/tokens.css';
 
 /* ─── Brand font: @font-face never blocks rendering unlike @import ────────── */
+/* 
+  www.OnlineWebFonts.Com 
+  Font made from Web Fonts is licensed by CC BY 4.0
+*/
 @font-face {
   font-family: 'Softers';
-  src: url('https://db.onlinewebfonts.com/c/4cea98eafccf9e828f89ace38e306fa3?family=Softers') format('woff2');
-  font-display: optional;
+  src: url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.eot');
+  src: url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.eot?#iefix') format('embedded-opentype'),
+       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.woff2') format('woff2'),
+       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.woff') format('woff'),
+       url('https://db.onlinewebfonts.com/t/4cea98eafccf9e828f89ace38e306fa3.ttf') format('truetype');
+  font-display: swap;
   font-weight: 400;
   font-style: normal;
 }

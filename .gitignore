@@ -48,7 +48,7 @@ apps/web/e2e/.auth/*.json
 
 # Project Reorganization (Untracked)
 docs/
-scripts/
+/scripts/
 *.zip
 tmp/
 deliverable/

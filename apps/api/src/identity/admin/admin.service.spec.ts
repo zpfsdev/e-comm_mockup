@@ -15,8 +15,8 @@ const mockPrisma: {
   order: {
     count: jest.Mock;
   };
-  payment: {
-    aggregate: jest.Mock;
+  product: {
+    count: jest.Mock;
   };
 } = {
   user: {
@@ -31,8 +31,8 @@ const mockPrisma: {
   order: {
     count: jest.fn(),
   },
-  payment: {
-    aggregate: jest.fn(),
+  product: {
+    count: jest.fn(),
   },
 };
 
@@ -52,13 +52,11 @@ describe('AdminService', () => {
   });
 
   describe('getPlatformStats', () => {
-    it('returns aggregate platform statistics with numeric revenue', async () => {
+    it('returns aggregate platform statistics', async () => {
       mockPrisma.user.count.mockResolvedValue(5);
       mockPrisma.seller.count.mockResolvedValue(2);
       mockPrisma.order.count.mockResolvedValue(8);
-      mockPrisma.payment.aggregate.mockResolvedValue({
-        _sum: { paymentAmount: 1234.56 },
-      });
+      mockPrisma.product.count.mockResolvedValue(42);
 
       const actualStats = await service.getPlatformStats();
 
@@ -66,21 +64,19 @@ describe('AdminService', () => {
         totalUsers: 5,
         totalSellers: 2,
         totalOrders: 8,
-        totalRevenue: 1234.56,
+        totalProducts: 42,
       });
     });
 
-    it('treats missing revenue aggregate as zero', async () => {
+    it('returns zero counts when no data exists', async () => {
       mockPrisma.user.count.mockResolvedValue(0);
       mockPrisma.seller.count.mockResolvedValue(0);
       mockPrisma.order.count.mockResolvedValue(0);
-      mockPrisma.payment.aggregate.mockResolvedValue({
-        _sum: { paymentAmount: null },
-      });
+      mockPrisma.product.count.mockResolvedValue(0);
 
       const actualStats = await service.getPlatformStats();
 
-      expect(actualStats.totalRevenue).toBe(0);
+      expect(actualStats.totalProducts).toBe(0);
     });
   });
 

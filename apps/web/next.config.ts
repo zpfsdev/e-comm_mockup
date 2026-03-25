@@ -2,8 +2,9 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  // ── Standalone Output ───────────────────────────────────────────────────
-  output: 'standalone',
+  // NOTE: Do NOT set `output: 'standalone'` when deploying to Vercel.
+  // Vercel handles Next.js bundling natively and `standalone` can conflict
+  // with its serverless function splitting, leading to deployment errors.
 
   /* ── Turbopack ─────────────────────────────────────────────────────────────
   // Explicitly set the monorepo root so Next.js does not try to infer it from

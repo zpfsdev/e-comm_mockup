@@ -1,0 +1,49 @@
+# render.yaml — Infrastructure-as-Code for Render.com
+# https://docs.render.com/infrastructure-as-code
+#
+# Deploy with: connect your GitHub repo to Render and it auto-discovers this file.
+
+services:
+  # ── NestJS API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: artistryx-api
+    runtime: node
+    region: singapore        # closest to PH users; change as needed
+    plan: free               # Render free tier
+    rootDir: apps/api
+    buildCommand: |
+      npm install &&
+      npx prisma generate &&
+      npm run build
+    startCommand: node dist/main.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false          # you set this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: CSRF_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false          # set to your Vercel URL
+
+  # ── Prisma Studio (secure admin panel) ──────────────────────────────────────
+  - type: web
+    name: artistryx-studio
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install && npx prisma generate
+    startCommand: node scripts/secure-studio.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: STUDIO_USER
+        sync: false          # set a strong admin username
+      - key: STUDIO_PASS
+        sync: false          # set a strong random password

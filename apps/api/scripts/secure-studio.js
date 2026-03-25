@@ -35,7 +35,7 @@ if (!STUDIO_USER || !STUDIO_PASS) {
 }
 
 // ── 1. Spawn Prisma Studio on the internal port ────────────────────────────
-const studio = spawn('npx', ['prisma', 'studio', '--port', String(STUDIO_PORT), '--browser', 'none'], {
+const studio = spawn('npx', ['prisma', 'studio', '--port', String(STUDIO_PORT), '--browser', 'none', '--hostname', '127.0.0.1'], {
   stdio: 'inherit',
   shell: true,
   env: { ...process.env },

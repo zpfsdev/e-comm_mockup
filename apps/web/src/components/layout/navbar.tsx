@@ -14,6 +14,7 @@ export function Navbar() {
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<HTMLDivElement>(null);
   const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +218,7 @@ export function Navbar() {
   }
 
   return (
+    <>
     <nav className={styles.nav} aria-label="Main navigation">
       <div className={styles.inner}>
         {/* Logo */}
@@ -232,7 +234,7 @@ export function Navbar() {
           />
         </Link>
 
-        {/* Right side */}
+        {/* Desktop right side */}
         <div className={styles.actions}>
           {/* START SELLING */}
           {!isAuthenticated ? (
@@ -358,7 +360,82 @@ export function Navbar() {
             <CartBadge />
           </div>
         </div>
+
+        {/* Mobile hamburger button */}
+        <button
+          type="button"
+          className={`${styles.hamburgerBtn} ${isMobileMenuOpen ? styles.hamburgerOpen : ''}`}
+          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          aria-label="Toggle mobile menu"
+          aria-expanded={isMobileMenuOpen}
+        >
+          <span className={styles.hamburgerLine} />
+          <span className={styles.hamburgerLine} />
+          <span className={styles.hamburgerLine} />
+        </button>
       </div>
     </nav>
+
+    {/* Mobile slide-out menu */}
+    {isMobileMenuOpen && (
+      <div className={styles.mobileMenuBackdrop} onClick={() => setIsMobileMenuOpen(false)} />
+    )}
+    <div className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ''}`}>
+      <div className={styles.mobileMenuHeader}>
+        <Link href="/" className={styles.logo} onClick={() => setIsMobileMenuOpen(false)}>
+          <Image src="/logo.png" alt="Artistryx" width={140} height={45} className={styles.logoImage} style={{ height: 'auto' }} />
+        </Link>
+        <button type="button" className={styles.mobileMenuCloseBtn} onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {isAuthenticated ? (
+        <>
+          <Link href="/profile" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+            My Profile
+          </Link>
+          <Link href="/orders" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a4 4 0 0 0-8 0v2" /></svg>
+            My Orders
+          </Link>
+          <Link href="/cart" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>
+            Cart
+          </Link>
+          {isSeller && user?.hasStore && (
+            <Link href="/seller/dashboard" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+              Seller Dashboard
+            </Link>
+          )}
+          {isAdmin && (
+            <Link href="/admin/dashboard" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+              Admin Panel
+            </Link>
+          )}
+          <button type="button" className={styles.mobileMenuLink} onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} style={{ border: 'none', background: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+            Log Out
+          </button>
+        </>
+      ) : (
+        <>
+          <Link href="/auth/sign-in" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
+            Sign In
+          </Link>
+          <Link href="/auth/sign-up" className={styles.mobileMenuLink} onClick={() => setIsMobileMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
+            Register
+          </Link>
+        </>
+      )}
+    </div>
+    </>
   );
 }

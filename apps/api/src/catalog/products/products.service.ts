@@ -51,6 +51,7 @@ export class ProductsService {
 
     const where: Prisma.ProductWhereInput = {
       status: 'Available',
+      deletedAt: null,
       ...(searchStr && {
         OR: [
           { name: { contains: searchStr } },
@@ -93,7 +94,7 @@ export class ProductsService {
    */
   async findById(id: number): Promise<ProductDto> {
     const product = await this.prisma.product.findFirst({
-      where: { id, status: 'Available' },
+      where: { id, status: 'Available', deletedAt: null },
       select: PRODUCT_SELECT,
     });
     if (!product) throw new NotFoundException('Product not found.');
@@ -285,7 +286,7 @@ export class ProductsService {
     try {
       await this.prisma.product.update({
         where: { id, sellerId },
-        data: { status: 'Unavailable' },
+        data: { status: 'Unavailable', deletedAt: new Date() },
       });
     } catch (err) {
       if (

@@ -34,6 +34,8 @@ html {
   /* Hide scrollbar but keep scroll on html so position:fixed works correctly */
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 html::-webkit-scrollbar,
@@ -49,6 +51,11 @@ body {
   background-color: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  max-width: 100vw;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ─── Typography ──────────────────────────────────────────────────────────── */

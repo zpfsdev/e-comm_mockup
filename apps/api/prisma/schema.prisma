@@ -120,7 +120,7 @@ model Seller {
   shopName        String       @unique @db.VarChar(255)
   shopDescription String?      @db.Text
   shopLogoUrl     String?      @db.VarChar(255)
-  shopStatus      ShopStatus   @default(Active)
+  shopStatus      ShopStatus   @default(Pending)
   registeredAt    DateTime     @default(now())
   commissions     Commission[]
   products        Product[]
@@ -162,6 +162,7 @@ model Product {
   dateAdded     DateTime       @default(now())
   lastUpdated   DateTime       @updatedAt
   ageRangeId    Int
+  deletedAt     DateTime?
   cartItems     CartItem[]
   orderItems    OrderItem[]
   productDetail ProductDetail?
@@ -297,6 +298,7 @@ enum UserStatus {
 }
 
 enum ShopStatus {
+  Pending
   Active
   Inactive
   Banned

@@ -1,15 +1,3 @@
-envVarGroups:
-  - name: artistryx-shared-secrets
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: REFRESH_TOKEN_SECRET
-        generateValue: true
-      - key: CSRF_SECRET
-        generateValue: true
-
 services:
   # ── NestJS API ──────────────────────────────────────────────────────────────
   - type: web
@@ -25,9 +13,16 @@ services:
     startCommand: node dist/src/main.js
     healthCheckPath: /api/v1/health
     envVars:
-      - fromGroup: artistryx-shared-secrets
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_VERSION
         value: "20.x"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: CSRF_SECRET
+        generateValue: true
       - key: FRONTEND_URL
         sync: false
       - key: ADMIN_PASSWORD
@@ -45,7 +40,8 @@ services:
     buildCommand: pnpm install && npx prisma generate
     startCommand: node scripts/secure-studio.js
     envVars:
-      - fromGroup: artistryx-shared-secrets
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_VERSION
         value: "20.x"
       - key: STUDIO_USER

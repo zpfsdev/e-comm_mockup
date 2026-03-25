@@ -99,6 +99,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // ── Rewrites (Direct-to-API proxying) ───────────────────────────────────────
+  // Resolves Third-Party Cookie blocking by hosting the API under the same domain.
+  async rewrites() {
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL
+      ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+      : 'http://localhost:3001';
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiOrigin}/api/v1/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

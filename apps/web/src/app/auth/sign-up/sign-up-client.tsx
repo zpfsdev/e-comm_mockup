@@ -69,7 +69,11 @@ export default function SignUpClientPage() {
       router.push(from);
     },
     onError: (err) => {
-      setServerError(err.response?.data?.message ?? 'Registration failed. Please try again.');
+      if (!err.response) {
+        setServerError('Network error. Please check your connection.');
+      } else {
+        setServerError(err.response.data?.message ?? 'Registration failed. Please try again.');
+      }
     },
   });
 

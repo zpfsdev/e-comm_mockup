@@ -189,10 +189,10 @@ export class AuthController {
       this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       secure: isProduction,
-      path: '/',
+      path: '/api/v1/auth/refresh',
     });
     this.setAccessTokenCookie(res, tokens.accessToken);
   }
@@ -203,12 +203,13 @@ export class AuthController {
       this.configService.get<string>('NODE_ENV') === 'production';
     res.cookie('at', accessToken, {
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'strict',
+      sameSite: 'strict',
       maxAge: 2 * 60 * 60 * 1000, // 2 hours
       secure: isProduction,
       path: '/',
     });
   }
+
 
   /** Clears auth cookies on logout. */
   private clearAuthCookies(res: Response): void {
@@ -217,10 +218,10 @@ export class AuthController {
     const shared = {
       httpOnly: true,
       maxAge: 0,
-      path: '/',
       secure: isProduction,
     };
-    res.cookie('at', '', { ...shared, sameSite: 'strict' });
-    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax' });
+    res.cookie('at', '', { ...shared, sameSite: 'strict', path: '/' });
+    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax', path: '/api/v1/auth/refresh' });
   }
+
 }

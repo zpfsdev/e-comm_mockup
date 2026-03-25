@@ -93,7 +93,11 @@ export default function SignInClientPage() {
       router.push(from);
     },
     onError: (err) => {
-      setServerError(err.response?.data?.message ?? 'Invalid email or password.');
+      if (!err.response) {
+        setServerError('Network error. Please check your connection.');
+      } else {
+        setServerError(err.response.data?.message ?? 'Invalid email or password.');
+      }
     },
   });
 

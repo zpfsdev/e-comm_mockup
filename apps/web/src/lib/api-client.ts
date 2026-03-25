@@ -12,9 +12,18 @@ export const SESSION_EXPIRED_PARAM = 'reason=session_expired';
 const LOGOUT_TIMEOUT_MS = 2500;
 
 function redirectToSignIn(reason?: 'session_expired'): void {
-  const url = reason === 'session_expired'
-    ? `/auth/sign-in?${SESSION_EXPIRED_PARAM}`
-    : '/auth/sign-in';
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
+  
+  if (currentPath.startsWith('/auth/')) {
+    window.location.href = '/auth/sign-in';
+    return;
+  }
+  
+  const searchParams = new URLSearchParams();
+  if (reason === 'session_expired') searchParams.set('reason', 'session_expired');
+  searchParams.set('from', currentPath);
+
+  const url = `/auth/sign-in?${searchParams.toString()}`;
   window.location.href = url;
 }
 
@@ -59,7 +68,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as RetryableRequest;
 
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || 
+      originalRequest.url?.includes('/auth/register') || 
+      originalRequest.url?.includes('/auth/logout');
+
 
     if (
       error.response?.status !== 401 ||

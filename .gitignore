@@ -25,6 +25,10 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Production Deployment Info
+PROD_DEPLOYMENT_ENV.txt
+PROD_DEPLOYMENT_ENV.txt.bak
+
 # Editor
 .vscode/
 .idea/

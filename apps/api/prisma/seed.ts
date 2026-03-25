@@ -62,7 +62,11 @@ async function main() {
   const catSensoryToys = await prisma.category.create({ data: { categoryName: 'Sensory Toys', description: 'Hands-on sensory toys for tactile learning', imageUrl: '/Sensory Toys.png' } });
 
   // 3. Seller Accounts with Logos
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const defaultPassword = 'password123';
+  const adminPassword = process.env.ADMIN_PASSWORD || defaultPassword;
+  
+  const hashedDefaultPassword = await bcrypt.hash(defaultPassword, 10);
+  const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
 
   const stores = [
     { name: 'Giggling', first: 'Jillian Casey', last: 'Bandola', user: 'jillian_seller', email: 'jillian@giggling.test', logo: '/giggling.png', desc: 'Where every toy tells a story of joy and discovery. We specialize in sensory and imaginative play for the little ones.' },
@@ -80,7 +84,7 @@ async function main() {
         lastName: s.last,
         username: s.user,
         email: s.email,
-        password: hashedPassword,
+        password: hashedDefaultPassword,
         dateOfBirth: new Date('1990-01-01'),
         contactNumber: '09123456789',
         status: UserStatus.Active,
@@ -305,7 +309,7 @@ async function main() {
       lastName: 'Admin',
       username: 'admin',
       email: 'admin@artistryx.test',
-      password: hashedPassword,
+      password: hashedAdminPassword,
       dateOfBirth: new Date('1985-12-25'),
       contactNumber: '09000000001',
       status: UserStatus.Active,
@@ -329,7 +333,7 @@ async function main() {
         lastName: c.last,
         username: c.user,
         email: c.email,
-        password: hashedPassword,
+        password: hashedDefaultPassword,
         dateOfBirth: new Date('1995-05-05'),
         contactNumber: '09876543210',
         status: UserStatus.Active,
@@ -347,7 +351,7 @@ async function main() {
       lastName: 'Merchant',
       username: 'pending_seller',
       email: 'pending@seller.test',
-      password: hashedPassword,
+      password: hashedDefaultPassword,
       dateOfBirth: new Date('1992-02-02'),
       contactNumber: '09112223334',
       status: UserStatus.Active,

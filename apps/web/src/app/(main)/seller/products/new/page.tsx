@@ -190,6 +190,17 @@ export default function SellerNewProductPage() {
             {form.imageUrl && (
               <span className={styles.fileUploadStatus}>✓ Uploaded</span>
             )}
+            {form.imageUrl && (
+              <button type="button" onClick={() => {
+                const oldUrl = form.imageUrl;
+                updateField('imageUrl', '');
+                if (oldUrl && oldUrl.startsWith('/uploads/')) {
+                  fetch(`/api/upload?url=${encodeURIComponent(oldUrl)}`, { method: 'DELETE' }).catch(console.error);
+                }
+              }} style={{ background: 'none', border: 'none', color: 'var(--color-error, #ef4444)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline', marginLeft: '8px' }}>
+                Remove Image
+              </button>
+            )}
           </div>
           {form.imageUrl && (
             <div className={styles.fileUploadPreview}>

@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { register, handleSubmit, reset, setValue } = useForm<EditForm>({
+  const { register, handleSubmit, reset, setValue, getValues } = useForm<EditForm>({
     defaultValues: { firstName: '', middleName: '', lastName: '', contactNumber: '', profilePictureUrl: '' },
   });
 
@@ -127,6 +127,16 @@ export default function ProfilePage() {
       setFeedback({ type: 'error', message: 'Upload error: ' + String(err) });
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    const currentUrl = getValues('profilePictureUrl');
+    setValue('profilePictureUrl', '');
+    mutation.mutate({ profilePictureUrl: '' });
+    
+    if (currentUrl && currentUrl.startsWith('/uploads/')) {
+      fetch(`/api/upload?url=${encodeURIComponent(currentUrl)}`, { method: 'DELETE' }).catch(console.error);
     }
   }
 
@@ -238,7 +248,7 @@ export default function ProfilePage() {
                     : <span className={styles.avatarText}>{initials}</span>
                   }
                 </div>
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="avatar-upload" className={styles.avatarSelectBtn} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
@@ -246,6 +256,11 @@ export default function ProfilePage() {
                     {uploading ? 'Uploading...' : 'Select Image'}
                   </label>
                   <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+                  {profile?.profilePictureUrl && (
+                    <button type="button" onClick={handleRemoveAvatar} style={{ background: 'none', border: 'none', color: 'var(--color-error, #ef4444)', fontSize: '0.85rem', cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}>
+                      Remove Image
+                    </button>
+                  )}
                 </div>
               </div>
 

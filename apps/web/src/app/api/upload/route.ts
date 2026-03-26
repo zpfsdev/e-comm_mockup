@@ -37,3 +37,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: 'File upload failed' }, { status: 500 });
   }
 }
+
+import { unlink } from 'fs/promises';
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const urlParam = searchParams.get('url');
+
+    if (!urlParam || !urlParam.startsWith('/uploads/')) {
+      return NextResponse.json({ success: false, message: 'Invalid file URL' }, { status: 400 });
+    }
+
+    const fileName = urlParam.replace('/uploads/', '');
+    const uploadDir = join(process.cwd(), 'public', 'uploads');
+    const filePath = join(uploadDir, fileName);
+
+    try {
+      await unlink(filePath);
+    } catch (e) {
+      console.error('File unlink error (might not exist):', e);
+      // We can still return success if the file is already gone
+    }
+
+    return NextResponse.json({ success: true, message: 'File deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    return NextResponse.json({ success: false, message: 'File deletion failed' }, { status: 500 });
+  }
+}

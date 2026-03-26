@@ -73,9 +73,14 @@ export class UsersService {
   }
 
   async updateProfile(id: number, dto: UpdateProfileDto) {
+    // Convert empty profilePictureUrl to null for proper database cleanup
+    const data: Record<string, unknown> = { ...dto };
+    if (dto.profilePictureUrl !== undefined && !dto.profilePictureUrl) {
+      data.profilePictureUrl = null;
+    }
     return this.prisma.user.update({
       where: { id },
-      data: dto,
+      data,
       select: {
         id: true,
         firstName: true,

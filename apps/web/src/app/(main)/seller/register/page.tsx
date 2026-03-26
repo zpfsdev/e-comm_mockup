@@ -207,6 +207,17 @@ export default function SellerRegisterPage() {
                   />
                   {uploading && <span className={styles.fileUploadStatus} style={{ color: 'rgba(255,255,255,0.7)' }}>Uploading...</span>}
                   {form.shopLogoUrl && !uploading && <span className={styles.fileUploadStatus} style={{ color: '#4ade80' }}>✓</span>}
+                  {form.shopLogoUrl && !uploading && (
+                    <button type="button" onClick={() => {
+                      const oldUrl = form.shopLogoUrl;
+                      setForm((p) => ({ ...p, shopLogoUrl: '' }));
+                      if (oldUrl && oldUrl.startsWith('/uploads/')) {
+                        fetch(`/api/upload?url=${encodeURIComponent(oldUrl)}`, { method: 'DELETE' }).catch(console.error);
+                      }
+                    }} style={{ background: 'none', border: 'none', color: 'var(--color-error, #ef4444)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                      Remove Logo
+                    </button>
+                  )}
                 </div>
                 {form.shopLogoUrl && (
                   <div className={styles.fileUploadPreview}>

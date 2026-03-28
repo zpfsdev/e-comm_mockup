@@ -1,3 +1,5 @@
+@import './mobile-tables.css';
+
 .page {
   max-width: var(--container-max);
   margin-inline: auto;
@@ -299,4 +301,3 @@
   cursor: not-allowed;
 }
 
-@import './mobile-tables.css';

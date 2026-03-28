@@ -1,3 +1,5 @@
+@import './mobile-tables.css';
+
 .page {
   max-width: var(--container-max);
   margin-inline: auto;
@@ -185,4 +187,3 @@
 }
 .accessDeniedLink:hover { opacity: 0.85; }
 
-@import './mobile-tables.css';

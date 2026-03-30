@@ -48,6 +48,13 @@ export class OrdersController {
     return this.ordersService.findUserOrders(user.sub, page, limit, status);
   }
 
+  @Get('items/disputed')
+  @Roles(RoleName.Admin)
+  @ApiOperation({ summary: 'List all disputed order items (Admin)' })
+  getDisputedItems() {
+    return this.ordersService.findDisputedItems();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific order with full tracking info' })
   getOrder(
@@ -70,5 +77,27 @@ export class OrdersController {
       user.sub,
       dto.status,
     );
+  }
+
+  @Post('items/:orderItemId/dispute')
+  @Roles(RoleName.Customer)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Dispute a completed order item (Customer)' })
+  requestRefund(
+    @Param('orderItemId', ParseIntPipe) orderItemId: number,
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { reason?: string },
+  ) {
+    return this.ordersService.requestRefund(orderItemId, user.sub, body?.reason);
+  }
+
+  @Patch('items/:orderItemId/resolve')
+  @Roles(RoleName.Admin)
+  @ApiOperation({ summary: 'Resolve a disputed item (Admin)' })
+  resolveDispute(
+    @Param('orderItemId', ParseIntPipe) orderItemId: number,
+    @Body() body: { resolution: 'Refunded' | 'Completed' },
+  ) {
+    return this.ordersService.resolveDispute(orderItemId, body.resolution);
   }
 }

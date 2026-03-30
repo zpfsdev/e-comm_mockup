@@ -12,9 +12,13 @@ import { SellersService } from './sellers/sellers.service';
 import { CartController } from './cart/cart.controller';
 import { CartService } from './cart/cart.service';
 
+// Commissions
+import { CommissionsController } from './commissions/commissions.controller';
+import { CommissionsService } from './commissions/commissions.service';
+
 @Module({
-  controllers: [OrdersController, SellersController, CartController],
-  providers: [OrdersService, SellersService, CartService],
-  exports: [OrdersService, SellersService, CartService],
+  controllers: [OrdersController, SellersController, CartController, CommissionsController],
+  providers: [OrdersService, SellersService, CartService, CommissionsService],
+  exports: [OrdersService, SellersService, CartService, CommissionsService],
 })
 export class SalesModule {}

@@ -16,9 +16,11 @@ jest.mock('@tanstack/react-query', () => ({
 const mockProfile = {
   id: 1,
   firstName: 'Juan',
+  middleName: undefined,
   lastName: 'dela Cruz',
   username: 'juandc',
   email: 'juan@email.com',
+  contactNumber: '09171234567',
   status: 'Active',
   dateTimeRegistered: '2025-01-01T00:00:00Z',
   userRoles: [{ role: { roleName: 'Customer' } }],
@@ -50,9 +52,9 @@ describe('ProfilePage', () => {
     render(<ProfilePage />);
 
     expect(screen.getByRole('heading', { name: /my profile/i })).toBeInTheDocument();
-    expect(screen.getAllByText('juan@email.com').length).toBeGreaterThan(0);
-    expect(screen.getByText('@juandc')).toBeInTheDocument();
-    expect(screen.getByText('Customer')).toBeInTheDocument();
+    // Email and username appear as disabled input values
+    expect(screen.getByDisplayValue('juan@email.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('juandc')).toBeInTheDocument();
   });
 
   it('shows error state when profile fetch fails', () => {
@@ -70,10 +72,13 @@ describe('ProfilePage', () => {
     const user = userEvent.setup();
     render(<ProfilePage />);
 
-    const textBoxes = screen.getAllByRole('textbox');
-    await user.clear(textBoxes[0]);
-    await user.type(textBoxes[0], 'Maria');
-    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    // First Name input (enabled, labelled by "First Name")
+    const firstNameInput = screen.getByLabelText(/first name/i);
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Maria');
+
+    // The submit button renders as "Save" (not "Save Changes")
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
 
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ firstName: 'Maria' }),

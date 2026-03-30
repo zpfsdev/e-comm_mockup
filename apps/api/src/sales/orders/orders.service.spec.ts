@@ -318,4 +318,128 @@ describe('OrdersService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+
+  // ─── requestRefund ──────────────────────────────────────────────────────────
+
+  describe('requestRefund', () => {
+    it('transitions a Completed item to Disputed', async () => {
+      (mockPrisma.orderItem as any).findFirst = jest.fn().mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Completed',
+        dateDelivered: new Date(),
+      });
+      mockPrisma.orderItem.update.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Disputed',
+        dateDelivered: new Date(),
+        productId: 1,
+      });
+
+      const result = await service.requestRefund(201, 42, 'Defective');
+
+      expect(result.orderItemStatus).toBe('Disputed');
+    });
+
+    it('throws BadRequestException if item is not Completed', async () => {
+      (mockPrisma.orderItem as any).findFirst = jest.fn().mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Pending',
+        dateDelivered: null,
+      });
+
+      await expect(service.requestRefund(201, 42)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws BadRequestException if dispute window (14 days) expired', async () => {
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 20);
+      (mockPrisma.orderItem as any).findFirst = jest.fn().mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Completed',
+        dateDelivered: oldDate,
+      });
+
+      await expect(service.requestRefund(201, 42)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws NotFoundException if item does not belong to user', async () => {
+      (mockPrisma.orderItem as any).findFirst = jest.fn().mockResolvedValue(null);
+
+      await expect(service.requestRefund(999, 42)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  // ─── resolveDispute ──────────────────────────────────────────────────────────
+
+  describe('resolveDispute', () => {
+    it('refunds a Disputed item and voids its commission atomically', async () => {
+      mockPrisma.orderItem.findUnique.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Disputed',
+      });
+
+      // The $transaction mock now includes commission
+      const txMock = {
+        commission: { deleteMany: jest.fn() },
+        orderItem: {
+          update: jest.fn().mockResolvedValue({
+            id: 201,
+            orderItemStatus: 'Refunded',
+            dateDelivered: null,
+            productId: 1,
+          }),
+        },
+      };
+      mockPrisma.$transaction.mockImplementationOnce((cb: any) => cb(txMock));
+
+      const result = await service.resolveDispute(201, 'Refunded');
+
+      expect(result.orderItemStatus).toBe('Refunded');
+      expect(txMock.commission.deleteMany).toHaveBeenCalledWith({
+        where: { orderItemId: 201 },
+      });
+    });
+
+    it('rejects dispute (restores to Completed) without voiding commission', async () => {
+      mockPrisma.orderItem.findUnique.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Disputed',
+      });
+
+      const txMock = {
+        commission: { deleteMany: jest.fn() },
+        orderItem: {
+          update: jest.fn().mockResolvedValue({
+            id: 201,
+            orderItemStatus: 'Completed',
+            dateDelivered: null,
+            productId: 1,
+          }),
+        },
+      };
+      mockPrisma.$transaction.mockImplementationOnce((cb: any) => cb(txMock));
+
+      const result = await service.resolveDispute(201, 'Completed');
+
+      expect(result.orderItemStatus).toBe('Completed');
+      expect(txMock.commission.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException if item is not in a disputable state', async () => {
+      mockPrisma.orderItem.findUnique.mockResolvedValue({
+        id: 201,
+        orderItemStatus: 'Pending',
+      });
+
+      await expect(service.resolveDispute(201, 'Refunded')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
 });

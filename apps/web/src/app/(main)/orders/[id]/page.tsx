@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { serverFetch } from '@/lib/server-api';
 import { ReviewButton } from './review-button';
+import { DisputeButton } from './dispute-button';
 import styles from '../orders.module.css';
 
 interface Seller {
@@ -54,6 +55,9 @@ const STATUS_CLASS: Record<string, string> = {
   InTransit: styles.statusShipped,
   Completed: styles.statusCompleted,
   Cancelled: styles.statusCancelled,
+  Disputed: styles.statusCancelled,
+  RefundRequested: styles.statusCancelled,
+  Refunded: styles.statusShipped,
 } as const;
 
 type OrderStatus = keyof typeof STATUS_CLASS;
@@ -259,6 +263,11 @@ export default async function OrderDetailPage({ params }: Props) {
                           existingReview={item.review}
                         />
                       )}
+                      <DisputeButton
+                        orderItemId={item.id}
+                        productName={item.product.name}
+                        status={item.orderItemStatus}
+                      />
                     </div>
                   </div>
                 ))}

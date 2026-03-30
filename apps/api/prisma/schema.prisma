@@ -285,6 +285,7 @@ model Commission {
   commissionAmount Decimal          @db.Decimal(10, 2)
   status           CommissionStatus @default(Unpaid)
   datePaid         DateTime?
+  referenceNumber  String?          @db.VarChar(100)
   orderItem        OrderItem        @relation(fields: [orderItemId], references: [id])
   seller           Seller           @relation(fields: [sellerId], references: [id])
 
@@ -326,6 +327,9 @@ enum OrderItemStatus {
   InTransit
   Completed
   Cancelled
+  Disputed
+  RefundRequested
+  Refunded
 }
 
 enum PaymentStatus {

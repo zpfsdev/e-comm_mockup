@@ -28,6 +28,11 @@ jest.mock('@/lib/server-api', () => ({
   serverFetch: jest.fn(),
 }));
 
+// ProfileSidebar inside OrdersPage uses useQuery for cart count
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: jest.fn().mockReturnValue({ data: undefined, isLoading: false, isError: false }),
+}));
+
 jest.mock('./orders-error', () => ({
   OrdersError: () => <p>Failed to load your orders. Please try again.</p>,
 }));
@@ -39,7 +44,15 @@ const mockOrders = [
     totalAmount: 498,
     orderDate: '2026-01-15T10:00:00Z',
     orderItems: [
-      { id: 1, quantity: 2, product: { name: 'Story Book', imageUrl: undefined } },
+      {
+        id: 1,
+        quantity: 2,
+        product: {
+          name: 'Story Book',
+          imageUrl: undefined,
+          seller: { id: 1, shopName: 'Test Store' },
+        },
+      },
     ],
   },
 ];
@@ -84,7 +97,8 @@ describe('OrdersPage (RSC)', () => {
 
     await renderPage();
 
-    expect(screen.getByText(/haven't placed any orders yet/i)).toBeInTheDocument();
+    // The page renders "No orders found in this section."
+    expect(screen.getByText(/no orders found/i)).toBeInTheDocument();
   });
 
   it('renders OrdersError when serverFetch throws', async () => {

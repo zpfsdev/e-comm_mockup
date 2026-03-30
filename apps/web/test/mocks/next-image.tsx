@@ -12,11 +12,13 @@ interface MockImageProps {
   className?: string;
 }
 
-const MockNextImage = ({ src, alt = '', ...rest }: MockImageProps) => (
+const MockNextImage = ({ src, alt = '', priority, fill, ...rest }: MockImageProps) => (
   <span
     data-testid="mock-next-image"
     data-src={src}
     data-alt={alt}
+    data-priority={priority ? 'true' : undefined}
+    data-fill={fill ? 'true' : undefined}
     aria-label={alt || undefined}
     {...(rest as object)}
   />

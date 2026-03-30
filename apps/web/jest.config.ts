@@ -8,8 +8,8 @@ const config: Config = {
     '^.+\\.(t|j)sx?$': 'ts-jest',
   },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': '<rootDir>/test/style-mock.ts',
+    '^@/(.*)$': '<rootDir>/src/$1',
     '^next/image$': '<rootDir>/test/mocks/next-image.tsx',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setup-tests.ts'],

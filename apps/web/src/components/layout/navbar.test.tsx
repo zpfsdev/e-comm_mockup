@@ -11,6 +11,12 @@ jest.mock('next/link', () => {
   return MockLink;
 });
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/',
+  useSearchParams: () => ({ get: jest.fn().mockReturnValue(null) }),
+}));
+
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: { items: [] },
@@ -37,11 +43,12 @@ jest.mock('@/lib/api-client', () => ({
 }));
 
 describe('Navbar', () => {
-  it('renders logo and admin dashboard link when user is admin', () => {
+  it('renders logo and admin panel link when user is admin', () => {
     render(<Navbar />);
 
     expect(screen.getByLabelText('Artistryx home')).toBeInTheDocument();
-    expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+    // The mobile menu renders "Admin Panel" text
+    expect(screen.getByText('Admin Panel')).toBeInTheDocument();
   });
 });
 

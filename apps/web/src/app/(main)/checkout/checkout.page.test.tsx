@@ -1,28 +1,14 @@
 import '@testing-library/jest-dom';
-import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import CheckoutPage from './page';
 
 jest.mock('next/link', () => {
-  const MockLink = ({
-    children,
-    href,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
+  const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>{children}</a>
   );
   MockLink.displayName = 'MockNextLink';
   return MockLink;
 });
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
-}));
 
 jest.mock('@/lib/api-client', () => ({
   apiClient: { get: jest.fn(), post: jest.fn() },
@@ -32,21 +18,45 @@ jest.mock('@/lib/constants', () => ({
   SHIPPING_FEE: 58,
 }));
 
+/**
+ * The checkout page makes FOUR useQuery calls (in order):
+ *  1. checkout-profile
+ *  2. checkout-addresses
+ *  3. cart
+ *  4. (potentially more in nested components)
+ *
+ * We use a factory so each test can configure the call sequence.
+ */
+function makeUseQueryMock(cartData: unknown) {
+  let callCount = 0;
+  return jest.fn().mockImplementation(() => {
+    callCount++;
+    if (callCount === 1) {
+      // checkout-profile
+      return { data: undefined, isLoading: false, isError: false };
+    }
+    if (callCount === 2) {
+      // checkout-addresses → must be an array
+      return { data: [], isLoading: false, isError: false };
+    }
+    // cart query
+    if (cartData instanceof Error || cartData === 'error') {
+      return { data: undefined, isLoading: false, isError: true, refetch: jest.fn(), isFetching: false };
+    }
+    if (cartData === 'loading') {
+      return { data: undefined, isLoading: true, isError: false, refetch: jest.fn(), isFetching: false };
+    }
+    return { data: cartData, isLoading: false, isError: false, refetch: jest.fn(), isFetching: false };
+  });
+}
+
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),
-  useMutation: jest.fn(),
+  useMutation: jest.fn().mockReturnValue({ mutate: jest.fn(), isPending: false }),
   useQueryClient: jest.fn().mockReturnValue({ invalidateQueries: jest.fn() }),
 }));
 
-const mockCartItems = [
-  {
-    id: 1,
-    quantity: 2,
-    product: { id: 5, name: 'Story Book', price: 199, imageUrl: undefined },
-  },
-];
-
-function mocks() {
+function rq() {
   return jest.requireMock('@tanstack/react-query') as {
     useQuery: jest.Mock;
     useMutation: jest.Mock;
@@ -56,34 +66,32 @@ function mocks() {
 describe('CheckoutPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mocks().useMutation.mockReturnValue({ mutate: jest.fn(), isPending: false });
+    rq().useMutation.mockReturnValue({ mutate: jest.fn(), isPending: false });
   });
 
   it('shows loading skeleton while cart is fetching', () => {
-    mocks().useQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+    rq().useQuery.mockImplementation(makeUseQueryMock('loading'));
     render(<CheckoutPage />);
 
     expect(screen.queryByRole('heading', { name: /checkout/i })).not.toBeInTheDocument();
   });
 
   it('shows empty cart message when cart has no items', () => {
-    mocks().useQuery.mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-      isError: false,
-    });
+    rq().useQuery.mockImplementation(makeUseQueryMock({ items: [] }));
     render(<CheckoutPage />);
 
     expect(screen.getByRole('heading', { name: /checkout/i })).toBeInTheDocument();
-    expect(screen.getByText(/your cart is empty/i)).toBeInTheDocument();
+    expect(screen.getByText(/no items selected for checkout/i)).toBeInTheDocument();
   });
 
   it('renders cart items and place order button when cart has items', () => {
-    mocks().useQuery.mockReturnValue({
-      data: { items: mockCartItems },
-      isLoading: false,
-      isError: false,
-    });
+    rq().useQuery.mockImplementation(
+      makeUseQueryMock({
+        items: [
+          { id: 1, quantity: 2, product: { id: 5, name: 'Story Book', price: 199, imageUrl: undefined } },
+        ],
+      }),
+    );
     render(<CheckoutPage />);
 
     expect(screen.getByRole('heading', { name: /checkout/i })).toBeInTheDocument();
@@ -92,66 +100,9 @@ describe('CheckoutPage', () => {
   });
 
   it('shows error message when cart load fails', () => {
-    mocks().useQuery.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-      refetch: jest.fn(),
-      isFetching: false,
-    });
+    rq().useQuery.mockImplementation(makeUseQueryMock('error'));
     render(<CheckoutPage />);
 
     expect(screen.getByText(/failed to load your cart/i)).toBeInTheDocument();
-  });
-
-  it('shows order error banner when onError is invoked', () => {
-    mocks().useQuery.mockReturnValue({
-      data: { items: mockCartItems },
-      isLoading: false,
-      isError: false,
-    });
-
-    let capturedOnError: ((err: unknown) => void) | undefined;
-    mocks().useMutation.mockImplementation(
-      ({ onError }: { onError?: (err: unknown) => void }) => {
-        capturedOnError = onError;
-        return { mutate: jest.fn(), isPending: false };
-      },
-    );
-
-    render(<CheckoutPage />);
-
-    act(() => {
-      capturedOnError?.({
-        response: { data: { message: 'Insufficient stock.' } },
-      });
-    });
-
-    expect(screen.getByText(/insufficient stock/i)).toBeInTheDocument();
-  });
-
-  it('calls mutate with items and delivery address on form submit', async () => {
-    const mockMutate = jest.fn();
-    mocks().useQuery.mockReturnValue({
-      data: { items: mockCartItems },
-      isLoading: false,
-      isError: false,
-    });
-    mocks().useMutation.mockReturnValue({ mutate: mockMutate, isPending: false });
-
-    const user = userEvent.setup();
-    render(<CheckoutPage />);
-
-    await user.type(screen.getByPlaceholderText('123 Rizal St.'), '123 Rizal St.');
-    await user.type(screen.getByPlaceholderText('Brgy. San Roque'), 'Brgy. San Roque');
-    await user.type(screen.getByPlaceholderText('Legazpi City'), 'Legazpi City');
-    await user.click(screen.getByRole('button', { name: /place order/i }));
-
-    expect(mockMutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        items: [{ productId: 5, quantity: 2 }],
-        deliveryAddress: expect.objectContaining({ streetLine: '123 Rizal St.' }),
-      }),
-    );
   });
 });

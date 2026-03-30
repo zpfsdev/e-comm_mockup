@@ -380,8 +380,11 @@ export class OrdersService {
   > = {
     Pending: ['InTransit', 'Cancelled'],
     InTransit: ['Completed', 'Cancelled'],
-    Completed: [],
+    Completed: ['Disputed'],
     Cancelled: [],
+    Disputed: ['RefundRequested', 'Completed'],
+    RefundRequested: ['Refunded', 'Completed'],
+    Refunded: [],
   };
 
   /**
@@ -429,6 +432,119 @@ export class OrdersService {
         dateDelivered: true,
         productId: true,
       },
+    });
+  }
+
+  /**
+   * Admin: returns all order items in Disputed or RefundRequested state.
+   */
+  async findDisputedItems() {
+    return this.prisma.orderItem.findMany({
+      where: {
+        orderItemStatus: { in: ['Disputed', 'RefundRequested'] },
+      },
+      select: {
+        id: true,
+        quantity: true,
+        price: true,
+        orderItemStatus: true,
+        dateDelivered: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            seller: { select: { id: true, shopName: true } },
+          },
+        },
+        order: {
+          select: {
+            id: true,
+            userId: true,
+            user: {
+              select: { firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+      },
+      orderBy: { id: 'desc' },
+    });
+  }
+
+  /**
+   * Customer initiates a dispute on a Completed order item.
+   * Only items delivered within the last 14 days may be disputed.
+   */
+  async requestRefund(
+    orderItemId: number,
+    userId: number,
+    reason?: string,
+  ): Promise<OrderItemStatusUpdateResponseDto> {
+    const orderItem = await this.prisma.orderItem.findFirst({
+      where: { id: orderItemId, order: { userId } },
+      select: { id: true, orderItemStatus: true, dateDelivered: true },
+    });
+
+    if (!orderItem) throw new NotFoundException('Order item not found.');
+    if (orderItem.orderItemStatus !== 'Completed') {
+      throw new BadRequestException(
+        `Only completed items can be disputed. Current: ${orderItem.orderItemStatus}`,
+      );
+    }
+
+    // Enforce 14-day dispute window
+    if (orderItem.dateDelivered) {
+      const daysSince =
+        (Date.now() - orderItem.dateDelivered.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince > 14) {
+        throw new BadRequestException(
+          'Dispute window expired. Items can only be disputed within 14 days of delivery.',
+        );
+      }
+    }
+
+    return this.prisma.orderItem.update({
+      where: { id: orderItemId },
+      data: { orderItemStatus: 'Disputed' },
+      select: { id: true, orderItemStatus: true, dateDelivered: true, productId: true },
+    });
+  }
+
+  /**
+   * Admin resolves a disputed item.
+   * Uses an atomic $transaction: if resolution is 'Refunded', the associated
+   * commission is voided (deleted) to keep the financial ledger consistent.
+   */
+  async resolveDispute(
+    orderItemId: number,
+    resolution: 'Refunded' | 'Completed',
+  ): Promise<OrderItemStatusUpdateResponseDto> {
+    const orderItem = await this.prisma.orderItem.findUnique({
+      where: { id: orderItemId },
+      select: { id: true, orderItemStatus: true },
+    });
+
+    if (!orderItem) throw new NotFoundException('Order item not found.');
+    if (
+      orderItem.orderItemStatus !== 'Disputed' &&
+      orderItem.orderItemStatus !== 'RefundRequested'
+    ) {
+      throw new BadRequestException(
+        `Item is not in a disputable state. Current: ${orderItem.orderItemStatus}`,
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // If refunding, void the seller's commission for this item
+      if (resolution === 'Refunded') {
+        await tx.commission.deleteMany({ where: { orderItemId } });
+      }
+
+      return tx.orderItem.update({
+        where: { id: orderItemId },
+        data: { orderItemStatus: resolution },
+        select: { id: true, orderItemStatus: true, dateDelivered: true, productId: true },
+      });
     });
   }
 

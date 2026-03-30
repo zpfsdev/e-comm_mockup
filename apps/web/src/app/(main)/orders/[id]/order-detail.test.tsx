@@ -8,10 +8,28 @@ jest.mock('next/navigation', () => ({
   notFound: jest.fn(() => {
     throw new Error('NEXT_NOT_FOUND');
   }),
+  useRouter: () => ({ refresh: jest.fn() }),
 }));
+
+jest.mock('next/link', () => {
+  const MockLink = ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>{children}</a>
+  );
+  MockLink.displayName = 'MockNextLink';
+  return MockLink;
+});
 
 jest.mock('@/lib/server-api', () => ({
   serverFetch: jest.fn(),
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: jest.fn().mockReturnValue({ mutate: jest.fn(), isPending: false, isError: false }),
+  useQueryClient: jest.fn().mockReturnValue({ invalidateQueries: jest.fn() }),
+}));
+
+jest.mock('@/lib/api-client', () => ({
+  apiClient: { post: jest.fn() },
 }));
 
 const mockOrder = {
@@ -27,11 +45,12 @@ const mockOrder = {
       quantity: 2,
       price: '199.00',
       orderItemStatus: 'Pending',
-      product: { id: 5, name: 'Story Book', imageUrl: undefined },
+      product: { id: 5, name: 'Story Book', imageUrl: undefined, seller: { id: 1, shopName: 'Test Store' } },
+      review: null,
     },
   ],
   payment: { paymentStatus: 'Unpaid', paymentAmount: '498.00' },
-  userAddress: undefined,
+  userAddress: null,
 };
 
 describe('OrderDetailPage', () => {

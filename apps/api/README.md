@@ -1,6 +1,6 @@
 ## Artistryx API (`apps/api`)
 
-Backend service for the Artistryx marketplace. Exposes REST endpoints for authentication, products, cart, orders, reviews, sellers, and admin features.  
+Backend service for the Artistryx marketplace. Exposes REST endpoints for authentication, products, cart, orders, reviews, sellers, disputes, payouts, and admin features.  
 Runs on port 3001 with all routes prefixed by `/api/v1`.
 
 ---
@@ -25,6 +25,8 @@ Runs on port 3001 with all routes prefixed by `/api/v1`.
 - `cart`: per-user cart, item add/update/remove/clear  
 - `orders`: create orders from cart, list and view orders, seller-facing item status updates  
 - `reviews`: one review per purchased order item  
+- `disputes`: customer-initiated order item disputes
+- `commissions`: admin-facing payout management for shop balances
 - `admin`: platform statistics, user and shop status management  
 - `core`: guards, interceptors, decorators, exception filters, throttling  
 
@@ -86,6 +88,7 @@ Prisma configuration lives in:
 - Global JWT guard protects all routes except those explicitly marked as public.  
 - Role-based guard enforces role metadata (Customer, Seller, Admin).  
 - Ownership checks are enforced in services (for example, sellers can only mutate their own products and order items).
+- Transactional integrity (`$transaction`) is enforced for complex operations like dispute resolution and payout processing.
 
 **Security headers and rate limiting**
 
@@ -136,12 +139,15 @@ All routes are under `/api/v1`:
 - `DELETE /cart` – clear cart  
 - `POST /orders` – place order from cart  
 - `GET /orders` and `GET /orders/:id` – order history and detail  
+- `POST /orders/:id/dispute` – dispute an order item  
 - `POST /reviews/order-items/:orderItemId` – review purchased item  
 - `GET /reviews/product/:productId` – list product reviews (public, paginated)  
 - `GET /admin/stats` – platform statistics (admin only)  
 - `GET /admin/users` – user list for admin dashboard  
 - `PATCH /admin/users/:id/status` – activate / deactivate user (admin only)  
 - `PATCH /admin/shops/:id/status` – update shop status (Active/Inactive/Banned)  
+- `PATCH /admin/disputes/:id` – resolve an order item dispute (admin only)
+- `POST /admin/payouts` – settle shop commissions (admin only)
 - `GET /health` – unauthenticated health check used by CI and readiness probes  
 
 For the full list of endpoints and DTOs, refer to the controllers and DTOs under `src/`.

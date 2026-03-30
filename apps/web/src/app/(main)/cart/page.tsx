@@ -10,14 +10,21 @@ import { SHIPPING_FEE } from '@/lib/constants';
 import { useAuth } from '@/providers/auth-provider';
 import type { Cart } from '@/types/cart';
 import styles from './cart.module.css';
-
+import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [mutatingIds, setMutatingIds] = useState<Set<number>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/sign-in?redirect=/cart');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // Helper to get selected items total
   const getSelectedTotal = (items: any[]) => {
@@ -147,6 +154,20 @@ export default function CartPage() {
     else next.add(id);
     setSelectedIds(next);
   };
+
+  if (authLoading || (!isAuthenticated && !cart)) {
+    return (
+      <div className={styles.page}>
+        <div style={{ display: 'flex', gap: '8px', padding: '16px' }}>
+          <Skeleton width="48px" height="48px" style={{ borderRadius: '50%' }} />
+          <div>
+            <Skeleton width="200px" height="24px" style={{ marginBottom: '8px' }} />
+            <Skeleton width="150px" height="16px" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isError) {
     return (

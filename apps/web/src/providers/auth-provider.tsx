@@ -41,7 +41,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let isMounted = true;
     const bootstrap = async () => {
-      const csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+      // Use localStorage so the CSRF token survives tab closes / browser restarts.
+      // sessionStorage is wiped on close, which caused the "cookie bug" where
+      // the HttpOnly refreshToken cookie was valid but the frontend couldn't use it.
+      const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
       if (!csrfToken) {
         if (isMounted) {
           setIsLoading(false);
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(data.user);
       } catch {
         tokenStore.clear();
-        sessionStorage.removeItem(CSRF_TOKEN_KEY);
+        localStorage.removeItem(CSRF_TOKEN_KEY);
         // Clear the session cookie so sign-in page doesn't show stale "session expired"
         document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
       } finally {
@@ -80,7 +83,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback((data: AuthResponse): void => {
     tokenStore.set(data.accessToken);
     if (data.csrfToken) {
-      sessionStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
+      // Store in localStorage so the token survives tab/browser close.
+      localStorage.setItem(CSRF_TOKEN_KEY, data.csrfToken);
     }
     document.cookie = 'session=1; path=/; SameSite=Lax; max-age=86400';
     setUser(data.user);
@@ -91,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // tear down the local session regardless of network outcome.
     apiClient.post('/auth/logout').finally(() => {
       tokenStore.clear();
-      sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      localStorage.removeItem(CSRF_TOKEN_KEY);
       document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
       setUser(null);
       window.location.href = '/';
@@ -99,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const refreshUser = useCallback(async (): Promise<void> => {
-    const csrfToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
+    const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
     if (!csrfToken) return;
 
     try {

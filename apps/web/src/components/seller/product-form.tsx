@@ -138,10 +138,37 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
     return <Skeleton height="20rem" style={{ borderRadius: 'var(--radius-md)', marginTop: 'var(--space-6)' }} />;
   }
 
+  const fieldStyle: React.CSSProperties = {
+    padding: '0.625rem 0.875rem',
+    border: '1.5px solid #d1d5db',
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    color: '#111827',
+    fontSize: '0.9rem',
+    width: '100%',
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  };
+
+  const labelTextStyle: React.CSSProperties = {
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: '#374151',
+    letterSpacing: '0.02em',
+    textTransform: 'uppercase',
+  };
+
   return (
-    <div style={{ marginTop: 'var(--space-8)', backgroundColor: 'var(--color-cream)', padding: 'var(--space-8)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+    <div style={{ marginTop: 'var(--space-8)', backgroundColor: '#ffffff', padding: 'var(--space-8)', borderRadius: 'var(--radius-lg)', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text)' }}>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827' }}>
           {initialData?.id ? 'Edit Product' : 'Add New Product'}
         </h2>
         <Button variant="secondary" onClick={onCancel} disabled={mutation.isPending}>
@@ -151,39 +178,58 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
         {error && (
-          <div style={{ padding: 'var(--space-4)', backgroundColor: 'var(--color-error)', color: 'white', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ padding: 'var(--space-4)', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '0.9rem' }}>
             {error}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-6)' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Product Name</span>
+        {/* Row 1: Name + Price + Stock */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-5)' }}>
+          <label style={labelStyle}>
+            <span style={labelTextStyle}>Product Name</span>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
+              placeholder="e.g. Wooden Puzzle Set"
+              style={fieldStyle}
             />
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Price (PHP)</span>
+          <label style={labelStyle}>
+            <span style={labelTextStyle}>Price (PHP)</span>
             <input
               type="number"
               step="0.01"
+              min="0"
               value={form.price}
               onChange={(e) => setForm(f => ({ ...f, price: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
+              placeholder="0.00"
+              style={fieldStyle}
             />
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Category</span>
+          <label style={labelStyle}>
+            <span style={labelTextStyle}>Stock Quantity</span>
+            <input
+              type="number"
+              min="0"
+              value={form.stockQuantity}
+              onChange={(e) => setForm(f => ({ ...f, stockQuantity: e.target.value }))}
+              placeholder="1"
+              style={fieldStyle}
+            />
+          </label>
+        </div>
+
+        {/* Row 2: Category + Age Range */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-5)' }}>
+          <label style={labelStyle}>
+            <span style={labelTextStyle}>Category</span>
             <select
               value={form.categoryId}
               onChange={(e) => setForm(f => ({ ...f, categoryId: Number(e.target.value) }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-cream)' }}
+              style={fieldStyle}
             >
               <option value={0} disabled>Select Category</option>
               {categories?.map(c => (
@@ -192,12 +238,12 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
             </select>
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Age Range</span>
+          <label style={labelStyle}>
+            <span style={labelTextStyle}>Age Range</span>
             <select
               value={form.ageRangeId}
               onChange={(e) => setForm(f => ({ ...f, ageRangeId: Number(e.target.value) }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-cream)' }}
+              style={fieldStyle}
             >
               <option value={0} disabled>Select Age Range</option>
               {ageRanges?.map(a => (
@@ -205,30 +251,61 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
               ))}
             </select>
           </label>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Stock Quantity</span>
-            <input
-              type="number"
-              value={form.stockQuantity}
-              onChange={(e) => setForm(f => ({ ...f, stockQuantity: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
-            />
-          </label>
         </div>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Product Image</span>
+        {/* Product Image */}
+        <label style={labelStyle}>
+          <span style={labelTextStyle}>Product Image</span>
           <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {form.imageUrl ? (
-              <div style={{ flexShrink: 0, width: '100px', height: '100px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-input-border, #ccc)', backgroundColor: '#eee', position: 'relative' }}>
-                <img src={form.imageUrl.startsWith('http') || form.imageUrl.startsWith('data:') || form.imageUrl.startsWith('/') ? form.imageUrl : `/${form.imageUrl}`} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = ''; e.currentTarget.style.display = 'none'; }} />
-                <button type="button" onClick={() => setForm(f => ({ ...f, imageUrl: '' }))} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>×</button>
+              <div style={{ flexShrink: 0, width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db', backgroundColor: '#f3f4f6', position: 'relative' }}>
+                <img
+                  src={form.imageUrl.startsWith('http') || form.imageUrl.startsWith('data:') || form.imageUrl.startsWith('/') ? form.imageUrl : `/${form.imageUrl}`}
+                  alt="Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.currentTarget.src = ''; e.currentTarget.style.display = 'none'; }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, imageUrl: '' }))}
+                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', lineHeight: 1 }}
+                >
+                  ×
+                </button>
               </div>
             ) : (
-              <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
-                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} style={{ padding: 'var(--space-3)', border: '1px dashed var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', width: '100%', cursor: 'pointer', backgroundColor: 'var(--color-background, #fff)' }} />
-                {isUploading && <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Uploading...</p>}
+              <div style={{ flexShrink: 0 }}>
+                <label
+                  htmlFor="product-image-upload"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0.6rem 1rem',
+                    border: '1.5px dashed #9ca3af',
+                    borderRadius: '8px',
+                    backgroundColor: isUploading ? '#f9fafb' : '#ffffff',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    userSelect: 'none',
+                    transition: 'background 0.15s, border-color 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <span>{isUploading ? 'Uploading…' : 'Choose image'}</span>
+                </label>
+                <input
+                  id="product-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                  style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+                />
               </div>
             )}
             <input
@@ -236,27 +313,29 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
               value={form.imageUrl}
               onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
               placeholder="Or paste an image URL..."
-              style={{ flex: '2 1 auto', padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)', minWidth: '200px' }}
+              style={{ ...fieldStyle, flex: '1 1 200px' }}
             />
           </div>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)' }}>Description</span>
+        {/* Description */}
+        <label style={labelStyle}>
+          <span style={labelTextStyle}>Description</span>
           <textarea
             value={form.description}
             onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
             rows={4}
-            style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', resize: 'vertical', backgroundColor: 'var(--color-background, #fff)' }}
+            placeholder="Describe the product..."
+            style={{ ...fieldStyle, resize: 'vertical' }}
           />
         </label>
 
-        <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'flex-end', marginTop: 'var(--space-2)', paddingTop: 'var(--space-4)', borderTop: '1px solid #e5e7eb' }}>
           <Button type="button" variant="secondary" onClick={onCancel} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving...' : 'Save Product'}
+            {mutation.isPending ? 'Saving…' : initialData?.id ? 'Save Changes' : 'Add Product'}
           </Button>
         </div>
       </form>

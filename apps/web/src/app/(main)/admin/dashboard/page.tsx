@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { ConfirmModal } from '@/components/ui/confirm-modal/confirm-modal';
 import styles from './admin.module.css';
 
 interface AdminStats {
@@ -119,25 +121,31 @@ export default function AdminDashboardPage() {
   const [selectedShop, setSelectedShop] = useState<AdminShop | null>(null);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [newPassword, setNewPassword] = useState('');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [settlingId, setSettlingId] = useState<number | null>(null);
   const [refMap, setRefMap] = useState<Record<number, string>>({});
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  // ConfirmModal state
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    description?: string;
+    confirmLabel?: string;
+    isDangerous?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const withConfirm = (opts: typeof confirm) => setConfirm(opts);
+  const closeConfirm = () => setConfirm(null);
 
   const updateShopStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiClient.patch(`/admin/shops/${id}/status`, { status }),
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-shops'] });
-      showToast(`Shop status updated to ${status}.`);
+      toast.success(`Shop status updated to ${status}.`);
       setSelectedShop(null);
     },
-    onError: () => showToast('Failed to update shop status.', 'error'),
+    onError: () => toast.error('Failed to update shop status.'),
   });
 
   const updateUserStatus = useMutation({
@@ -146,20 +154,20 @@ export default function AdminDashboardPage() {
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       if (selectedUser) setSelectedUser({ ...selectedUser, status });
-      showToast(`User ${status === 'Active' ? 'activated' : 'suspended'} successfully.`);
+      toast.success(`User ${status === 'Active' ? 'activated' : 'suspended'} successfully.`);
     },
-    onError: () => showToast('Failed to update user status.', 'error'),
+    onError: () => toast.error('Failed to update user status.'),
   });
 
   const resetPassword = useMutation({
     mutationFn: ({ id, newPassword }: { id: number; newPassword?: string }) =>
       apiClient.post(`/admin/users/${id}/reset-password`, { newPassword }),
     onSuccess: (res) => {
-      showToast(res.data.message || 'Password reset successful.');
+      toast.success(res.data.message || 'Password reset successful.');
       setShowPasswordPrompt(false);
       setNewPassword('');
     },
-    onError: () => showToast('Password reset failed.', 'error'),
+    onError: () => toast.error('Password reset failed.'),
   });
 
   const elevateRole = useMutation({
@@ -168,9 +176,9 @@ export default function AdminDashboardPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setSelectedUser(null);
-      showToast('User role updated.');
+      toast.success('User role updated.');
     },
-    onError: () => showToast('Failed to update role.', 'error'),
+    onError: () => toast.error('Failed to update role.'),
   });
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<AdminStats>({
@@ -223,9 +231,9 @@ export default function AdminDashboardPage() {
     onSuccess: (_, { resolution }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-disputes'] });
       setResolvingId(null);
-      showToast(`Dispute resolved: ${resolution}.`);
+      toast.success(`Dispute resolved: ${resolution}.`);
     },
-    onError: () => showToast('Failed to resolve dispute.', 'error'),
+    onError: () => toast.error('Failed to resolve dispute.'),
   });
 
   const settleMutation = useMutation({
@@ -234,9 +242,9 @@ export default function AdminDashboardPage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
       setSettlingId(null);
-      showToast(`Settled ${res.data.settledCount} commission(s). Ref: ${res.data.referenceNumber}`);
+      toast.success(`Settled ${res.data.settledCount} commission(s). Ref: ${res.data.referenceNumber}`);
     },
-    onError: () => showToast('Failed to settle payout.', 'error'),
+    onError: () => toast.error('Failed to settle payout.'),
   });
 
   const users = usersData?.users ?? [];
@@ -272,53 +280,20 @@ export default function AdminDashboardPage() {
 
   return (
     <div className={styles.page}>
-      {/* Toast notification */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            top: 'var(--space-6)',
-            right: 'var(--space-6)',
-            zIndex: 2000,
-            padding: 'var(--space-3) var(--space-5)',
-            borderRadius: 'var(--radius-md)',
-            background: toast.type === 'success' ? '#c4ffe2' : '#f7b3b3',
-            color: toast.type === 'success' ? '#15803d' : '#f27070',
-            fontWeight: 600,
-            fontSize: 'var(--text-sm)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            animation: 'slideUp 0.2s ease',
-          }}
-        >
-          {toast.message}
-        </div>
-      )}
+      {/* Confirm Modal */}
+      <ConfirmModal
+        open={!!confirm}
+        title={confirm?.title ?? ''}
+        description={confirm?.description}
+        confirmLabel={confirm?.confirmLabel}
+        isDangerous={confirm?.isDangerous}
+        onConfirm={() => { confirm?.onConfirm(); closeConfirm(); }}
+        onCancel={closeConfirm}
+      />
 
       <div className={styles.pageHeader}>
         <h1 className={styles.heading}>Admin Dashboard</h1>
         <p className={styles.subheading}>Platform overview and management</p>
-        <ul className={styles.navLinks} role="list">
-          <li>
-            <a
-              href="#overview"
-              className={styles.activeNavLink}
-            >
-              Dashboard
-            </a>
-          </li>
-          <li>
-            <a href="#disputes" className={styles.navLink}>
-              Disputes
-            </a>
-          </li>
-          <li>
-            <a href="#payouts" className={styles.navLink}>
-              Payouts
-            </a>
-          </li>
-        </ul>
       </div>
 
       {/* Stats */}
@@ -532,7 +507,12 @@ export default function AdminDashboardPage() {
                   {selectedUser.status !== 'Active' && (
                     <button
                       className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                      onClick={() => updateUserStatus.mutate({ id: selectedUser.id, status: 'Active' })}
+                      onClick={() => withConfirm({
+                        title: 'Activate Account',
+                        description: `Activate account for ${selectedUser.firstName} ${selectedUser.lastName}?`,
+                        confirmLabel: 'Activate',
+                        onConfirm: () => updateUserStatus.mutate({ id: selectedUser.id, status: 'Active' }),
+                      })}
                       disabled={updateUserStatus.isPending}
                     >
                       Activate Account
@@ -541,7 +521,13 @@ export default function AdminDashboardPage() {
                   {selectedUser.status === 'Active' && (
                     <button
                       className={`${styles.actionBtn} ${styles.btnDelete}`}
-                      onClick={() => updateUserStatus.mutate({ id: selectedUser.id, status: 'Suspended' })}
+                      onClick={() => withConfirm({
+                        title: 'Suspend Account',
+                        description: `Suspend ${selectedUser.firstName} ${selectedUser.lastName}? They will not be able to log in.`,
+                        confirmLabel: 'Suspend',
+                        isDangerous: true,
+                        onConfirm: () => updateUserStatus.mutate({ id: selectedUser.id, status: 'Suspended' }),
+                      })}
                       disabled={updateUserStatus.isPending}
                     >
                       Suspend Account
@@ -556,21 +542,37 @@ export default function AdminDashboardPage() {
                 <div className={styles.btnRow}>
                   <button
                     className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Admin' })}
+                    onClick={() => withConfirm({
+                      title: 'Assign Admin Role',
+                      description: `Grant Admin privileges to ${selectedUser.firstName} ${selectedUser.lastName}?`,
+                      confirmLabel: 'Assign Admin',
+                      isDangerous: true,
+                      onConfirm: () => elevateRole.mutate({ id: selectedUser.id, role: 'Admin' }),
+                    })}
                     disabled={elevateRole.isPending}
                   >
                     Admin
                   </button>
                   <button
                     className={`${styles.actionBtn} ${styles.btnUpdate}`}
-                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Seller' })}
+                    onClick={() => withConfirm({
+                      title: 'Assign Seller Role',
+                      description: `Assign Seller role to ${selectedUser.firstName} ${selectedUser.lastName}?`,
+                      confirmLabel: 'Assign Seller',
+                      onConfirm: () => elevateRole.mutate({ id: selectedUser.id, role: 'Seller' }),
+                    })}
                     disabled={elevateRole.isPending}
                   >
                     Seller
                   </button>
                   <button
                     className={`${styles.actionBtn} ${styles.btnArchive}`}
-                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Customer' })}
+                    onClick={() => withConfirm({
+                      title: 'Assign Customer Role',
+                      description: `Set ${selectedUser.firstName} ${selectedUser.lastName} as Customer?`,
+                      confirmLabel: 'Assign Customer',
+                      onConfirm: () => elevateRole.mutate({ id: selectedUser.id, role: 'Customer' }),
+                    })}
                     disabled={elevateRole.isPending}
                   >
                     Customer
@@ -699,14 +701,25 @@ export default function AdminDashboardPage() {
                     <>
                       <button
                         className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                        onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' })}
+                        onClick={() => withConfirm({
+                          title: 'Approve Shop',
+                          description: `Approve "${selectedShop.shopName}" and make it live?`,
+                          confirmLabel: 'Approve',
+                          onConfirm: () => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' }),
+                        })}
                         disabled={updateShopStatus.isPending}
                       >
                         Approve Shop
                       </button>
                       <button
                         className={`${styles.actionBtn} ${styles.btnDelete}`}
-                        onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Banned' })}
+                        onClick={() => withConfirm({
+                          title: 'Reject Shop',
+                          description: `Reject "${selectedShop.shopName}"? The shop will be banned.`,
+                          confirmLabel: 'Reject',
+                          isDangerous: true,
+                          onConfirm: () => updateShopStatus.mutate({ id: selectedShop.id, status: 'Banned' }),
+                        })}
                         disabled={updateShopStatus.isPending}
                       >
                         Reject Shop
@@ -716,19 +729,44 @@ export default function AdminDashboardPage() {
                   {selectedShop.shopStatus === 'Active' && (
                     <button
                       className={`${styles.actionBtn} ${styles.btnArchive}`}
-                      onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Inactive' })}
+                      onClick={() => withConfirm({
+                        title: 'Suspend Shop',
+                        description: `Suspend "${selectedShop.shopName}"? Products will be hidden.`,
+                        confirmLabel: 'Suspend',
+                        isDangerous: true,
+                        onConfirm: () => updateShopStatus.mutate({ id: selectedShop.id, status: 'Inactive' }),
+                      })}
                       disabled={updateShopStatus.isPending}
                     >
                       Suspend Shop
                     </button>
                   )}
-                  {(selectedShop.shopStatus === 'Inactive' || selectedShop.shopStatus === 'Banned') && (
+                  {selectedShop.shopStatus === 'Inactive' && (
                     <button
                       className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                      onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' })}
+                      onClick={() => withConfirm({
+                        title: 'Reactivate Shop',
+                        description: `Reactivate "${selectedShop.shopName}"?`,
+                        confirmLabel: 'Reactivate',
+                        onConfirm: () => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' }),
+                      })}
                       disabled={updateShopStatus.isPending}
                     >
                       Reactivate Shop
+                    </button>
+                  )}
+                  {selectedShop.shopStatus === 'Banned' && (
+                    <button
+                      className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                      onClick={() => withConfirm({
+                        title: 'Unban Shop',
+                        description: `Unban "${selectedShop.shopName}" and restore it to Active status?`,
+                        confirmLabel: 'Unban',
+                        onConfirm: () => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' }),
+                      })}
+                      disabled={updateShopStatus.isPending}
+                    >
+                      Unban Shop
                     </button>
                   )}
                 </div>
@@ -782,7 +820,13 @@ export default function AdminDashboardPage() {
                   type="button"
                   className={`${styles.actionBtn} ${styles.btnDelete}`}
                   disabled={resolveMutation.isPending && resolvingId === item.id}
-                  onClick={() => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Refunded' }); }}
+                  onClick={() => withConfirm({
+                    title: 'Approve Refund',
+                    description: `Approve refund for "${item.product.name}"? This will void the seller's commission for this item.`,
+                    confirmLabel: 'Approve Refund',
+                    isDangerous: true,
+                    onConfirm: () => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Refunded' }); },
+                  })}
                 >
                   Approve Refund
                 </button>
@@ -790,7 +834,13 @@ export default function AdminDashboardPage() {
                   type="button"
                   className={`${styles.actionBtn} ${styles.btnArchive}`}
                   disabled={resolveMutation.isPending && resolvingId === item.id}
-                  onClick={() => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Completed' }); }}
+                  onClick={() => withConfirm({
+                    title: 'Reject Dispute',
+                    description: `Reject the dispute for "${item.product.name}"? The order will be marked Completed.`,
+                    confirmLabel: 'Reject Dispute',
+                    isDangerous: true,
+                    onConfirm: () => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Completed' }); },
+                  })}
                 >
                   Reject Dispute
                 </button>

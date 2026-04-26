@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button/button';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { ConfirmModal } from '@/components/ui/confirm-modal/confirm-modal';
 import { ProductForm, type ProductData } from '@/components/seller/product-form';
 import { SellerRecentOrderDto } from '@/types/seller';
 import styles from './dashboard.module.css';
@@ -71,12 +71,20 @@ const fmt = new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', 
 
 export default function SellerDashboardPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [confirmingDeleteProductId, setConfirmingDeleteProductId] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    description?: string;
+    confirmLabel?: string;
+    isDangerous?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
   const [view, setView] = useState<'dashboard' | 'add_product' | 'edit_product'>('dashboard');
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null);
+
+  const withConfirm = (opts: typeof confirm) => setConfirm(opts);
+  const closeConfirm = () => setConfirm(null);
 
   const fmtDate = new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
@@ -137,21 +145,25 @@ export default function SellerDashboardPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiClient.delete(`/products/${id}`),
     onSuccess: () => {
-      setConfirmingDeleteProductId(null);
+      closeConfirm();
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+      toast.success('Product deleted successfully.');
     },
+    onError: () => toast.error('Failed to delete product.'),
   });
 
   const updateOrderStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: 'InTransit' | 'Cancelled' | 'Completed' }) =>
       apiClient.patch(`/orders/items/${id}/status`, { status }),
-    onSuccess: () => {
+    onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['seller-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['seller-stats'] });
       refetchDashboard();
       refetchStats();
       refetchProducts();
+      toast.success(`Order marked as ${status}.`);
     },
+    onError: () => toast.error('Failed to update order status.'),
   });
 
   const STATS = [
@@ -189,38 +201,39 @@ export default function SellerDashboardPage() {
 
   return (
     <div className={styles.page}>
+      {/* Confirm Modal */}
+      <ConfirmModal
+        open={!!confirm}
+        title={confirm?.title ?? ''}
+        description={confirm?.description}
+        confirmLabel={confirm?.confirmLabel}
+        isDangerous={confirm?.isDangerous}
+        onConfirm={() => { confirm?.onConfirm(); closeConfirm(); }}
+        onCancel={closeConfirm}
+      />
       <div className={styles.pageHeader}>
-        <h1 className={styles.heading}>Seller Dashboard</h1>
-        <p className={styles.subheading}>Manage your products and track your sales</p>
-        <ul className={styles.navLinks} role="list">
-          <li>
-            <Link
-              href="/seller/dashboard"
-              className={pathname === '/seller/dashboard' ? styles.activeNavLink : styles.navLink}
-              aria-current={pathname === '/seller/dashboard' ? 'page' : undefined}
-            >
-              Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/seller/orders"
-              className={pathname === '/seller/orders' ? styles.activeNavLink : styles.navLink}
-              aria-current={pathname === '/seller/orders' ? 'page' : undefined}
-            >
-              Orders
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/seller/payouts"
-              className={pathname === '/seller/payouts' ? styles.activeNavLink : styles.navLink}
-              aria-current={pathname === '/seller/payouts' ? 'page' : undefined}
-            >
-              Payouts
-            </Link>
-          </li>
-        </ul>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>
+          {/* Shop logo */}
+          {dashboard?.shopLogoUrl ? (
+            <img
+              src={dashboard.shopLogoUrl.startsWith('/') ? dashboard.shopLogoUrl : `/${dashboard.shopLogoUrl}`}
+              alt={dashboard.shopName ?? 'Shop logo'}
+              width={52}
+              height={52}
+              style={{ borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-card-border)', flexShrink: 0 }}
+            />
+          ) : (
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.3rem', flexShrink: 0 }}>
+              {(dashboard?.shopName ?? user?.username ?? 'S')[0].toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h1 className={styles.heading} style={{ marginBottom: 0 }}>
+              {dashboard?.shopName ?? 'Seller Dashboard'}
+            </h1>
+            <p className={styles.subheading} style={{ marginTop: 'var(--space-1)' }}>Manage your products and track your sales</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
@@ -319,7 +332,13 @@ export default function SellerDashboardPage() {
                         )}
                         <button
                           className={`${styles.actionBtn} ${styles.btnDelete}`}
-                          onClick={() => setConfirmingDeleteProductId(p.id)}
+                          onClick={() => withConfirm({
+                            title: 'Delete Product',
+                            description: `Permanently delete product P-${p.id.toString().padStart(4,'0')} "${p.name}"? This cannot be undone.`,
+                            confirmLabel: 'Delete',
+                            isDangerous: true,
+                            onConfirm: () => deleteMutation.mutate(p.id),
+                          })}
                         >
                           Delete
                         </button>
@@ -390,14 +409,25 @@ export default function SellerDashboardPage() {
                         <div className={styles.actionGroup}>
                           <button
                             className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'InTransit' })}
+                            onClick={() => withConfirm({
+                              title: 'Confirm Order',
+                              description: `Mark order O-${o.id.toString().padStart(4,'0')} as In Transit?`,
+                              confirmLabel: 'Confirm',
+                              onConfirm: () => updateOrderStatusMutation.mutate({ id: o.id, status: 'InTransit' }),
+                            })}
                             disabled={updateOrderStatusMutation.isPending}
                           >
                             Confirm
                           </button>
                           <button
                             className={`${styles.actionBtn} ${styles.btnDelete}`}
-                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
+                            onClick={() => withConfirm({
+                              title: 'Cancel Order',
+                              description: `Cancel order O-${o.id.toString().padStart(4,'0')}? This cannot be undone.`,
+                              confirmLabel: 'Cancel Order',
+                              isDangerous: true,
+                              onConfirm: () => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' }),
+                            })}
                             disabled={updateOrderStatusMutation.isPending}
                           >
                             Cancel
@@ -407,14 +437,25 @@ export default function SellerDashboardPage() {
                         <div className={styles.actionGroup}>
                           <button
                             className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Completed' })}
+                            onClick={() => withConfirm({
+                              title: 'Mark as Delivered',
+                              description: `Mark order O-${o.id.toString().padStart(4,'0')} as Completed?`,
+                              confirmLabel: 'Mark Delivered',
+                              onConfirm: () => updateOrderStatusMutation.mutate({ id: o.id, status: 'Completed' }),
+                            })}
                             disabled={updateOrderStatusMutation.isPending}
                           >
                             Mark Delivered
                           </button>
                           <button
                             className={`${styles.actionBtn} ${styles.btnDelete}`}
-                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
+                            onClick={() => withConfirm({
+                              title: 'Cancel Order',
+                              description: `Cancel order O-${o.id.toString().padStart(4,'0')} even though it's in transit?`,
+                              confirmLabel: 'Cancel Order',
+                              isDangerous: true,
+                              onConfirm: () => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' }),
+                            })}
                             disabled={updateOrderStatusMutation.isPending}
                           >
                             Cancel
@@ -483,55 +524,6 @@ export default function SellerDashboardPage() {
         />
       )}
 
-
-      {/* ─── Delete Product Confirmation ──────────────────────────── */}
-      {confirmingDeleteProductId !== null && (
-        <div
-          className={styles.modalOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-product-title"
-          onClick={() => setConfirmingDeleteProductId(null)}
-        >
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 id="delete-product-title" className={styles.modalTitle}>Delete Product Listing</h3>
-              <button
-                type="button"
-                className={styles.modalCloseBtn}
-                aria-label="Cancel deletion"
-                onClick={() => setConfirmingDeleteProductId(null)}
-              >
-                &times;
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <p>
-                Are you sure you want to remove this listing? This will permanently delete product{' '}
-                <strong>P-{confirmingDeleteProductId?.toString().padStart(4, '0')}</strong> from your store. This action is irreversible.
-              </p>
-            </div>
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.modalCancelBtn}
-                onClick={() => setConfirmingDeleteProductId(null)}
-                disabled={deleteMutation.isPending}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.modalDeleteBtn}
-                onClick={() => deleteMutation.mutate(confirmingDeleteProductId)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

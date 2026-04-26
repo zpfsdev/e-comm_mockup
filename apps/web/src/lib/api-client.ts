@@ -104,7 +104,7 @@ apiClient.interceptors.response.use(
 
     try {
       const csrfToken =
-        typeof window !== 'undefined' ? sessionStorage.getItem(CSRF_TOKEN_KEY) : null;
+        typeof window !== 'undefined' ? localStorage.getItem(CSRF_TOKEN_KEY) : null;
       const { data } = await axios.post<{ accessToken: string }>(
         `${API_BASE_URL}/auth/refresh`,
         {},
@@ -123,7 +123,7 @@ apiClient.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       tokenStore.clear();
-      sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      localStorage.removeItem(CSRF_TOKEN_KEY);
       const logoutPromise = apiClient.post('/auth/logout').catch(() => {});
       const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, LOGOUT_TIMEOUT_MS));
       void Promise.race([logoutPromise, timeoutPromise]).then(() => {

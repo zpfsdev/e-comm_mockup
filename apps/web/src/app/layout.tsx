@@ -3,6 +3,7 @@ import { Outfit, Paytone_One } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/providers/query-provider';
 import { AuthProvider } from '@/providers/auth-provider';
+import { Toaster } from 'sonner';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -37,6 +38,7 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>{children}</AuthProvider>
         </QueryProvider>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

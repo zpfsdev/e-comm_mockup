@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -116,33 +117,16 @@ export class AuthController {
       typeof cookies.refreshToken === 'string' ? cookies.refreshToken : undefined;
     const clientCsrfToken = req.headers['x-csrf-token'] as string | undefined;
 
-    if (!refreshToken) throw new UnauthorizedException('No refresh token provided.');
-    if (!clientCsrfToken) {
+    if (!refreshToken) {
       this.clearAuthCookies(res);
-      throw new UnauthorizedException('No CSRF token provided.');
+      throw new UnauthorizedException('No refresh token provided.');
     }
 
-    try {
-      // Validate CSRF
-      await this.jwtService.verifyAsync(clientCsrfToken, {
-        secret: this.configService.get<string>('CSRF_SECRET', 'secret'),
-      });
-
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
-        secret: this.configService.get<string>('REFRESH_TOKEN_SECRET', 'secret'),
-      });
-
-      const tokenData = await this.authService.refresh(payload, refreshToken);
-      if (!tokenData) {
-        this.clearAuthCookies(res);
-        throw new UnauthorizedException('Invalid refresh token.');
-      }
-      this.setAuthCookies(res, tokenData.tokens);
-      return { accessToken: tokenData.tokens.accessToken, user: tokenData.user };
-    } catch (e) {
-      this.clearAuthCookies(res);
-      throw new UnauthorizedException('Invalid refresh token.');
-    }
+    // Delegate all CSRF validation and token verification to the service.
+    const result = await this.authService.refresh(refreshToken, clientCsrfToken);
+    // Issue a fresh access-token cookie so RSC pages stay authenticated.
+    this.setAccessTokenCookie(res, result.accessToken);
+    return result;
   }
 
   @Get('me')

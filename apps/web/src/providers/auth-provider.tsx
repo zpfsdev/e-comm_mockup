@@ -44,8 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Always attempt a silent refresh — the HttpOnly refreshToken cookie may
       // still be valid even if the csrfToken was lost from localStorage (e.g.
       // server restart, browser restart, hard refresh). We send the CSRF token
-      // if we have one; the server accepts the call either way for the initial
-      // bootstrap handshake.
+      // if we have one.
       const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
       try {
         const { data } = await axios.post<RefreshResponse>(
@@ -59,15 +58,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!isMounted) return;
         tokenStore.set(data.accessToken);
         setUser(data.user);
-        // Re-persist CSRF token in case it was missing or rotated
+        // Re-persist CSRF token in case it was missing or rotated.
         if ((data as any).csrfToken) {
           localStorage.setItem(CSRF_TOKEN_KEY, (data as any).csrfToken);
         }
-      } catch {
-        // Refresh failed — no valid session. Clean up any stale remnants.
-        tokenStore.clear();
-        localStorage.removeItem(CSRF_TOKEN_KEY);
-        document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
+      } catch (err) {
+        if (!isMounted) return;
+        // Only destroy local session on a real auth rejection (401/403).
+        // Network errors (ECONNREFUSED, server starting up, offline) must NOT
+        // clear the CSRF token — the session is still valid, the API just isn't
+        // ready yet.
+        const status = axios.isAxiosError(err) ? err.response?.status : null;
+        const isAuthFailure = status === 401 || status === 403;
+        if (isAuthFailure) {
+          tokenStore.clear();
+          localStorage.removeItem(CSRF_TOKEN_KEY);
+          document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
+        }
+        // For network errors: silently stay logged-out for this render cycle.
+        // The user's session remains intact — next page load will succeed.
       } finally {
         if (isMounted) {
           setIsLoading(false);

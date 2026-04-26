@@ -26,6 +26,48 @@
   color: var(--color-text-muted);
 }
 
+.navLinks {
+  display: flex;
+  gap: var(--space-6);
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.navLink, .activeNavLink {
+  display: inline-block;
+  padding: var(--space-2) 0;
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.navLink:hover {
+  color: var(--color-text);
+  border-color: var(--color-card-border);
+}
+
+.activeNavLink {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─── Stats row ───────────────────────────────────────────────────────────── */
 .statsGrid {
   display: flex;
@@ -80,6 +122,40 @@
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   color: var(--color-primary);
+}
+
+/* When sectionHeader is used as a full <section> wrapper, override flex */
+section.sectionHeader {
+  display: block;
+  margin-bottom: var(--space-12);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+}
+
+.emptyStateTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+
+.emptyStateText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 /* ─── Tables ──────────────────────────────────────────────────────── */
@@ -140,6 +216,7 @@
 
 .statusActive { color: #33ca7f; }
 .statusInactive { color: #f27070; }
+.statusPending { color: #f59e0b; }
 
 .actionGroup {
   display: flex;
@@ -155,11 +232,18 @@
   border: none;
   cursor: pointer;
   min-width: 66px;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), box-shadow 0.2s;
 }
 
 .actionBtn:hover { opacity: 0.8; }
-.btnArchive { background-color: #ffead2; color: var(--color-text-muted); }
+.actionBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+}
+.btnArchive  { background-color: #ffead2; color: var(--color-text-muted); }
+.btnUpdate   { background-color: #dbeafe; color: #1d4ed8; }
+.btnConfirm  { background-color: #c4ffe2; color: #15803d; }
+.btnDelete   { background-color: #f7b3b3; color: #f27070; }
 
 .roleBadge {
   font-size: var(--text-xs);
@@ -187,3 +271,268 @@
 }
 .accessDeniedLink:hover { opacity: 0.85; }
 
+.headerActions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.productImg {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.productNameCell {
+  text-align: left;
+  white-space: pre-wrap;
+  min-width: 150px;
+}
+
+/* ─── Modal Overlay ─────────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+  overscroll-behavior: contain;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modalContent {
+  background-color: var(--color-surface, #fff);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  overflow: hidden;
+  animation: slideUp 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.modalCloseBtn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+}
+.modalCloseBtn:hover { color: var(--color-text); }
+.modalCloseBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.modalBody {
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+.modalBody p { margin: 0; }
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-card-border);
+}
+
+.modalCancelBtn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-card-border);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.modalCancelBtn:hover:not(:disabled) { background: rgba(0,0,0,0.05); }
+.modalCancelBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+}
+
+.modalDeleteBtn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s, box-shadow 0.2s;
+}
+.modalDeleteBtn:hover:not(:disabled) { filter: brightness(0.9); }
+.modalDeleteBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px #ef4444;
+}
+.modalDeleteBtn:disabled, .modalCancelBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Modal Refinements */
+.modalIdBadge {
+  font-size: var(--text-sm);
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.infoValue {
+  font-weight: 500;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.modalDivider {
+  border: none;
+  border-top: 1px solid var(--color-card-border);
+  margin: var(--space-5) 0;
+}
+
+.fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-5) 0;
+}
+
+.fieldset:last-child {
+  margin-bottom: 0;
+}
+
+.fieldsetLegend {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+
+.btnRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.formLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.formHint {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.formInput {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-card-border);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(119, 71, 255, 0.1);
+}
+
+.shopIdentity {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.shopIdentityImg {
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.shopIdentityImgPlaceholder {
+  width: 64px;
+  height: 64px;
+  background: var(--color-background);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.shopIdentityName {
+  font-weight: 700;
+  font-size: var(--text-lg);
+  margin-bottom: 2px;
+  color: var(--color-text);
+}
+
+.shopIdentitySeller {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}

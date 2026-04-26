@@ -1,7 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
@@ -23,6 +25,22 @@ interface Product {
   description?: string;
   averageRating?: number;
   reviewCount?: number;
+}
+
+interface EditProductForm {
+  name: string;
+  description: string;
+  price: string;
+  stockQuantity: string;
+  imageUrl: string;
+}
+
+interface UpdateProductPayload {
+  name?: string;
+  description?: string;
+  price?: number;
+  stockQuantity?: number;
+  imageUrl?: string;
 }
 
 interface SellerStats {
@@ -54,11 +72,32 @@ function getStatus(err: unknown): number | undefined {
   return (err as AxiosError<unknown>)?.response?.status;
 }
 
+const fmt = new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+
 export default function SellerDashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [confirmingDeleteProductId, setConfirmingDeleteProductId] = useState<number | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<EditProductForm>({ name: '', description: '', price: '', stockQuantity: '', imageUrl: '' });
+
+  const fmtDate = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const openEditOverlay = (p: Product) => {
+    setEditingProduct(p);
+    setEditForm({
+      name: p.name,
+      description: p.description ?? '',
+      price: String(p.price),
+      stockQuantity: String(p.stockQuantity ?? 0),
+      imageUrl: p.imageUrl ?? '',
+    });
+  };
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj, refetch: refetchStats } = useQuery<SellerStats>({
     queryKey: ['seller-stats'],
@@ -94,13 +133,22 @@ export default function SellerDashboardPage() {
     },
   });
 
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateProductPayload }) =>
+      apiClient.patch(`/products/${id}`, data),
+    onSuccess: () => {
+      setEditingProduct(null);
+      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+      refetchProducts();
+    },
+  });
+
   const updateOrderStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: 'InTransit' | 'Cancelled' | 'Completed' }) =>
       apiClient.patch(`/orders/items/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['seller-stats'] });
-      // Force immediate refetch
       refetchDashboard();
       refetchStats();
       refetchProducts();
@@ -111,7 +159,7 @@ export default function SellerDashboardPage() {
     { label: 'Total Products', value: stats?.totalProducts ?? 0 },
     { label: 'Total Orders',   value: stats?.totalOrders ?? 0 },
     { label: 'Pending Orders', value: stats?.pendingOrders ?? 0 },
-    { label: 'Monthly Sales',  value: `₱ ${Number(stats?.totalRevenue ?? 0).toFixed(2)}` },
+    { label: 'Monthly Sales',  value: `PHP ${Number(stats?.totalRevenue ?? 0).toFixed(2)}` },
   ];
 
   const sellerStatus = getStatus(statsErrorObj ?? productsErrorObj);
@@ -119,7 +167,7 @@ export default function SellerDashboardPage() {
     router.push('/seller/register');
     return null;
   }
-  
+
   if (sellerStatus === 403) {
     return (
       <div className={styles.page}>
@@ -145,6 +193,35 @@ export default function SellerDashboardPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.heading}>Seller Dashboard</h1>
         <p className={styles.subheading}>Manage your products and track your sales</p>
+        <ul className={styles.navLinks} role="list">
+          <li>
+            <Link
+              href="/seller/dashboard"
+              className={pathname === '/seller/dashboard' ? styles.activeNavLink : styles.navLink}
+              aria-current={pathname === '/seller/dashboard' ? 'page' : undefined}
+            >
+              Dashboard
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/seller/orders"
+              className={pathname === '/seller/orders' ? styles.activeNavLink : styles.navLink}
+              aria-current={pathname === '/seller/orders' ? 'page' : undefined}
+            >
+              Orders
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/seller/payouts"
+              className={pathname === '/seller/payouts' ? styles.activeNavLink : styles.navLink}
+              aria-current={pathname === '/seller/payouts' ? 'page' : undefined}
+            >
+              Payouts
+            </Link>
+          </li>
+        </ul>
       </div>
 
       {/* Stats */}
@@ -165,7 +242,7 @@ export default function SellerDashboardPage() {
         <h2 className={styles.sectionTitle}>My Products ({stats?.totalProducts ?? products.length})</h2>
         <div className={styles.headerActions}>
           <Button variant="primary" onClick={() => router.push('/seller/products/new')}>
-            Add Products
+            Add Product
           </Button>
         </div>
       </div>
@@ -209,7 +286,7 @@ export default function SellerDashboardPage() {
                     <td data-label="Description" className={`${styles.leftAlign} ${styles.descriptionCell}`}>
                       {p.description ? (p.description.length > 60 ? p.description.substring(0, 60) + '...' : p.description) : '—'}
                     </td>
-                    <td data-label="Price">₱ {Number(p.price).toFixed(2)}</td>
+                    <td data-label="Price">PHP {Number(p.price).toFixed(2)}</td>
                     <td data-label="Qty">{p.stockQuantity ?? 0}</td>
                     <td data-label="Category">{categoryName}</td>
                     <td data-label="Age Range">{p.ageRange?.label ?? '—'}</td>
@@ -233,16 +310,16 @@ export default function SellerDashboardPage() {
                         {p.status === 'Available' && (
                           <button
                             className={`${styles.actionBtn} ${styles.btnUpdate}`}
-                            onClick={() => router.push(`/seller/products/${p.id}/edit`)}
+                            onClick={() => openEditOverlay(p)}
                           >
-                            Update
+                            Edit
                           </button>
                         )}
                         <button
                           className={`${styles.actionBtn} ${styles.btnDelete}`}
                           onClick={() => setConfirmingDeleteProductId(p.id)}
                         >
-                          Archive Listing
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -281,66 +358,75 @@ export default function SellerDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {dashboard.recentOrders.map((o) => (
-                <tr key={o.id}>
-                  <td data-label="Customer">{o.customerName}</td>
-                  <td data-label="Product Image">
-                    {o.productImageUrl ? (
-                      <img src={o.productImageUrl?.startsWith('/') ? o.productImageUrl : `/${o.productImageUrl}`} alt={o.productName} width={60} height={60} className={styles.productImg} />
-                    ) : (
-                      <div className={styles.productImg} style={{ background: '#eee' }} />
-                    )}
-                  </td>
-                  <td data-label="Product" className={`${styles.leftAlign} ${styles.productNameCell}`}>{o.productName}</td>
-                  <td data-label="Qty">{o.quantity}</td>
-                  <td data-label="Shipping Address" className={`${styles.leftAlign} ${styles.descriptionCell}`}>{o.shippingAddress}</td>
-                  <td data-label="Order Date">{new Date(o.orderDate).toLocaleDateString()}</td>
-                  <td data-label="Total">₱ {(Number(o.price) * o.quantity).toFixed(2)}</td>
-                  <td data-label="Date Delivered">{o.dateDelivered ? new Date(o.dateDelivered).toLocaleDateString() : '—'}</td>
-                  <td data-label="Status">{o.orderItemStatus}</td>
-                  <td data-label="Action">
-                    {o.orderItemStatus === 'Pending' ? (
-                       <div className={styles.actionGroup}>
-                         <button 
-                           className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                           onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'InTransit' })}
-                           disabled={updateOrderStatusMutation.isPending}
-                         >
-                           Confirm
-                         </button>
-                         <button 
-                           className={`${styles.actionBtn} ${styles.btnDelete}`}
-                           onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
-                           disabled={updateOrderStatusMutation.isPending}
-                         >
-                           Cancel
-                         </button>
-                       </div>
-                    ) : o.orderItemStatus === 'InTransit' ? (
-                       <div className={styles.actionGroup}>
-                         <button 
-                           className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                           onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Completed' })}
-                           disabled={updateOrderStatusMutation.isPending}
-                         >
-                           Mark as Delivered
-                         </button>
-                         <button 
-                           className={`${styles.actionBtn} ${styles.btnDelete}`}
-                           onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
-                           disabled={updateOrderStatusMutation.isPending}
-                         >
-                           Cancel
-                         </button>
-                       </div>
-                    ) : (
-                       <div className={styles.actionGroup}>
+              {dashboard.recentOrders.map((o) => {
+                const isDisputed = o.orderItemStatus === 'Disputed';
+                return (
+                  <tr key={o.id}>
+                    <td data-label="Customer">{o.customerName}</td>
+                    <td data-label="Product Image">
+                      {o.productImageUrl ? (
+                        <img src={o.productImageUrl?.startsWith('/') ? o.productImageUrl : `/${o.productImageUrl}`} alt={o.productName} width={60} height={60} className={styles.productImg} />
+                      ) : (
+                        <div className={styles.productImg} style={{ background: '#eee' }} />
+                      )}
+                    </td>
+                    <td data-label="Product" className={`${styles.leftAlign} ${styles.productNameCell}`}>{o.productName}</td>
+                    <td data-label="Qty">{o.quantity}</td>
+                    <td data-label="Shipping Address" className={`${styles.leftAlign} ${styles.descriptionCell}`}>{o.shippingAddress}</td>
+                    <td data-label="Order Date">{fmt.format(new Date(o.orderDate))}</td>
+                    <td data-label="Total">PHP {(Number(o.price) * o.quantity).toFixed(2)}</td>
+                    <td data-label="Date Delivered">{o.dateDelivered ? fmt.format(new Date(o.dateDelivered)) : '—'}</td>
+                    <td data-label="Status">
+                      {isDisputed ? (
+                        <span className={styles.statusDisputed}>Disputed</span>
+                      ) : (
+                        <span>{o.orderItemStatus}</span>
+                      )}
+                    </td>
+                    <td data-label="Action">
+                      {o.orderItemStatus === 'Pending' ? (
+                        <div className={styles.actionGroup}>
+                          <button
+                            className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'InTransit' })}
+                            disabled={updateOrderStatusMutation.isPending}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            className={`${styles.actionBtn} ${styles.btnDelete}`}
+                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
+                            disabled={updateOrderStatusMutation.isPending}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : o.orderItemStatus === 'InTransit' ? (
+                        <div className={styles.actionGroup}>
+                          <button
+                            className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Completed' })}
+                            disabled={updateOrderStatusMutation.isPending}
+                          >
+                            Mark Delivered
+                          </button>
+                          <button
+                            className={`${styles.actionBtn} ${styles.btnDelete}`}
+                            onClick={() => updateOrderStatusMutation.mutate({ id: o.id, status: 'Cancelled' })}
+                            disabled={updateOrderStatusMutation.isPending}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={styles.actionGroup}>
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>—</span>
-                       </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -374,11 +460,11 @@ export default function SellerDashboardPage() {
                   <td data-label="Commission ID">C-{(c.id).toString().padStart(4, '0')}</td>
                   <td data-label="Order Ref">O-{(c.orderId).toString().padStart(4, '0')}</td>
                   <td data-label="Product Segment" className={`${styles.leftAlign} ${styles.productNameCell}`}>{c.productName}</td>
-                  <td data-label="Commission Amount">₱ {Number(c.amount).toFixed(2)}</td>
+                  <td data-label="Commission Amount">PHP {Number(c.amount).toFixed(2)}</td>
                   <td data-label="Ledger Status" className={c.status === 'Paid' ? styles.statusActive : styles.statusPending}>
                     {c.status}
                   </td>
-                  <td data-label="Date Paid">{c.datePaid ? new Date(c.datePaid).toLocaleDateString() : '—'}</td>
+                  <td data-label="Date Paid">{c.datePaid ? fmtDate.format(new Date(c.datePaid)) : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -386,38 +472,142 @@ export default function SellerDashboardPage() {
         </div>
       )}
 
-      {confirmingDeleteProductId !== null && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+      {/* ─── Edit Product Overlay ─────────────────────────────────── */}
+      {editingProduct && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-product-title"
+          onClick={() => setEditingProduct(null)}
+        >
+          <div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Delete Product Listing</h3>
-              <button 
-                type="button" 
-                className={styles.modalCloseBtn} 
+              <h3 id="edit-product-title" className={styles.modalTitle}>
+                Edit Product <span className={styles.modalIdBadge}>P-{editingProduct.id.toString().padStart(4, '0')}</span>
+              </h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                aria-label="Close edit dialog"
+                onClick={() => setEditingProduct(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.formGrid}>
+                {(
+                  [
+                    { field: 'name' as const,          label: 'Product Name',  type: 'text'   },
+                    { field: 'price' as const,         label: 'Price (PHP)',   type: 'number' },
+                    { field: 'stockQuantity' as const, label: 'Stock Qty',     type: 'number' },
+                    { field: 'imageUrl' as const,      label: 'Image URL',     type: 'text'   },
+                  ] as const
+                ).map(({ field, label, type }) => (
+                  <div key={field} className={styles.formGroup}>
+                    <label htmlFor={`edit-${field}`} className={styles.formLabel}>
+                      {label}
+                    </label>
+                    <input
+                      id={`edit-${field}`}
+                      type={type}
+                      value={editForm[field]}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                      className={styles.formInput}
+                    />
+                  </div>
+                ))}
+                <div className={styles.formGroup}>
+                  <label htmlFor="edit-description" className={styles.formLabel}>
+                    Description
+                  </label>
+                  <textarea
+                    id="edit-description"
+                    value={editForm.description}
+                    rows={3}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                    className={styles.formTextarea}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.modalCancelBtn}
+                onClick={() => setEditingProduct(null)}
+                disabled={updateProductMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.modalConfirmBtn}
+                onClick={() =>
+                  updateProductMutation.mutate({
+                    id: editingProduct.id,
+                    data: {
+                      name: editForm.name,
+                      description: editForm.description,
+                      imageUrl: editForm.imageUrl,
+                      price: Number(editForm.price),
+                      stockQuantity: Number(editForm.stockQuantity),
+                    },
+                  })
+                }
+                disabled={updateProductMutation.isPending}
+              >
+                {updateProductMutation.isPending ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delete Product Confirmation ──────────────────────────── */}
+      {confirmingDeleteProductId !== null && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-product-title"
+          onClick={() => setConfirmingDeleteProductId(null)}
+        >
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 id="delete-product-title" className={styles.modalTitle}>Delete Product Listing</h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                aria-label="Cancel deletion"
                 onClick={() => setConfirmingDeleteProductId(null)}
               >
                 &times;
               </button>
             </div>
             <div className={styles.modalBody}>
-              <p>Are you sure you want to remove this listing? This will permanently delete the product <strong>P-{confirmingDeleteProductId?.toString().padStart(4, '0')}</strong> from your store. This action is irreversible.</p>
+              <p>
+                Are you sure you want to remove this listing? This will permanently delete product{' '}
+                <strong>P-{confirmingDeleteProductId?.toString().padStart(4, '0')}</strong> from your store. This action is irreversible.
+              </p>
             </div>
             <div className={styles.modalActions}>
-              <button 
-                type="button" 
-                className={styles.modalCancelBtn} 
+              <button
+                type="button"
+                className={styles.modalCancelBtn}
                 onClick={() => setConfirmingDeleteProductId(null)}
                 disabled={deleteMutation.isPending}
               >
                 Cancel
               </button>
-              <button 
-                type="button" 
-                className={styles.modalDeleteBtn} 
+              <button
+                type="button"
+                className={styles.modalDeleteBtn}
                 onClick={() => deleteMutation.mutate(confirmingDeleteProductId)}
                 disabled={deleteMutation.isPending}
               >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
               </button>
             </div>
           </div>

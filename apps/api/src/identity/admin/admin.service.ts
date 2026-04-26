@@ -138,8 +138,8 @@ export class AdminService {
     return { totalUsers, totalSellers, totalOrders, totalProducts };
   }
 
-  async resetUserPassword(userId: number) {
-    const newPassword = 'welcome123';
+  async resetUserPassword(userId: number, customPassword?: string) {
+    const newPassword = customPassword || 'welcome123';
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
@@ -148,7 +148,7 @@ export class AdminService {
         refreshTokenVersion: { increment: 1 } 
       },
     });
-    return { success: true, message: 'Password reset to default.' };
+    return { success: true, message: `Password reset to ${customPassword ? 'provided password' : 'default'}.` };
   }
 
   async setUserRole(userId: number, roleName: RoleName) {

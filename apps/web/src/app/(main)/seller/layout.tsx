@@ -5,7 +5,7 @@ interface Props {
   readonly children: ReactNode;
 }
 
-export default async function AdminLayout({ children }: Props) {
+export default async function SellerLayout({ children }: Props) {
   await requireAuth();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
@@ -51,25 +52,114 @@ interface PaginatedShopsResponse {
   total: number;
 }
 
+interface DisputedItem {
+  id: number;
+  quantity: number;
+  price: string;
+  orderItemStatus: string;
+  dateDelivered: string | null;
+  product: {
+    id: number;
+    name: string;
+    imageUrl?: string;
+    seller: { id: number; shopName: string };
+  };
+  order: {
+    id: number;
+    userId: number;
+    user: { firstName: string; lastName: string; email: string };
+  };
+}
+
+interface SellerPayout {
+  sellerId: number;
+  shopName: string;
+  unpaidCount: number;
+  totalUnpaid: string;
+}
+
 function getResponseStatus(err: unknown): number | undefined {
   return (err as AxiosError<unknown>)?.response?.status;
 }
 
+const fmtDate = new Intl.DateTimeFormat('en-PH', {
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: 'numeric', minute: '2-digit',
+});
+
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+function formatLastLogin(dateString: string | null): string {
+  if (!dateString) return '—';
+  try {
+    const elapsed = (Date.now() - new Date(dateString).getTime()) / 1000;
+    if (elapsed < 60) return rtf.format(-Math.round(elapsed), 'second');
+    if (elapsed < 3600) return rtf.format(-Math.round(elapsed / 60), 'minute');
+    if (elapsed < 86400) return rtf.format(-Math.round(elapsed / 3600), 'hour');
+    if (elapsed < 2592000) return rtf.format(-Math.round(elapsed / 86400), 'day');
+    if (elapsed < 31536000) return rtf.format(-Math.round(elapsed / 2592000), 'month');
+    return rtf.format(-Math.round(elapsed / 31536000), 'year');
+  } catch {
+    return '—';
+  }
+}
+
+function formatDateTime(dateString: string): string {
+  try {
+    return fmtDate.format(new Date(dateString));
+  } catch {
+    return dateString;
+  }
+}
+
 export default function AdminDashboardPage() {
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedShop, setSelectedShop] = useState<AdminShop | null>(null);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [resolvingId, setResolvingId] = useState<number | null>(null);
+  const [settlingId, setSettlingId] = useState<number | null>(null);
+  const [refMap, setRefMap] = useState<Record<number, string>>({});
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const updateShopStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiClient.patch(`/admin/shops/${id}/status`, { status }),
-    onSuccess: () => {
+    onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-shops'] });
+      showToast(`Shop status updated to ${status}.`);
+      setSelectedShop(null);
     },
+    onError: () => showToast('Failed to update shop status.', 'error'),
+  });
+
+  const updateUserStatus = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      apiClient.patch(`/admin/users/${id}/status`, { status }),
+    onSuccess: (_, { status }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      if (selectedUser) setSelectedUser({ ...selectedUser, status });
+      showToast(`User ${status === 'Active' ? 'activated' : 'suspended'} successfully.`);
+    },
+    onError: () => showToast('Failed to update user status.', 'error'),
   });
 
   const resetPassword = useMutation({
-    mutationFn: (id: number) => apiClient.post(`/admin/users/${id}/reset-password`),
-    onSuccess: () => alert('Password reset to welcome123'),
+    mutationFn: ({ id, newPassword }: { id: number; newPassword?: string }) =>
+      apiClient.post(`/admin/users/${id}/reset-password`, { newPassword }),
+    onSuccess: (res) => {
+      showToast(res.data.message || 'Password reset successful.');
+      setShowPasswordPrompt(false);
+      setNewPassword('');
+    },
+    onError: () => showToast('Password reset failed.', 'error'),
   });
 
   const elevateRole = useMutation({
@@ -78,7 +168,9 @@ export default function AdminDashboardPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setSelectedUser(null);
+      showToast('User role updated.');
     },
+    onError: () => showToast('Failed to update role.', 'error'),
   });
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj } = useQuery<AdminStats>({
@@ -106,6 +198,45 @@ export default function AdminDashboardPage() {
       return data;
     },
     retry: (_, error) => getResponseStatus(error) !== 403,
+  });
+
+  const { data: disputes = [], isLoading: loadingDisputes } = useQuery<DisputedItem[]>({
+    queryKey: ['admin-disputes'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<DisputedItem[]>('/orders/items/disputed');
+      return data;
+    },
+    retry: 1,
+  });
+
+  const { data: payoutSellers = [], isLoading: loadingPayouts } = useQuery<SellerPayout[]>({
+    queryKey: ['admin-payouts'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<SellerPayout[]>('/commissions/pending');
+      return data;
+    },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: ({ orderItemId, resolution }: { orderItemId: number; resolution: 'Refunded' | 'Completed' }) =>
+      apiClient.patch(`/orders/items/${orderItemId}/resolve`, { resolution }),
+    onSuccess: (_, { resolution }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-disputes'] });
+      setResolvingId(null);
+      showToast(`Dispute resolved: ${resolution}.`);
+    },
+    onError: () => showToast('Failed to resolve dispute.', 'error'),
+  });
+
+  const settleMutation = useMutation({
+    mutationFn: ({ sellerId, referenceNumber }: { sellerId: number; referenceNumber: string }) =>
+      apiClient.patch(`/commissions/settle/${sellerId}`, { referenceNumber }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
+      setSettlingId(null);
+      showToast(`Settled ${res.data.settledCount} commission(s). Ref: ${res.data.referenceNumber}`);
+    },
+    onError: () => showToast('Failed to settle payout.', 'error'),
   });
 
   const users = usersData?.users ?? [];
@@ -139,54 +270,59 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const formatLastLogin = (dateString: string | null) => {
-    if (!dateString) return '—';
-    try {
-      const msPerMinute = 60 * 1000;
-      const msPerHour = msPerMinute * 60;
-      const msPerDay = msPerHour * 24;
-      const msPerMonth = msPerDay * 30;
-      const msPerYear = msPerDay * 365;
-
-      const elapsed = Date.now() - new Date(dateString).getTime();
-
-      if (elapsed < msPerMinute) return Math.round(elapsed / 1000) + ' seconds ago';
-      if (elapsed < msPerHour) return Math.round(elapsed / msPerMinute) + ' minutes ago';
-      if (elapsed < msPerDay) return Math.round(elapsed / msPerHour) + ' hours ago';
-      if (elapsed < msPerMonth) return Math.round(elapsed / msPerDay) + ' days ago';
-      if (elapsed < msPerYear) return Math.round(elapsed / msPerMonth) + ' months ago';
-      return Math.round(elapsed / msPerYear) + ' years ago';
-    } catch {
-      return '—';
-    }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    try {
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const date = new Date(dateString);
-      const hours = date.getHours();
-      const minutes = pad(date.getMinutes());
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedHours = pad(hours % 12 || 12);
-      const year = date.getFullYear();
-      const month = pad(date.getMonth() + 1);
-      const day = pad(date.getDate());
-      return `${year}-${month}-${day},\n${formattedHours}:${minutes} ${ampm}`;
-    } catch {
-      return dateString;
-    }
-  };
-
   return (
     <div className={styles.page}>
+      {/* Toast notification */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 'var(--space-6)',
+            right: 'var(--space-6)',
+            zIndex: 2000,
+            padding: 'var(--space-3) var(--space-5)',
+            borderRadius: 'var(--radius-md)',
+            background: toast.type === 'success' ? '#c4ffe2' : '#f7b3b3',
+            color: toast.type === 'success' ? '#15803d' : '#f27070',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            animation: 'slideUp 0.2s ease',
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className={styles.pageHeader}>
         <h1 className={styles.heading}>Admin Dashboard</h1>
-        <p className={styles.subheading}>Platform Overview and user management</p>
+        <p className={styles.subheading}>Platform overview and management</p>
+        <ul className={styles.navLinks} role="list">
+          <li>
+            <a
+              href="#overview"
+              className={styles.activeNavLink}
+            >
+              Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="#disputes" className={styles.navLink}>
+              Disputes
+            </a>
+          </li>
+          <li>
+            <a href="#payouts" className={styles.navLink}>
+              Payouts
+            </a>
+          </li>
+        </ul>
       </div>
 
       {/* Stats */}
-      <div className={styles.statsGrid}>
+      <div id="overview" className={styles.statsGrid}>
         {loadingStats
           ? STATS.map((_, i) => <Skeleton key={i} height="8rem" style={{ borderRadius: '15px' }} />)
           : STATS.map((s) => (
@@ -218,14 +354,14 @@ export default function AdminDashboardPage() {
                 <th>Contact No.</th>
                 <th>Reg. Date</th>
                 <th>Last Login</th>
-                <th>Role</th>
+                <th>Role(s)</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => {
-                const roleName = user.userRoles[0]?.role?.roleName ?? 'Customer';
+                const roleNames = user.userRoles.map((r) => r.role?.roleName).filter(Boolean).join(', ') || 'Customer';
                 return (
                   <tr key={user.id}>
                     <td data-label="User ID">U-{user.id.toString().padStart(4, '0')}</td>
@@ -235,17 +371,15 @@ export default function AdminDashboardPage() {
                     <td data-label="Contact No.">{user.contactNumber ?? '—'}</td>
                     <td data-label="Reg. Date" style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(user.dateTimeRegistered)}</td>
                     <td data-label="Last Login">{formatLastLogin(user.lastLogin)}</td>
-                    <td data-label="Role">
-                      <span className={styles.roleBadge}>
-                        {roleName}
-                      </span>
+                    <td data-label="Role(s)">
+                      <span className={styles.roleBadge}>{roleNames}</span>
                     </td>
                     <td data-label="Status" className={user.status === 'Active' ? styles.statusActive : styles.statusInactive}>
                       {user.status === 'Active' ? 'Active' : 'Suspended'}
                     </td>
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
-                        <button 
+                        <button
                           className={`${styles.actionBtn} ${styles.btnUpdate}`}
                           onClick={() => setSelectedUser(user)}
                         >
@@ -290,14 +424,24 @@ export default function AdminDashboardPage() {
                   <td data-label="Shop ID">S-{shop.id.toString().padStart(4, '0')}</td>
                   <td data-label="Shop Logo">
                     {shop.shopLogoUrl ? (
-                      <img src={shop.shopLogoUrl?.startsWith('/') ? shop.shopLogoUrl : `/${shop.shopLogoUrl}`} alt={shop.shopName} width={60} height={60} className={styles.shopImg} />
+                      <img
+                        src={shop.shopLogoUrl?.startsWith('/') ? shop.shopLogoUrl : `/${shop.shopLogoUrl}`}
+                        alt={shop.shopName}
+                        width={60}
+                        height={60}
+                        className={styles.shopImg}
+                      />
                     ) : (
                       <div className={styles.shopImg} style={{ background: '#eee' }} />
                     )}
                   </td>
                   <td data-label="Shop Name">{shop.shopName}</td>
                   <td data-label="Shop Description" className={`${styles.leftAlign} ${styles.descriptionCell}`}>
-                    {shop.shopDescription ? (shop.shopDescription.length > 80 ? shop.shopDescription.substring(0, 80) + '...' : shop.shopDescription) : '—'}
+                    {shop.shopDescription
+                      ? shop.shopDescription.length > 80
+                        ? shop.shopDescription.substring(0, 80) + '...'
+                        : shop.shopDescription
+                      : '—'}
                   </td>
                   <td data-label="Reg. Date" style={{ whiteSpace: 'pre-wrap' }}>{formatDateTime(shop.registeredAt)}</td>
                   <td data-label="Seller Name">{shop.user.firstName} {shop.user.lastName}</td>
@@ -309,44 +453,12 @@ export default function AdminDashboardPage() {
                   </td>
                   <td data-label="Action">
                     <div className={styles.actionGroup}>
-                      {shop.shopStatus === 'Pending' ? (
-                        <>
-                          <button 
-                            className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                            title="Approve Shop"
-                            onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Active' })}
-                            disabled={updateShopStatus.isPending}
-                          >
-                            Approve
-                          </button>
-                          <button 
-                            className={`${styles.actionBtn} ${styles.btnDelete}`}
-                            title="Reject/Ban Shop"
-                            onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Banned' })}
-                            disabled={updateShopStatus.isPending}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      ) : shop.shopStatus === 'Active' ? (
-                        <button 
-                          className={`${styles.actionBtn} ${styles.btnArchive}`}
-                          title="Suspend Shop"
-                          onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Inactive' })}
-                          disabled={updateShopStatus.isPending}
-                        >
-                          Suspend
-                        </button>
-                      ) : (
-                         <button 
-                          className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                          title="Reactivate Shop"
-                          onClick={() => updateShopStatus.mutate({ id: shop.id, status: 'Active' })}
-                          disabled={updateShopStatus.isPending}
-                        >
-                          Activate
-                        </button>
-                      )}
+                      <button
+                        className={`${styles.actionBtn} ${styles.btnUpdate}`}
+                        onClick={() => setSelectedShop(shop)}
+                      >
+                        Manage
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -356,64 +468,405 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* ─── Manage User Overlay ──────────────────────────────────── */}
       {selectedUser && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: '450px' }}>
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manage-user-title"
+          onClick={() => { setSelectedUser(null); setShowPasswordPrompt(false); setNewPassword(''); }}
+        >
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Manage User <strong>U-{(selectedUser.id).toString().padStart(4, '0')}</strong></h3>
-              <button className={styles.modalCloseBtn} onClick={() => setSelectedUser(null)}>&times;</button>
+              <h3 id="manage-user-title" className={styles.modalTitle}>
+                Manage User <span className={styles.modalIdBadge}>U-{selectedUser.id.toString().padStart(4, '0')}</span>
+              </h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                aria-label="Close manage user dialog"
+                onClick={() => { setSelectedUser(null); setShowPasswordPrompt(false); setNewPassword(''); }}
+              >
+                &times;
+              </button>
             </div>
+
             <div className={styles.modalBody}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                <div>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Name</p>
-                  <p style={{ fontWeight: 500 }}>{selectedUser.firstName} {selectedUser.lastName}</p>
+              {/* Info grid */}
+              <dl className={styles.infoGrid}>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Name</dt>
+                  <dd className={styles.infoValue}>{selectedUser.firstName} {selectedUser.lastName}</dd>
                 </div>
-                <div>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Email/Username</p>
-                  <p style={{ fontWeight: 500 }}>{selectedUser.email} / {selectedUser.username}</p>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Email</dt>
+                  <dd className={styles.infoValue}>{selectedUser.email}</dd>
                 </div>
-                <div>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>Role Management</p>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <button 
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Username</dt>
+                  <dd className={styles.infoValue}>{selectedUser.username}</dd>
+                </div>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Status</dt>
+                  <dd className={styles.infoValue}>
+                    <span className={selectedUser.status === 'Active' ? styles.statusActive : styles.statusInactive}>
+                      {selectedUser.status}
+                    </span>
+                  </dd>
+                </div>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Roles</dt>
+                  <dd className={styles.infoValue}>
+                    {selectedUser.userRoles.map((r) => r.role.roleName).join(', ') || 'None'}
+                  </dd>
+                </div>
+              </dl>
+
+              <hr className={styles.modalDivider} />
+
+              {/* Account Status */}
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.fieldsetLegend}>Account Status</legend>
+                <div className={styles.btnRow}>
+                  {selectedUser.status !== 'Active' && (
+                    <button
                       className={`${styles.actionBtn} ${styles.btnConfirm}`}
-                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Admin' })}
-                      disabled={elevateRole.isPending}
+                      onClick={() => updateUserStatus.mutate({ id: selectedUser.id, status: 'Active' })}
+                      disabled={updateUserStatus.isPending}
                     >
-                      Make Admin
+                      Activate Account
                     </button>
-                    <button 
-                      className={`${styles.actionBtn} ${styles.btnUpdate}`}
-                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Seller' })}
-                      disabled={elevateRole.isPending}
-                    >
-                      Make Seller
-                    </button>
-                    <button 
+                  )}
+                  {selectedUser.status === 'Active' && (
+                    <button
                       className={`${styles.actionBtn} ${styles.btnDelete}`}
-                      onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Customer' })}
-                      disabled={elevateRole.isPending}
+                      onClick={() => updateUserStatus.mutate({ id: selectedUser.id, status: 'Suspended' })}
+                      disabled={updateUserStatus.isPending}
                     >
-                      Make Customer
+                      Suspend Account
                     </button>
-                  </div>
+                  )}
                 </div>
-                <div style={{ marginTop: 'var(--space-2)' }}>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>Security</p>
-                  <button 
-                    className={`${styles.actionBtn} ${styles.btnArchive}`}
-                    onClick={() => resetPassword.mutate(selectedUser.id)}
-                    disabled={resetPassword.isPending}
+              </fieldset>
+
+              {/* Role Management */}
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.fieldsetLegend}>Assign Role</legend>
+                <div className={styles.btnRow}>
+                  <button
+                    className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Admin' })}
+                    disabled={elevateRole.isPending}
                   >
-                    Force Password Reset (to 'welcome123')
+                    Admin
+                  </button>
+                  <button
+                    className={`${styles.actionBtn} ${styles.btnUpdate}`}
+                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Seller' })}
+                    disabled={elevateRole.isPending}
+                  >
+                    Seller
+                  </button>
+                  <button
+                    className={`${styles.actionBtn} ${styles.btnArchive}`}
+                    onClick={() => elevateRole.mutate({ id: selectedUser.id, role: 'Customer' })}
+                    disabled={elevateRole.isPending}
+                  >
+                    Customer
                   </button>
                 </div>
-              </div>
+              </fieldset>
+
+              {/* Security */}
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.fieldsetLegend}>Security</legend>
+                {!showPasswordPrompt ? (
+                  <button
+                    className={`${styles.actionBtn} ${styles.btnArchive}`}
+                    onClick={() => setShowPasswordPrompt(true)}
+                  >
+                    Force Password Reset
+                  </button>
+                ) : (
+                  <div className={styles.formGroup}>
+                    <label htmlFor="new-password-input" className={styles.formLabel}>
+                      New Password
+                      <span className={styles.formHint}> (leave blank to use system default)</span>
+                    </label>
+                    <input
+                      id="new-password-input"
+                      type="password"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className={styles.formInput}
+                      autoComplete="new-password"
+                    />
+                    <div className={styles.btnRow}>
+                      <button
+                        className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                        onClick={() => resetPassword.mutate({ id: selectedUser.id, newPassword: newPassword || undefined })}
+                        disabled={resetPassword.isPending}
+                      >
+                        {resetPassword.isPending ? 'Resetting…' : 'Confirm Reset'}
+                      </button>
+                      <button
+                        className={`${styles.actionBtn} ${styles.btnUpdate}`}
+                        onClick={() => { setShowPasswordPrompt(false); setNewPassword(''); }}
+                        disabled={resetPassword.isPending}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </fieldset>
             </div>
           </div>
         </div>
       )}
+
+      {/* ─── Manage Shop Overlay ──────────────────────────────────── */}
+      {selectedShop && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manage-shop-title"
+          onClick={() => setSelectedShop(null)}
+        >
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 id="manage-shop-title" className={styles.modalTitle}>
+                {selectedShop.shopName}
+                <span className={styles.modalIdBadge}>S-{selectedShop.id.toString().padStart(4, '0')}</span>
+              </h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                aria-label="Close manage shop dialog"
+                onClick={() => setSelectedShop(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              {/* Shop identity */}
+              <div className={styles.shopIdentity}>
+                {selectedShop.shopLogoUrl ? (
+                  <img
+                    src={selectedShop.shopLogoUrl.startsWith('/') ? selectedShop.shopLogoUrl : `/${selectedShop.shopLogoUrl}`}
+                    alt={selectedShop.shopName}
+                    width={64}
+                    height={64}
+                    className={styles.shopIdentityImg}
+                  />
+                ) : (
+                  <div className={styles.shopIdentityImgPlaceholder} />
+                )}
+                <div>
+                  <p className={styles.shopIdentityName}>{selectedShop.shopName}</p>
+                  <p className={styles.shopIdentitySeller}>by {selectedShop.user.firstName} {selectedShop.user.lastName}</p>
+                  <span className={
+                    selectedShop.shopStatus === 'Active' ? styles.statusActive :
+                    selectedShop.shopStatus === 'Pending' ? styles.statusPending : styles.statusInactive
+                  }>
+                    {selectedShop.shopStatus}
+                  </span>
+                </div>
+              </div>
+
+              <hr className={styles.modalDivider} />
+
+              <dl className={styles.infoGrid}>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Registered</dt>
+                  <dd className={styles.infoValue}>{formatDateTime(selectedShop.registeredAt)}</dd>
+                </div>
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoLabel}>Description</dt>
+                  <dd className={styles.infoValue}>{selectedShop.shopDescription || '—'}</dd>
+                </div>
+              </dl>
+
+              <hr className={styles.modalDivider} />
+
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.fieldsetLegend}>Shop Actions</legend>
+                <div className={styles.btnRow}>
+                  {selectedShop.shopStatus === 'Pending' && (
+                    <>
+                      <button
+                        className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                        onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' })}
+                        disabled={updateShopStatus.isPending}
+                      >
+                        Approve Shop
+                      </button>
+                      <button
+                        className={`${styles.actionBtn} ${styles.btnDelete}`}
+                        onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Banned' })}
+                        disabled={updateShopStatus.isPending}
+                      >
+                        Reject Shop
+                      </button>
+                    </>
+                  )}
+                  {selectedShop.shopStatus === 'Active' && (
+                    <button
+                      className={`${styles.actionBtn} ${styles.btnArchive}`}
+                      onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Inactive' })}
+                      disabled={updateShopStatus.isPending}
+                    >
+                      Suspend Shop
+                    </button>
+                  )}
+                  {(selectedShop.shopStatus === 'Inactive' || selectedShop.shopStatus === 'Banned') && (
+                    <button
+                      className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                      onClick={() => updateShopStatus.mutate({ id: selectedShop.id, status: 'Active' })}
+                      disabled={updateShopStatus.isPending}
+                    >
+                      Reactivate Shop
+                    </button>
+                  )}
+                </div>
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ─── Disputes Section ─────────────────────────────────────── */}
+      <section id="disputes" className={styles.sectionHeader} style={{ scrollMarginTop: 'var(--space-6)' }}>
+        <h2 className={styles.sectionTitle}>Dispute Management</h2>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-5)' }}>
+          Review and resolve customer disputes. Approving a refund voids the seller commission for that item.
+        </p>
+
+        {loadingDisputes && (
+          <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>Loading disputes&hellip;</div>
+        )}
+
+        {!loadingDisputes && disputes.length === 0 && (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyStateTitle}>No Active Disputes</p>
+            <p className={styles.emptyStateText}>All customer issues have been resolved.</p>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {disputes.map((item) => (
+            <div key={item.id} className={styles.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+                <div>
+                  <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{item.product.name}</p>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                    Order O-{item.order.id.toString().padStart(4, '0')} &middot; {item.order.user.firstName} {item.order.user.lastName} ({item.order.user.email})
+                  </p>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                    Shop: {item.product.seller.shopName} &middot; Qty: {item.quantity} &middot; PHP {Number(item.price).toFixed(2)}
+                  </p>
+                  {item.dateDelivered && (
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                      Delivered: {fmtDate.format(new Date(item.dateDelivered))}
+                    </p>
+                  )}
+                </div>
+                <span className={styles.statusDisputed}>{item.orderItemStatus}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.btnDelete}`}
+                  disabled={resolveMutation.isPending && resolvingId === item.id}
+                  onClick={() => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Refunded' }); }}
+                >
+                  Approve Refund
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.btnArchive}`}
+                  disabled={resolveMutation.isPending && resolvingId === item.id}
+                  onClick={() => { setResolvingId(item.id); resolveMutation.mutate({ orderItemId: item.id, resolution: 'Completed' }); }}
+                >
+                  Reject Dispute
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Payouts Section ──────────────────────────────────────── */}
+      <section id="payouts" className={styles.sectionHeader} style={{ scrollMarginTop: 'var(--space-6)' }}>
+        <h2 className={styles.sectionTitle}>Seller Payouts</h2>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-5)' }}>
+          Review and settle pending seller commissions. Enter a reference number to log the payment.
+        </p>
+
+        {loadingPayouts && (
+          <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>Loading payouts&hellip;</div>
+        )}
+
+        {!loadingPayouts && payoutSellers.length === 0 && (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyStateTitle}>All Payouts Settled</p>
+            <p className={styles.emptyStateText}>No pending commissions for any seller.</p>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {payoutSellers.map((seller) => (
+            <div key={seller.sellerId} className={styles.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                <div>
+                  <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{seller.shopName}</p>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                    {seller.unpaidCount} unpaid commission{seller.unpaidCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
+                  PHP {Number(seller.totalUnpaid).toFixed(2)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <label htmlFor={`ref-${seller.sellerId}`} className={styles.visuallyHidden}>Reference Number</label>
+                <input
+                  id={`ref-${seller.sellerId}`}
+                  type="text"
+                  placeholder="Reference # (e.g. TXN-20260330-001)"
+                  value={refMap[seller.sellerId] ?? ''}
+                  onChange={(e) => setRefMap((prev) => ({ ...prev, [seller.sellerId]: e.target.value }))}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-card-border)',
+                    background: 'rgba(0,0,0,0.04)',
+                    color: 'inherit',
+                    fontSize: 'var(--text-sm)',
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.btnConfirm}`}
+                  disabled={!refMap[seller.sellerId]?.trim() || (settleMutation.isPending && settlingId === seller.sellerId)}
+                  onClick={() => {
+                    setSettlingId(seller.sellerId);
+                    settleMutation.mutate({ sellerId: seller.sellerId, referenceNumber: refMap[seller.sellerId] });
+                  }}
+                  style={{ whiteSpace: 'nowrap', minWidth: 'max-content' }}
+                >
+                  {settleMutation.isPending && settlingId === seller.sellerId ? 'Settling…' : 'Settle Payout'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

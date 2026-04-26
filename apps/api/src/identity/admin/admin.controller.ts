@@ -66,9 +66,12 @@ export class AdminController {
   }
 
   @Post('users/:id/reset-password')
-  @ApiOperation({ summary: 'Forcibly reset a user password to welcome123' })
-  resetUserPassword(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.resetUserPassword(id);
+  @ApiOperation({ summary: 'Forcibly reset a user password' })
+  resetUserPassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { newPassword?: string }
+  ) {
+    return this.adminService.resetUserPassword(id, body.newPassword);
   }
 
   @Patch('shops/:id/status')

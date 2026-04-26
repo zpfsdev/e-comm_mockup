@@ -279,7 +279,7 @@ export default function SellerDashboardPage() {
                     <td data-label="Product ID">P-{p.id.toString().padStart(4, '0')}</td>
                     <td data-label="Product Image">
                       {p.imageUrl ? (
-                        <img src={p.imageUrl.startsWith('/') ? p.imageUrl : `/${p.imageUrl}`} alt={p.name} width={60} height={60} className={styles.productImg} />
+                        <img src={p.imageUrl.startsWith('http') || p.imageUrl.startsWith('data:') || p.imageUrl.startsWith('/') ? p.imageUrl : `/${p.imageUrl}`} alt={p.name} width={60} height={60} className={styles.productImg} />
                       ) : (
                         <div className={styles.productImg} style={{ background: '#eee' }} />
                       )}

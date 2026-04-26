@@ -92,6 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     apiClient.post('/auth/logout').finally(() => {
       tokenStore.clear();
       sessionStorage.removeItem(CSRF_TOKEN_KEY);
+      document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
       setUser(null);
       window.location.href = '/';
     });

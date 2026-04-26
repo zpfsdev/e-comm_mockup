@@ -112,24 +112,37 @@ export class AuthController {
       rawCookies && typeof rawCookies === 'object'
         ? (rawCookies as { refreshToken?: unknown })
         : { refreshToken: undefined };
-    const rawRefresh = cookies.refreshToken;
-    const headerValue = req.headers['x-csrf-token'];
-    const csrfToken =
-      typeof headerValue === 'string'
-        ? headerValue
-        : Array.isArray(headerValue)
-          ? headerValue[0]
-          : undefined;
-
     const refreshToken =
-      typeof rawRefresh === 'string' ? rawRefresh : undefined;
+      typeof cookies.refreshToken === 'string' ? cookies.refreshToken : undefined;
+    const clientCsrfToken = req.headers['x-csrf-token'] as string | undefined;
 
-    const result = await this.authService.refresh(
-      refreshToken ?? '',
-      csrfToken,
-    );
-    this.setAccessTokenCookie(res, result.accessToken);
-    return result;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token provided.');
+    if (!clientCsrfToken) {
+      this.clearAuthCookies(res);
+      throw new UnauthorizedException('No CSRF token provided.');
+    }
+
+    try {
+      // Validate CSRF
+      await this.jwtService.verifyAsync(clientCsrfToken, {
+        secret: this.configService.get<string>('CSRF_SECRET', 'secret'),
+      });
+
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
+        secret: this.configService.get<string>('REFRESH_TOKEN_SECRET', 'secret'),
+      });
+
+      const tokenData = await this.authService.refresh(payload, refreshToken);
+      if (!tokenData) {
+        this.clearAuthCookies(res);
+        throw new UnauthorizedException('Invalid refresh token.');
+      }
+      this.setAuthCookies(res, tokenData.tokens);
+      return { accessToken: tokenData.tokens.accessToken, user: tokenData.user };
+    } catch (e) {
+      this.clearAuthCookies(res);
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
   }
 
   @Get('me')
@@ -192,7 +205,7 @@ export class AuthController {
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       secure: isProduction,
-      path: '/api/v1/auth/refresh',
+      path: '/api/v1/auth', // using /api/v1/auth instead of /refresh so logout can clear it
     });
     this.setAccessTokenCookie(res, tokens.accessToken);
   }
@@ -221,7 +234,8 @@ export class AuthController {
       secure: isProduction,
     };
     res.cookie('at', '', { ...shared, sameSite: 'lax', path: '/' });
-    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax', path: '/api/v1/auth/refresh' });
+    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax', path: '/api/v1/auth/refresh' }); // Try clear old path
+    res.cookie('refreshToken', '', { ...shared, sameSite: 'lax', path: '/api/v1/auth' }); // Try clear new path
   }
 
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { apiClient } from '@/lib/api-client';
@@ -34,47 +34,62 @@ interface ProductFormProps {
   onSuccess: () => void;
 }
 
+/** Delete a previously-uploaded local file (only /uploads/ paths — never external URLs). */
+async function deleteUploadedFile(url: string): Promise<void> {
+  if (!url || !url.startsWith('/uploads/')) return;
+  try {
+    await fetch(`/api/upload?url=${encodeURIComponent(url)}`, { method: 'DELETE' });
+  } catch {
+    // Non-critical — file might already be gone
+  }
+}
+
 export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormProps) {
   const [form, setForm] = useState({
     name: initialData?.name ?? '',
     description: initialData?.description ?? '',
-    imageUrl: initialData?.imageUrl ?? '',
+    imageUrl: initialData?.imageUrl ?? '', // persisted URL (already saved or pasted)
     price: initialData?.price ? String(initialData.price) : '',
     categoryId: initialData?.categoryId ?? 0,
     ageRangeId: initialData?.ageRangeId ?? 0,
     stockQuantity: initialData?.stockQuantity ? String(initialData.stockQuantity) : '1',
   });
-  const [error, setError] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Pending file — selected but NOT yet uploaded
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>(''); // local object URL for preview only
+  const objectUrlRef = useRef<string>(''); // track for cleanup
+
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Clean up object URL when component unmounts or file changes
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
+  /** Called when user picks a file — only creates a local preview, no upload yet. */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Revoke any previous object URL to avoid memory leaks
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const local = URL.createObjectURL(file);
+    objectUrlRef.current = local;
+    setPendingFile(file);
+    setPreviewUrl(local);
+    // Clear any manually-pasted URL since a file takes precedence
+    setForm(f => ({ ...f, imageUrl: '' }));
+  };
 
-    setIsUploading(true);
-    setError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await res.json();
-      if (data.success && data.url) {
-        setForm(f => ({ ...f, imageUrl: data.url }));
-      } else {
-        setError(data.message || 'Failed to upload image');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('An error occurred during upload');
-    } finally {
-      setIsUploading(false);
-    }
+  /** Clear the pending file selection without uploading anything. */
+  const clearPendingFile = () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = '';
+    setPendingFile(null);
+    setPreviewUrl('');
   };
 
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -108,25 +123,63 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
     },
     onError: (err) => {
       setError(err.response?.data?.message ?? `Failed to ${initialData?.id ? 'update' : 'create'} product.`);
+      setIsSaving(false);
     },
   });
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
-    if (!form.name.trim() || !form.description.trim() || !form.imageUrl.trim()) {
-      setError('Name, description, and image URL are required.');
+
+    // Determine the final image URL: pending file > pasted URL > existing URL
+    const effectiveImageUrl = previewUrl ? null : form.imageUrl; // null means we need to upload
+
+    if (!form.name.trim() || !form.description.trim()) {
+      setError('Name and description are required.');
+      return;
+    }
+    if (!pendingFile && !form.imageUrl.trim()) {
+      setError('Please choose an image file or paste an image URL.');
       return;
     }
     if (!form.categoryId || !form.ageRangeId) {
       setError('Please select a category and age range.');
       return;
     }
-    
+
+    setIsSaving(true);
+
+    let finalImageUrl = form.imageUrl;
+
+    // Upload pending file only now, at save time
+    if (pendingFile) {
+      try {
+        const formData = new FormData();
+        formData.append('file', pendingFile);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadData = await res.json();
+        if (!uploadData.success || !uploadData.url) {
+          setError(uploadData.message || 'Image upload failed. Please try again.');
+          setIsSaving(false);
+          return;
+        }
+        finalImageUrl = uploadData.url;
+
+        // If editing and the old image was a local upload, delete it
+        if (initialData?.imageUrl && initialData.imageUrl.startsWith('/uploads/')) {
+          void deleteUploadedFile(initialData.imageUrl);
+        }
+      } catch {
+        setError('Image upload failed. Please check your connection.');
+        setIsSaving(false);
+        return;
+      }
+    }
+
     mutation.mutate({
       name: form.name,
       description: form.description,
-      imageUrl: form.imageUrl,
+      imageUrl: finalImageUrl,
       price: Number(form.price),
       categoryId: Number(form.categoryId),
       ageRangeId: Number(form.ageRangeId),
@@ -255,20 +308,36 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
 
         {/* Product Image */}
         <label style={labelStyle}>
-          <span style={labelTextStyle}>Product Image</span>
+          <span style={labelTextStyle}>
+            Product Image
+            {pendingFile && (
+              <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                — {pendingFile.name} (will upload on save)
+              </span>
+            )}
+          </span>
           <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            {form.imageUrl ? (
+
+            {/* Preview: local pending file OR already-saved URL */}
+            {(previewUrl || form.imageUrl) ? (
               <div style={{ flexShrink: 0, width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db', backgroundColor: '#f3f4f6', position: 'relative' }}>
                 <img
-                  src={form.imageUrl.startsWith('http') || form.imageUrl.startsWith('data:') || form.imageUrl.startsWith('/') ? form.imageUrl : `/${form.imageUrl}`}
+                  src={previewUrl || (form.imageUrl.startsWith('/') || form.imageUrl.startsWith('http') ? form.imageUrl : `/${form.imageUrl}`)}
                   alt="Preview"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.currentTarget.src = ''; e.currentTarget.style.display = 'none'; }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <button
                   type="button"
-                  onClick={() => setForm(f => ({ ...f, imageUrl: '' }))}
+                  onClick={() => {
+                    if (previewUrl) {
+                      clearPendingFile();
+                    } else {
+                      setForm(f => ({ ...f, imageUrl: '' }));
+                    }
+                  }}
                   style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', lineHeight: 1 }}
+                  title="Remove image"
                 >
                   ×
                 </button>
@@ -284,8 +353,8 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
                     padding: '0.6rem 1rem',
                     border: '1.5px dashed #9ca3af',
                     borderRadius: '8px',
-                    backgroundColor: isUploading ? '#f9fafb' : '#ffffff',
-                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    backgroundColor: '#ffffff',
+                    cursor: 'pointer',
                     color: '#6b7280',
                     fontSize: '0.875rem',
                     userSelect: 'none',
@@ -296,25 +365,28 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
-                  <span>{isUploading ? 'Uploading…' : 'Choose image'}</span>
+                  <span>Choose image</span>
                 </label>
                 <input
                   id="product-image-upload"
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={isUploading}
+                  onChange={handleFileSelect}
                   style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
                 />
               </div>
             )}
-            <input
-              type="text"
-              value={form.imageUrl}
-              onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="Or paste an image URL..."
-              style={{ ...fieldStyle, flex: '1 1 200px' }}
-            />
+
+            {/* Paste URL — hidden while a pending file is selected */}
+            {!pendingFile && (
+              <input
+                type="text"
+                value={form.imageUrl}
+                onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+                placeholder="Or paste an image URL..."
+                style={{ ...fieldStyle, flex: '1 1 200px' }}
+              />
+            )}
           </div>
         </label>
 
@@ -331,11 +403,11 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
         </label>
 
         <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'flex-end', marginTop: 'var(--space-2)', paddingTop: 'var(--space-4)', borderTop: '1px solid #e5e7eb' }}>
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={mutation.isPending}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || mutation.isPending}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : initialData?.id ? 'Save Changes' : 'Add Product'}
+          <Button type="submit" variant="primary" disabled={isSaving || mutation.isPending}>
+            {isSaving ? 'Uploading image…' : mutation.isPending ? 'Saving…' : initialData?.id ? 'Save Changes' : 'Add Product'}
           </Button>
         </div>
       </form>

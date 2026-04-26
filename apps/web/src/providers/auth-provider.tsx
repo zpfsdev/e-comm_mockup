@@ -41,32 +41,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let isMounted = true;
     const bootstrap = async () => {
-      // Use localStorage so the CSRF token survives tab closes / browser restarts.
-      // sessionStorage is wiped on close, which caused the "cookie bug" where
-      // the HttpOnly refreshToken cookie was valid but the frontend couldn't use it.
+      // Always attempt a silent refresh — the HttpOnly refreshToken cookie may
+      // still be valid even if the csrfToken was lost from localStorage (e.g.
+      // server restart, browser restart, hard refresh). We send the CSRF token
+      // if we have one; the server accepts the call either way for the initial
+      // bootstrap handshake.
       const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
-      if (!csrfToken) {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-        return;
-      }
-      // Restore the in-memory access token by silently refreshing via the
-      // HttpOnly refresh-token cookie. The refresh response now includes the
-      // user summary, eliminating the separate GET /auth/me round-trip.
       try {
         const { data } = await axios.post<RefreshResponse>(
           `${API_BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true, headers: { 'X-CSRF-Token': csrfToken } },
+          {
+            withCredentials: true,
+            headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+          },
         );
         if (!isMounted) return;
         tokenStore.set(data.accessToken);
         setUser(data.user);
+        // Re-persist CSRF token in case it was missing or rotated
+        if ((data as any).csrfToken) {
+          localStorage.setItem(CSRF_TOKEN_KEY, (data as any).csrfToken);
+        }
       } catch {
+        // Refresh failed — no valid session. Clean up any stale remnants.
         tokenStore.clear();
         localStorage.removeItem(CSRF_TOKEN_KEY);
-        // Clear the session cookie so sign-in page doesn't show stale "session expired"
         document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
       } finally {
         if (isMounted) {

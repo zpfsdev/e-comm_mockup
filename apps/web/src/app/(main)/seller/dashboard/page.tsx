@@ -212,28 +212,8 @@ export default function SellerDashboardPage() {
         onCancel={closeConfirm}
       />
       <div className={styles.pageHeader}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>
-          {/* Shop logo */}
-          {dashboard?.shopLogoUrl ? (
-            <img
-              src={dashboard.shopLogoUrl.startsWith('/') ? dashboard.shopLogoUrl : `/${dashboard.shopLogoUrl}`}
-              alt={dashboard.shopName ?? 'Shop logo'}
-              width={52}
-              height={52}
-              style={{ borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-card-border)', flexShrink: 0 }}
-            />
-          ) : (
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.3rem', flexShrink: 0 }}>
-              {(dashboard?.shopName ?? user?.username ?? 'S')[0].toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h1 className={styles.heading} style={{ marginBottom: 0 }}>
-              {dashboard?.shopName ?? 'Seller Dashboard'}
-            </h1>
-            <p className={styles.subheading} style={{ marginTop: 'var(--space-1)' }}>Manage your products and track your sales</p>
-          </div>
-        </div>
+        <h1 className={styles.heading}>Seller Dashboard</h1>
+        <p className={styles.subheading}>Manage your products and track your sales</p>
       </div>
 
       {/* Stats */}

@@ -184,8 +184,9 @@ export function Navbar() {
                   <Image
                     src={user?.seller?.shopLogoUrl || user?.profilePictureUrl || ''}
                     alt={user.seller?.shopName || user.firstName}
-                    fill
-                    style={{ objectFit: 'cover' }}
+                    width={40}
+                    height={40}
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                   />
                 ) : (
                   <span>{user?.firstName?.charAt(0).toUpperCase() || 'U'}</span>

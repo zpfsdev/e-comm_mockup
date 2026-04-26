@@ -40,12 +40,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     let isMounted = true;
-    const bootstrap = async () => {
-      // Always attempt a silent refresh — the HttpOnly refreshToken cookie may
-      // still be valid even if the csrfToken was lost from localStorage (e.g.
-      // server restart, browser restart, hard refresh). We send the CSRF token
-      // if we have one.
-      const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
+
+    const sleep = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
+
+    const tryRefresh = async (csrfToken: string | null): Promise<'ok' | 'auth-failure' | 'network-error'> => {
       try {
         const { data } = await axios.post<RefreshResponse>(
           `${API_BASE_URL}/auth/refresh`,
@@ -55,34 +53,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
             headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
           },
         );
-        if (!isMounted) return;
+        if (!isMounted) return 'ok';
         tokenStore.set(data.accessToken);
         setUser(data.user);
-        // Re-persist CSRF token in case it was missing or rotated.
         if ((data as any).csrfToken) {
           localStorage.setItem(CSRF_TOKEN_KEY, (data as any).csrfToken);
         }
+        return 'ok';
       } catch (err) {
-        if (!isMounted) return;
-        // Only destroy local session on a real auth rejection (401/403).
-        // Network errors (ECONNREFUSED, server starting up, offline) must NOT
-        // clear the CSRF token — the session is still valid, the API just isn't
-        // ready yet.
         const status = axios.isAxiosError(err) ? err.response?.status : null;
-        const isAuthFailure = status === 401 || status === 403;
-        if (isAuthFailure) {
+        if (status === 401 || status === 403) return 'auth-failure';
+        return 'network-error';
+      }
+    };
+
+    const bootstrap = async () => {
+      // Always attempt a silent refresh — the HttpOnly refreshToken cookie may
+      // still be valid even if the csrfToken was lost from localStorage (e.g.
+      // server restart, browser restart, hard refresh).
+      const csrfToken = localStorage.getItem(CSRF_TOKEN_KEY);
+
+      // Retry up to 4 times with exponential backoff to handle the race where
+      // the web server is ready but the API server is still starting up
+      // (ECONNREFUSED). Delays: 500ms → 1s → 2s → 4s.
+      const delays = [500, 1000, 2000, 4000];
+
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        if (!isMounted) return;
+
+        const result = await tryRefresh(csrfToken);
+
+        if (result === 'ok') {
+          // Successfully restored session.
+          break;
+        }
+
+        if (result === 'auth-failure') {
+          // Actual 401/403 — the session is genuinely expired. Clear everything.
           tokenStore.clear();
           localStorage.removeItem(CSRF_TOKEN_KEY);
           document.cookie = 'session=; path=/; SameSite=Lax; max-age=0';
+          break;
         }
-        // For network errors: silently stay logged-out for this render cycle.
-        // The user's session remains intact — next page load will succeed.
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
+
+        // Network error — API not ready yet. Retry after backoff if attempts remain.
+        if (attempt < delays.length) {
+          await sleep(delays[attempt]);
         }
+        // On last attempt: give up silently. localStorage is untouched so the
+        // next page load will retry automatically.
       }
+
+      if (isMounted) setIsLoading(false);
     };
+
     void bootstrap();
     return () => {
       isMounted = false;

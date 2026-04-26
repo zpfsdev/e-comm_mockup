@@ -45,6 +45,37 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
     stockQuantity: initialData?.stockQuantity ? String(initialData.stockQuantity) : '1',
   });
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await res.json();
+      if (data.success && data.url) {
+        setForm(f => ({ ...f, imageUrl: data.url }));
+      } else {
+        setError(data.message || 'Failed to upload image');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred during upload');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -132,7 +163,7 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
               type="text"
               value={form.name}
               onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
             />
           </label>
 
@@ -143,7 +174,7 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
               step="0.01"
               value={form.price}
               onChange={(e) => setForm(f => ({ ...f, price: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
             />
           </label>
 
@@ -152,7 +183,7 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
             <select
               value={form.categoryId}
               onChange={(e) => setForm(f => ({ ...f, categoryId: Number(e.target.value) }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--surface-primary)' }}
+              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--surface-primary)' }}
             >
               <option value={0} disabled>Select Category</option>
               {categories?.map(c => (
@@ -166,7 +197,7 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
             <select
               value={form.ageRangeId}
               onChange={(e) => setForm(f => ({ ...f, ageRangeId: Number(e.target.value) }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--surface-primary)' }}
+              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--surface-primary)' }}
             >
               <option value={0} disabled>Select Age Range</option>
               {ageRanges?.map(a => (
@@ -181,25 +212,31 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
               type="number"
               value={form.stockQuantity}
               onChange={(e) => setForm(f => ({ ...f, stockQuantity: e.target.value }))}
-              style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+              style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)' }}
             />
           </label>
         </div>
 
         <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>Product Image URL</span>
-          <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-            {form.imageUrl && (
-              <div style={{ flexShrink: 0, width: '100px', height: '100px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-subtle)', backgroundColor: '#eee' }}>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>Product Image</span>
+          <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {form.imageUrl ? (
+              <div style={{ flexShrink: 0, width: '100px', height: '100px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-input-border, #ccc)', backgroundColor: '#eee', position: 'relative' }}>
                 <img src={form.imageUrl.startsWith('/') ? form.imageUrl : `/${form.imageUrl}`} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = ''; e.currentTarget.style.display = 'none'; }} />
+                <button type="button" onClick={() => setForm(f => ({ ...f, imageUrl: '' }))} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>×</button>
+              </div>
+            ) : (
+              <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
+                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} style={{ padding: 'var(--space-3)', border: '1px dashed var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', width: '100%', cursor: 'pointer', backgroundColor: 'var(--color-background, #fff)' }} />
+                {isUploading && <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Uploading...</p>}
               </div>
             )}
             <input
               type="text"
               value={form.imageUrl}
               onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="/images/example.jpg or https://..."
-              style={{ flex: 1, padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+              placeholder="Or paste an image URL..."
+              style={{ flex: '2 1 auto', padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-background, #fff)', minWidth: '200px' }}
             />
           </div>
         </label>
@@ -210,7 +247,7 @@ export function ProductForm({ initialData, onCancel, onSuccess }: ProductFormPro
             value={form.description}
             onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
             rows={4}
-            style={{ padding: 'var(--space-3)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', resize: 'vertical' }}
+            style={{ padding: 'var(--space-3)', border: '1px solid var(--color-input-border, #ccc)', borderRadius: 'var(--radius-md)', resize: 'vertical', backgroundColor: 'var(--color-background, #fff)' }}
           />
         </label>
 

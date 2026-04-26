@@ -151,6 +151,7 @@ export class AuthService {
     firstName: string;
     lastName: string;
     profilePictureUrl?: string | null;
+    refreshTokenVersion: number;
     userRoles: { role: { roleName: RoleName } }[];
     seller?: { id: number; shopName: string; shopLogoUrl?: string | null } | null;
   }): AuthTokens {

@@ -113,7 +113,6 @@ function formatDateTime(dateString: string): string {
 }
 
 export default function AdminDashboardPage() {
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [selectedShop, setSelectedShop] = useState<AdminShop | null>(null);

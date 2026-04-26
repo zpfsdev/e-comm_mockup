@@ -24,7 +24,7 @@ export interface AuthTokens {
     lastName: string;
     roles: string[];
     hasStore?: boolean;
-    seller?: { shopName: string };
+    seller?: { shopName: string; shopLogoUrl?: string | null };
     profilePictureUrl?: string;
   };
 }
@@ -152,8 +152,7 @@ export class AuthService {
     lastName: string;
     profilePictureUrl?: string | null;
     userRoles: { role: { roleName: RoleName } }[];
-    refreshTokenVersion: number;
-    seller?: { id: number; shopName: string } | null;
+    seller?: { id: number; shopName: string; shopLogoUrl?: string | null } | null;
   }): AuthTokens {
     const roles = user.userRoles.map((ur) => ur.role.roleName);
     const payload: JwtPayload = { sub: user.id, email: user.email, roles };
@@ -186,7 +185,7 @@ export class AuthService {
         profilePictureUrl: user.profilePictureUrl || undefined,
         roles,
         hasStore: !!user.seller,
-        seller: user.seller ? { shopName: user.seller.shopName } : undefined,
+        seller: user.seller ? { shopName: user.seller.shopName, shopLogoUrl: user.seller.shopLogoUrl } : undefined,
       },
     };
   }
@@ -211,7 +210,7 @@ export class AuthService {
       profilePictureUrl?: string;
       roles: string[];
       hasStore?: boolean;
-      seller?: { shopName: string };
+      seller?: { shopName: string; shopLogoUrl?: string | null };
     };
   }> {
     try {
@@ -263,7 +262,7 @@ export class AuthService {
           profilePictureUrl: user.profilePictureUrl || undefined,
           roles,
           hasStore: !!user.seller,
-          seller: user.seller ? { shopName: user.seller.shopName } : undefined,
+          seller: user.seller ? { shopName: user.seller.shopName, shopLogoUrl: user.seller.shopLogoUrl } : undefined,
         },
       };
     } catch (err) {

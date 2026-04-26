@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button/button';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { ProductForm, type ProductData } from '@/components/seller/product-form';
 import { SellerRecentOrderDto } from '@/types/seller';
 import styles from './dashboard.module.css';
 
@@ -19,20 +20,14 @@ interface Product {
   price: number | string;
   stockQuantity?: number;
   category?: { categoryName: string } | string;
-  ageRange?: { label: string } | null;
+  ageRange?: { id: number; label: string } | null;
   status?: string;
   imageUrl?: string;
   description?: string;
   averageRating?: number;
   reviewCount?: number;
-}
-
-interface EditProductForm {
-  name: string;
-  description: string;
-  price: string;
-  stockQuantity: string;
-  imageUrl: string;
+  categoryId?: number;
+  ageRangeId?: number;
 }
 
 interface UpdateProductPayload {
@@ -80,8 +75,8 @@ export default function SellerDashboardPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [confirmingDeleteProductId, setConfirmingDeleteProductId] = useState<number | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editForm, setEditForm] = useState<EditProductForm>({ name: '', description: '', price: '', stockQuantity: '', imageUrl: '' });
+  const [view, setView] = useState<'dashboard' | 'add_product' | 'edit_product'>('dashboard');
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null);
 
   const fmtDate = new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
@@ -89,14 +84,28 @@ export default function SellerDashboardPage() {
   });
 
   const openEditOverlay = (p: Product) => {
-    setEditingProduct(p);
-    setEditForm({
+    setSelectedProduct({
+      id: p.id,
       name: p.name,
       description: p.description ?? '',
-      price: String(p.price),
-      stockQuantity: String(p.stockQuantity ?? 0),
+      price: p.price,
+      stockQuantity: p.stockQuantity ?? 0,
       imageUrl: p.imageUrl ?? '',
+      categoryId: p.categoryId,
+      ageRangeId: p.ageRangeId ?? p.ageRange?.id,
     });
+    setView('edit_product');
+  };
+
+  const openAddForm = () => {
+    setSelectedProduct(null);
+    setView('add_product');
+  };
+
+  const handleFormSuccess = () => {
+    setView('dashboard');
+    queryClient.invalidateQueries({ queryKey: ['seller-products'] });
+    refetchProducts();
   };
 
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErrorObj, refetch: refetchStats } = useQuery<SellerStats>({
@@ -130,16 +139,6 @@ export default function SellerDashboardPage() {
     onSuccess: () => {
       setConfirmingDeleteProductId(null);
       queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-    },
-  });
-
-  const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateProductPayload }) =>
-      apiClient.patch(`/products/${id}`, data),
-    onSuccess: () => {
-      setEditingProduct(null);
-      queryClient.invalidateQueries({ queryKey: ['seller-products'] });
-      refetchProducts();
     },
   });
 
@@ -237,15 +236,18 @@ export default function SellerDashboardPage() {
         }
       </div>
 
-      {/* Products Table */}
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>My Products ({stats?.totalProducts ?? products.length})</h2>
-        <div className={styles.headerActions}>
-          <Button variant="primary" onClick={() => router.push('/seller/products/new')}>
-            Add Product
-          </Button>
-        </div>
-      </div>
+      {/* Content Rendering based on View */}
+      {view === 'dashboard' && (
+        <>
+          {/* Products Table */}
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>My Products ({stats?.totalProducts ?? products.length})</h2>
+            <div className={styles.headerActions}>
+              <Button variant="primary" onClick={openAddForm}>
+                Add Product
+              </Button>
+            </div>
+          </div>
 
       {loadingProducts ? (
         <Skeleton height="16rem" />
@@ -471,99 +473,16 @@ export default function SellerDashboardPage() {
           </table>
         </div>
       )}
+      </>)}
 
-      {/* ─── Edit Product Overlay ─────────────────────────────────── */}
-      {editingProduct && (
-        <div
-          className={styles.modalOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-product-title"
-          onClick={() => setEditingProduct(null)}
-        >
-          <div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 id="edit-product-title" className={styles.modalTitle}>
-                Edit Product <span className={styles.modalIdBadge}>P-{editingProduct.id.toString().padStart(4, '0')}</span>
-              </h3>
-              <button
-                type="button"
-                className={styles.modalCloseBtn}
-                aria-label="Close edit dialog"
-                onClick={() => setEditingProduct(null)}
-              >
-                &times;
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div className={styles.formGrid}>
-                {(
-                  [
-                    { field: 'name' as const,          label: 'Product Name',  type: 'text'   },
-                    { field: 'price' as const,         label: 'Price (PHP)',   type: 'number' },
-                    { field: 'stockQuantity' as const, label: 'Stock Qty',     type: 'number' },
-                    { field: 'imageUrl' as const,      label: 'Image URL',     type: 'text'   },
-                  ] as const
-                ).map(({ field, label, type }) => (
-                  <div key={field} className={styles.formGroup}>
-                    <label htmlFor={`edit-${field}`} className={styles.formLabel}>
-                      {label}
-                    </label>
-                    <input
-                      id={`edit-${field}`}
-                      type={type}
-                      value={editForm[field]}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, [field]: e.target.value }))}
-                      className={styles.formInput}
-                    />
-                  </div>
-                ))}
-                <div className={styles.formGroup}>
-                  <label htmlFor="edit-description" className={styles.formLabel}>
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-description"
-                    value={editForm.description}
-                    rows={3}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
-                    className={styles.formTextarea}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.modalCancelBtn}
-                onClick={() => setEditingProduct(null)}
-                disabled={updateProductMutation.isPending}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.modalConfirmBtn}
-                onClick={() =>
-                  updateProductMutation.mutate({
-                    id: editingProduct.id,
-                    data: {
-                      name: editForm.name,
-                      description: editForm.description,
-                      imageUrl: editForm.imageUrl,
-                      price: Number(editForm.price),
-                      stockQuantity: Number(editForm.stockQuantity),
-                    },
-                  })
-                }
-                disabled={updateProductMutation.isPending}
-              >
-                {updateProductMutation.isPending ? 'Saving…' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {(view === 'add_product' || view === 'edit_product') && (
+        <ProductForm 
+          initialData={selectedProduct} 
+          onCancel={() => setView('dashboard')} 
+          onSuccess={handleFormSuccess} 
+        />
       )}
+
 
       {/* ─── Delete Product Confirmation ──────────────────────────── */}
       {confirmingDeleteProductId !== null && (

@@ -8,6 +8,7 @@ export interface AuthUser {
   hasStore?: boolean;
   seller?: {
     shopName: string;
+    shopLogoUrl?: string;
   };
   profilePictureUrl?: string;
 }

@@ -34,6 +34,8 @@ describe('SellerDashboardPage', () => {
       if (key === 'seller-stats') return { data: mockStats, isLoading: false, isError: false };
       if (key === 'seller-products') return { data: { products: [], total: 0 }, isLoading: false, isError: false };
       if (key === 'seller-dashboard') return { data: { recentOrders: [], recentCommissions: [] }, isLoading: false, isError: false };
+      if (key === 'categories') return { data: [{ id: 1, categoryName: 'Toys' }], isLoading: false, isError: false };
+      if (key === 'age-ranges') return { data: [{ id: 1, label: '0-3 Years' }], isLoading: false, isError: false };
       return { data: undefined, isLoading: false, isError: false };
     });
     (useMutation as jest.Mock).mockReturnValue({ mutate: jest.fn(), isPending: false });
@@ -58,5 +60,19 @@ describe('SellerDashboardPage', () => {
     expect(screen.getByRole('heading', { name: /my products/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /orders/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /recent commissions/i })).toBeInTheDocument();
+  });
+
+  it('swaps to inline product form when Add Product is clicked', async () => {
+    const user = userEvent.setup();
+    render(<SellerDashboardPage />);
+    
+    const addBtn = screen.getByRole('button', { name: /add product/i });
+    await user.click(addBtn);
+    
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /add new product/i })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /orders/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /recent commissions/i })).not.toBeInTheDocument();
+    });
   });
 });

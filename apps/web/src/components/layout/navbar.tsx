@@ -180,10 +180,10 @@ export function Navbar() {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}
               >
-                {user?.profilePictureUrl ? (
+                {user?.seller?.shopLogoUrl || user?.profilePictureUrl ? (
                   <Image
-                    src={user.profilePictureUrl}
-                    alt={user.firstName}
+                    src={user?.seller?.shopLogoUrl || user?.profilePictureUrl || ''}
+                    alt={user.seller?.shopName || user.firstName}
                     fill
                     style={{ objectFit: 'cover' }}
                   />

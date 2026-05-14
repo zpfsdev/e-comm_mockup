@@ -44,7 +44,7 @@
   ──────────────────────────────────────────────────────────────────────── */
   --font-display: var(--font-paytone-one), Georgia, serif;
   --font-body:    var(--font-outfit), system-ui, sans-serif;
-  --font-brand:   'Softers', var(--font-body);
+  --font-brand:   var(--font-paytone-one), var(--font-body);
 
   /* Font sizes */
   --text-xs:   0.75rem;   /* 12px — captions, metadata */

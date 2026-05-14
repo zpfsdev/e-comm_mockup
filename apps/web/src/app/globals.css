@@ -1,22 +1,7 @@
 /* ─── Design tokens ───────────────────────────────────────────────────────── */
 @import '../styles/tokens.css';
 
-/* ─── Brand font: @font-face never blocks rendering unlike @import ────────── */
-/* 
-  www.OnlineWebFonts.Com 
-  Font made from Web Fonts is licensed by CC BY 4.0
-*/
-@font-face {
-  font-family: 'Softers';
-  src: url('/fonts/softers.eot');
-  src: url('/fonts/softers.eot?#iefix') format('embedded-opentype'),
-       url('/fonts/softers.woff2') format('woff2'),
-       url('/fonts/softers.woff') format('woff'),
-       url('/fonts/softers.ttf') format('truetype');
-  font-display: swap;
-  font-weight: 400;
-  font-style: normal;
-}
+/* ─── Brand font: Removed Softers font-face due to corrupted binary on Vercel ────────── */
 
 /* ─── Box model reset ─────────────────────────────────────────────────────── */
 *,

@@ -63,7 +63,7 @@ describe('AdminDashboardPage', () => {
     
     expect(screen.getByText('User Management')).toBeInTheDocument();
     expect(screen.getByText('Shop Management')).toBeInTheDocument();
-    expect(screen.getByText('Disputes')).toBeInTheDocument();
-    expect(screen.getByText('Payouts')).toBeInTheDocument();
+    expect(screen.getByText('Dispute Management')).toBeInTheDocument();
+    expect(screen.getByText('Seller Payouts')).toBeInTheDocument();
   });
 });
